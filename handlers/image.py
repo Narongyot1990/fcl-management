@@ -25,12 +25,12 @@ def _format(data: dict) -> str:
     def v(key): return data.get(key) or "-"
 
     return (
-        f"date/time : {v('date_time')}\n"
-        f"shipper   : {v('shipper')}\n"
-        f"Container : {v('container_no')}\n"
-        f"ขนาด     : {v('container_size')}\n"
-        f"Booking   : {v('booking_no')}\n"
-        f"Seal      : {v('seal_no')}\n"
-        f"Tare      : {v('tare_weight')}\n"
-        f"ทะเบียน  : {v('truck_plate')}"
+        f"shipper     : {v('shipper')}\n"
+        f"Booking     : {v('booking_no')}\n"
+        f"size        : {v('container_size')}\n"
+        f"Container   : {v('container_no')}\n"
+        f"Seal        : {v('seal_no')}\n"
+        f"Tare        : {v('tare_weight')}\n"
+        f"truck plate : {v('truck_plate')}\n"
+        f"date/time   : {v('date_time')}"
     )
