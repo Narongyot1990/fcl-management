@@ -12,6 +12,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.security import APIKeyHeader
 from services import line_client, db
 from handlers import image as image_handler
+from dashboard_html import HTML as _DASHBOARD_HTML
 
 app = FastAPI(title="AI Support LINE Bot")
 
@@ -29,14 +30,9 @@ def _require_key(key: str = Security(_api_key_header)) -> str:
 
 # ── Dashboard ─────────────────────────────────────────────────────────────────
 
-_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-
 @app.get("/dashboard", response_class=HTMLResponse)
 def dashboard():
-    html_path = os.path.join(_ROOT, "public", "index.html")
-    with open(html_path, encoding="utf-8") as f:
-        return f.read()
+    return _DASHBOARD_HTML
 
 
 # ── Records API ───────────────────────────────────────────────────────────────
