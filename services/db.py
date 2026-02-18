@@ -4,8 +4,8 @@ MongoDB CRUD service — prompt-agnostic, reusable across all prompt types.
 To support a new prompt, add entries to COLLECTIONS and DEDUP_KEYS below.
 """
 import os
-from datetime import datetime, timezone
-from pymongo import MongoClient
+from datetime import datetime, timezone, timedelta
+from pymongo import MongoClient, DESCENDING
 from pymongo.collection import Collection
 from dotenv import load_dotenv
 
@@ -76,6 +76,52 @@ def save(prompt_key: str, data: dict) -> tuple[bool, dict]:
     collection.insert_one(doc)
     doc.pop("_id", None)
     return True, doc
+
+
+def query(prompt_key: str, filters: dict | None = None, limit: int = 500) -> list[dict]:
+    """
+    Fetch records for a given prompt type with optional search filters.
+
+    Supported filter keys:
+        shipper, booking_no, container_no  — case-insensitive substring match
+        container_size                      — exact match
+        date_from, date_to                 — ISO date strings (YYYY-MM-DD), filter on created_at
+    """
+    collection = _get_collection(prompt_key)
+    mongo_filter = _build_search_filter(filters or {})
+
+    docs = []
+    for doc in collection.find(mongo_filter, {"_id": 0}).sort("created_at", DESCENDING).limit(limit):
+        if isinstance(doc.get("created_at"), datetime):
+            doc["created_at"] = doc["created_at"].isoformat()
+        docs.append(doc)
+    return docs
+
+
+def _build_search_filter(filters: dict) -> dict:
+    f: dict = {}
+
+    for field in ("shipper", "booking_no", "container_no"):
+        val = filters.get(field, "").strip()
+        if val:
+            f[field] = {"$regex": val, "$options": "i"}
+
+    size = filters.get("container_size", "").strip()
+    if size:
+        f["container_size"] = size
+
+    date_from = filters.get("date_from", "")
+    date_to   = filters.get("date_to", "")
+    if date_from or date_to:
+        date_f: dict = {}
+        if date_from:
+            date_f["$gte"] = datetime.fromisoformat(date_from).replace(tzinfo=timezone.utc)
+        if date_to:
+            # include the full end day
+            date_f["$lt"] = (datetime.fromisoformat(date_to) + timedelta(days=1)).replace(tzinfo=timezone.utc)
+        f["created_at"] = date_f
+
+    return f
 
 
 def _build_query(data: dict, keys: list[str]) -> dict | None:
