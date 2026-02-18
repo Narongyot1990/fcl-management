@@ -7,7 +7,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from dotenv import load_dotenv
 load_dotenv()
 
-from fastapi import FastAPI, Request, HTTPException, BackgroundTasks, Security
+from fastapi import FastAPI, Request, HTTPException, BackgroundTasks, Security, Body
 from fastapi.responses import HTMLResponse
 from fastapi.security import APIKeyHeader
 from services import line_client, db
@@ -61,6 +61,29 @@ def get_records(
 
     records = db.query(prompt, filters)
     return {"count": len(records), "records": records}
+
+
+@app.put("/api/records/{record_id}")
+def update_record(
+    record_id: str,
+    data: dict = Body(...),
+    key: str = Security(_api_key_header),
+):
+    _require_key(key)
+    if not db.update("eir", record_id, data):
+        raise HTTPException(status_code=404, detail="Record not found")
+    return {"updated": True}
+
+
+@app.delete("/api/records/{record_id}")
+def delete_record(
+    record_id: str,
+    key: str = Security(_api_key_header),
+):
+    _require_key(key)
+    if not db.delete("eir", record_id):
+        raise HTTPException(status_code=404, detail="Record not found")
+    return {"deleted": True}
 
 
 # ── LINE Webhook ──────────────────────────────────────────────────────────────

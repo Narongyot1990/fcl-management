@@ -5,6 +5,8 @@ To support a new prompt, add entries to COLLECTIONS and DEDUP_KEYS below.
 """
 import os
 from datetime import datetime, timezone, timedelta
+from bson import ObjectId
+from bson.errors import InvalidId
 from pymongo import MongoClient, DESCENDING
 from pymongo.collection import Collection
 from dotenv import load_dotenv
@@ -91,11 +93,45 @@ def query(prompt_key: str, filters: dict | None = None, limit: int = 500) -> lis
     mongo_filter = _build_search_filter(filters or {})
 
     docs = []
-    for doc in collection.find(mongo_filter, {"_id": 0}).sort("created_at", DESCENDING).limit(limit):
+    for doc in collection.find(mongo_filter).sort("created_at", DESCENDING).limit(limit):
+        doc["_id"] = str(doc["_id"])
         if isinstance(doc.get("created_at"), datetime):
             doc["created_at"] = doc["created_at"].isoformat()
         docs.append(doc)
     return docs
+
+
+_UPDATABLE_FIELDS = {
+    "shipper", "booking_no", "container_size", "container_no",
+    "seal_no", "tare_weight", "truck_plate", "date_time",
+}
+
+
+def delete(prompt_key: str, record_id: str) -> bool:
+    """Delete a record by its MongoDB _id string. Returns True if deleted."""
+    try:
+        oid = ObjectId(record_id)
+    except (InvalidId, Exception):
+        return False
+    result = _get_collection(prompt_key).delete_one({"_id": oid})
+    return result.deleted_count > 0
+
+
+def update(prompt_key: str, record_id: str, data: dict) -> bool:
+    """Patch allowed fields of a record. Returns True if matched."""
+    try:
+        oid = ObjectId(record_id)
+    except (InvalidId, Exception):
+        return False
+    patch = {
+        k: (v.strip() if isinstance(v, str) and v.strip() else None)
+        for k, v in data.items()
+        if k in _UPDATABLE_FIELDS
+    }
+    if not patch:
+        return False
+    result = _get_collection(prompt_key).update_one({"_id": oid}, {"$set": patch})
+    return result.matched_count > 0
 
 
 def _build_search_filter(filters: dict) -> dict:

@@ -7,15 +7,18 @@ HTML = r"""<!DOCTYPE html>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    body {
+    /* Flex-column full-height layout so table area scrolls independently */
+    html, body {
+      height: 100%;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background: #f0f2f5;
       color: #222;
-      min-height: 100vh;
     }
+    body { display: flex; flex-direction: column; }
 
     /* ── Header ─────────────────────────────────────────────── */
-    .header {
+    .app-header {
+      flex-shrink: 0;
       background: #1b3a5c;
       color: #fff;
       padding: 0 20px;
@@ -23,8 +26,6 @@ HTML = r"""<!DOCTYPE html>
       display: flex;
       align-items: center;
       gap: 12px;
-      position: sticky;
-      top: 0;
       z-index: 100;
       box-shadow: 0 2px 6px rgba(0,0,0,.25);
     }
@@ -50,6 +51,7 @@ HTML = r"""<!DOCTYPE html>
 
     /* ── Auth Banner ─────────────────────────────────────────── */
     #auth-banner {
+      flex-shrink: 0;
       background: #fffbe6;
       border-bottom: 2px solid #f0c30f;
       padding: 10px 20px;
@@ -80,18 +82,19 @@ HTML = r"""<!DOCTYPE html>
 
     /* ── Filters ─────────────────────────────────────────────── */
     .filters {
+      flex-shrink: 0;
       background: #fff;
       border-bottom: 1px solid #e0e0e0;
-      padding: 14px 20px 10px;
+      padding: 12px 20px 10px;
     }
     .filter-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-      gap: 8px 12px;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 7px 12px;
     }
     .fg label {
       display: block;
-      font-size: .68rem;
+      font-size: .66rem;
       font-weight: 700;
       color: #888;
       text-transform: uppercase;
@@ -100,24 +103,18 @@ HTML = r"""<!DOCTYPE html>
     }
     .fg input, .fg select {
       width: 100%;
-      padding: 6px 9px;
+      padding: 6px 8px;
       border: 1px solid #d0d0d0;
       border-radius: 6px;
-      font-size: .855rem;
+      font-size: .845rem;
       background: #fafafa;
-      transition: border-color .15s;
     }
     .fg input:focus, .fg select:focus {
       outline: none;
       border-color: #2d6a9f;
       background: #fff;
     }
-    .filter-actions {
-      margin-top: 10px;
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
+    .filter-actions { margin-top: 9px; display: flex; gap: 8px; }
     .btn-primary {
       padding: 7px 22px;
       background: #1b3a5c;
@@ -142,40 +139,46 @@ HTML = r"""<!DOCTYPE html>
 
     /* ── Status bar ──────────────────────────────────────────── */
     .status-bar {
-      padding: 5px 20px;
-      font-size: .775rem;
+      flex-shrink: 0;
+      padding: 4px 20px;
+      font-size: .76rem;
       color: #888;
       background: #f8f8f8;
       border-bottom: 1px solid #eee;
     }
 
-    /* ── Table ───────────────────────────────────────────────── */
-    .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    /* ── Table container — takes remaining height, scrolls both axes ── */
+    .table-wrap {
+      flex: 1;
+      overflow: auto;
+      min-height: 0;        /* critical for flex children */
+    }
 
     table {
       width: 100%;
       border-collapse: collapse;
       font-size: .835rem;
-      min-width: 900px;
+      min-width: 980px;
     }
-    thead {
+
+    /* Sticky header: put on <th>, not <thead> */
+    thead th {
+      position: sticky;
+      top: 0;
+      z-index: 10;
       background: #1b3a5c;
       color: #fff;
-      position: sticky;
-      top: 52px;
-      z-index: 50;
-    }
-    th {
-      padding: 9px 12px;
+      padding: 9px 11px;
       text-align: left;
       white-space: nowrap;
       font-weight: 500;
-      font-size: .78rem;
+      font-size: .76rem;
       letter-spacing: .3px;
       text-transform: uppercase;
     }
+
     td {
-      padding: 8px 12px;
+      padding: 7px 11px;
       border-bottom: 1px solid #ebebeb;
       white-space: nowrap;
     }
@@ -183,18 +186,18 @@ HTML = r"""<!DOCTYPE html>
     tbody tr:nth-child(even) td { background: #f8fafb; }
     tbody tr:nth-child(even):hover td { background: #eef4fb; }
 
-    .num-col { color: #bbb; font-size: .78rem; }
+    .num-col { color: #bbb; font-size: .76rem; }
     .size-badge {
       display: inline-block;
       background: #dde8f8;
       color: #1b3a5c;
-      padding: 1px 8px;
+      padding: 1px 7px;
       border-radius: 4px;
-      font-size: .78rem;
+      font-size: .76rem;
       font-weight: 600;
     }
-    .mono { font-family: 'Courier New', monospace; font-size: .82rem; }
-    .muted { color: #aaa; font-size: .78rem; }
+    .mono { font-family: 'Courier New', monospace; font-size: .81rem; }
+    .muted { color: #aaa; font-size: .76rem; }
 
     .empty-row td {
       text-align: center;
@@ -203,33 +206,108 @@ HTML = r"""<!DOCTYPE html>
       font-size: .9rem;
     }
 
+    /* ── Action buttons ──────────────────────────────────────── */
+    .act-btn {
+      padding: 3px 9px;
+      border-radius: 4px;
+      border: 1px solid;
+      cursor: pointer;
+      font-size: .73rem;
+      margin-right: 3px;
+      white-space: nowrap;
+    }
+    .act-edit { background: #f0f4f8; border-color: #aab; color: #336; }
+    .act-edit:hover { background: #e0e8f4; }
+    .act-del  { background: #fff0f0; border-color: #e99; color: #c33; }
+    .act-del:hover  { background: #ffe0e0; }
+
     /* ── Loading spinner ─────────────────────────────────────── */
     .spinner {
       display: inline-block;
-      width: 14px; height: 14px;
+      width: 12px; height: 12px;
       border: 2px solid #ccc;
       border-top-color: #1b3a5c;
       border-radius: 50%;
       animation: spin .6s linear infinite;
       vertical-align: middle;
-      margin-right: 6px;
+      margin-right: 5px;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
+    /* ── Edit Modal ──────────────────────────────────────────── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.45);
+      z-index: 500;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-box {
+      background: #fff;
+      border-radius: 8px;
+      padding: 20px 24px 22px;
+      width: 440px;
+      max-width: 96vw;
+      max-height: 92vh;
+      overflow-y: auto;
+      box-shadow: 0 8px 32px rgba(0,0,0,.22);
+    }
+    .modal-title {
+      font-size: .92rem;
+      font-weight: 600;
+      color: #1b3a5c;
+      margin-bottom: 14px;
+    }
+    .modal-grid {
+      display: grid;
+      grid-template-columns: 100px 1fr;
+      gap: 7px 10px;
+      align-items: center;
+    }
+    .modal-grid label {
+      font-size: .72rem;
+      font-weight: 700;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+    .modal-grid input,
+    .modal-grid select {
+      width: 100%;
+      padding: 6px 9px;
+      border: 1px solid #d0d0d0;
+      border-radius: 5px;
+      font-size: .855rem;
+    }
+    .modal-grid input:focus, .modal-grid select:focus {
+      outline: none;
+      border-color: #2d6a9f;
+    }
+    .modal-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      margin-top: 18px;
+    }
+
     /* ── Mobile ──────────────────────────────────────────────── */
     @media (max-width: 600px) {
-      .header-title { font-size: .9rem; }
+      .app-header { padding: 0 12px; }
+      .header-title { font-size: .88rem; }
       .filters { padding: 10px 12px 8px; }
       .filter-grid { grid-template-columns: 1fr 1fr; }
-      th, td { padding: 7px 9px; }
+      td, thead th { padding: 6px 8px; }
       .status-bar { padding: 4px 12px; }
     }
   </style>
 </head>
 <body>
 
-<!-- Header -->
-<header class="header">
+<!-- App Header -->
+<header class="app-header">
   <span class="header-title">EIR Records</span>
   <span class="header-badge" id="count-badge">—</span>
   <span class="header-spacer"></span>
@@ -246,36 +324,17 @@ HTML = r"""<!DOCTYPE html>
 <!-- Filters -->
 <div class="filters">
   <div class="filter-grid">
-    <div class="fg">
-      <label>Date From</label>
-      <input type="date" id="f-date-from" />
-    </div>
-    <div class="fg">
-      <label>Date To</label>
-      <input type="date" id="f-date-to" />
-    </div>
-    <div class="fg">
-      <label>Shipper</label>
-      <input type="text" id="f-shipper" placeholder="Search..." />
-    </div>
-    <div class="fg">
-      <label>Booking No</label>
-      <input type="text" id="f-booking" placeholder="Search..." />
-    </div>
-    <div class="fg">
-      <label>Container No</label>
-      <input type="text" id="f-container" placeholder="Search..." />
-    </div>
+    <div class="fg"><label>Date From</label><input type="date" id="f-date-from" /></div>
+    <div class="fg"><label>Date To</label><input type="date" id="f-date-to" /></div>
+    <div class="fg"><label>Shipper</label><input type="text" id="f-shipper" placeholder="Search..." /></div>
+    <div class="fg"><label>Booking No</label><input type="text" id="f-booking" placeholder="Search..." /></div>
+    <div class="fg"><label>Container No</label><input type="text" id="f-container" placeholder="Search..." /></div>
     <div class="fg">
       <label>Size</label>
       <select id="f-size">
-        <option value="">All sizes</option>
-        <option>20GP</option>
-        <option>40GP</option>
-        <option>40HC</option>
-        <option>45HC</option>
-        <option>20RF</option>
-        <option>40RF</option>
+        <option value="">All</option>
+        <option>20GP</option><option>40GP</option><option>40HC</option>
+        <option>45HC</option><option>20RF</option><option>40RF</option>
       </select>
     </div>
   </div>
@@ -288,8 +347,8 @@ HTML = r"""<!DOCTYPE html>
 <!-- Status bar -->
 <div class="status-bar" id="status-bar">Ready</div>
 
-<!-- Table -->
-<div class="table-scroll">
+<!-- Scrollable Table -->
+<div class="table-wrap">
   <table>
     <thead>
       <tr>
@@ -298,17 +357,45 @@ HTML = r"""<!DOCTYPE html>
         <th>Booking No</th>
         <th>Size</th>
         <th>Container No</th>
-        <th>Seal No</th>
+        <th>Seal</th>
         <th>Tare</th>
         <th>Truck</th>
         <th>Date / Time</th>
         <th>Saved At</th>
+        <th style="width:100px">Actions</th>
       </tr>
     </thead>
     <tbody id="tbody">
-      <tr class="empty-row"><td colspan="10">Enter API key to load records</td></tr>
+      <tr class="empty-row"><td colspan="11">Enter API key to load records</td></tr>
     </tbody>
   </table>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal-box">
+    <div class="modal-title">Edit Record</div>
+    <input type="hidden" id="edit-id" />
+    <div class="modal-grid">
+      <label>Shipper</label>    <input id="e-shipper"   type="text" />
+      <label>Booking</label>    <input id="e-booking"   type="text" />
+      <label>Size</label>
+      <select id="e-size">
+        <option value="">—</option>
+        <option>20GP</option><option>40GP</option><option>40HC</option>
+        <option>45HC</option><option>20RF</option><option>40RF</option>
+      </select>
+      <label>Container</label>  <input id="e-container" type="text" />
+      <label>Seal</label>       <input id="e-seal"      type="text" />
+      <label>Tare</label>       <input id="e-tare"      type="text" />
+      <label>Truck</label>      <input id="e-truck"     type="text" />
+      <label>Date/Time</label>  <input id="e-datetime"  type="text" placeholder="dd/mm/yyyy H:mm" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn-ghost" id="cancel-edit-btn">Cancel</button>
+      <button class="btn-primary" id="save-edit-btn">Save</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -317,23 +404,22 @@ HTML = r"""<!DOCTYPE html>
   function getKey() { return localStorage.getItem(KEY_STORAGE) || ''; }
   function setKey(k) { localStorage.setItem(KEY_STORAGE, k); }
 
+  let recordsMap = {};   // { _id: record } for edit lookup
+
   // ── Elements ──────────────────────────────────────────────────────────
-  const authBanner  = document.getElementById('auth-banner');
-  const keyInput    = document.getElementById('key-input');
-  const saveKeyBtn  = document.getElementById('save-key-btn');
-  const keyToggle   = document.getElementById('key-toggle-btn');
-  const statusBar   = document.getElementById('status-bar');
-  const countBadge  = document.getElementById('count-badge');
-  const tbody       = document.getElementById('tbody');
-  const searchBtn   = document.getElementById('search-btn');
-  const clearBtn    = document.getElementById('clear-btn');
+  const authBanner = document.getElementById('auth-banner');
+  const keyInput   = document.getElementById('key-input');
+  const statusBar  = document.getElementById('status-bar');
+  const countBadge = document.getElementById('count-badge');
+  const tbody      = document.getElementById('tbody');
+  const editModal  = document.getElementById('edit-modal');
 
   // ── Auth ──────────────────────────────────────────────────────────────
-  keyToggle.addEventListener('click', () => {
+  document.getElementById('key-toggle-btn').addEventListener('click', () => {
     authBanner.style.display = authBanner.style.display === 'flex' ? 'none' : 'flex';
   });
 
-  saveKeyBtn.addEventListener('click', () => {
+  document.getElementById('save-key-btn').addEventListener('click', () => {
     const k = keyInput.value.trim();
     if (!k) return;
     setKey(k);
@@ -342,24 +428,12 @@ HTML = r"""<!DOCTYPE html>
     loadRecords();
   });
 
-  keyInput.addEventListener('keydown', e => { if (e.key === 'Enter') saveKeyBtn.click(); });
+  keyInput.addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('save-key-btn').click(); });
 
   // ── Filters ───────────────────────────────────────────────────────────
-  function getFilters() {
-    const v = id => document.getElementById(id).value.trim();
-    return {
-      date_from:      v('f-date-from'),
-      date_to:        v('f-date-to'),
-      shipper:        v('f-shipper'),
-      booking_no:     v('f-booking'),
-      container_no:   v('f-container'),
-      container_size: v('f-size'),
-    };
-  }
+  document.getElementById('search-btn').addEventListener('click', loadRecords);
 
-  searchBtn.addEventListener('click', loadRecords);
-
-  clearBtn.addEventListener('click', () => {
+  document.getElementById('clear-btn').addEventListener('click', () => {
     ['f-date-from','f-date-to','f-shipper','f-booking','f-container'].forEach(
       id => document.getElementById(id).value = ''
     );
@@ -367,7 +441,6 @@ HTML = r"""<!DOCTYPE html>
     loadRecords();
   });
 
-  // Enter key on any filter input triggers search
   document.querySelectorAll('.fg input, .fg select').forEach(el => {
     el.addEventListener('keydown', e => { if (e.key === 'Enter') loadRecords(); });
   });
@@ -375,68 +448,68 @@ HTML = r"""<!DOCTYPE html>
   // ── Load Records ──────────────────────────────────────────────────────
   async function loadRecords() {
     const key = getKey();
-    if (!key) {
-      authBanner.style.display = 'flex';
-      return;
-    }
+    if (!key) { authBanner.style.display = 'flex'; return; }
 
     setStatus('<span class="spinner"></span> Loading...');
 
+    const v = id => document.getElementById(id).value.trim();
     const params = new URLSearchParams();
-    const filters = getFilters();
-    Object.entries(filters).forEach(([k, v]) => { if (v) params.set(k, v); });
+    if (v('f-date-from'))  params.set('date_from',      v('f-date-from'));
+    if (v('f-date-to'))    params.set('date_to',         v('f-date-to'));
+    if (v('f-shipper'))    params.set('shipper',          v('f-shipper'));
+    if (v('f-booking'))    params.set('booking_no',       v('f-booking'));
+    if (v('f-container'))  params.set('container_no',     v('f-container'));
+    if (v('f-size'))       params.set('container_size',   v('f-size'));
 
     try {
-      const res = await fetch('/api/records?' + params.toString(), {
-        headers: { 'X-API-Key': key },
-      });
+      const res = await fetch('/api/records?' + params, { headers: { 'X-API-Key': key } });
 
       if (res.status === 401) {
         authBanner.style.display = 'flex';
-        setStatus('Invalid API key — please re-enter');
+        setStatus('Invalid API key');
         renderEmpty('Invalid API key');
         return;
       }
-
-      if (!res.ok) {
-        setStatus('Server error: ' + res.status);
-        return;
-      }
+      if (!res.ok) { setStatus('Server error: ' + res.status); return; }
 
       const json = await res.json();
       render(json.records);
       countBadge.textContent = json.count + ' records';
-      setStatus('Showing ' + json.count + ' record' + (json.count !== 1 ? 's' : ''));
+      setStatus('Showing ' + json.count + (json.count !== 1 ? ' records' : ' record'));
     } catch (err) {
       setStatus('Error: ' + err.message);
     }
   }
 
-  // ── Render ────────────────────────────────────────────────────────────
+  // ── Render Table ──────────────────────────────────────────────────────
   function render(records) {
-    if (!records || records.length === 0) {
-      renderEmpty('No records found');
-      return;
-    }
+    recordsMap = {};
+    if (!records || records.length === 0) { renderEmpty('No records found'); return; }
 
-    tbody.innerHTML = records.map((r, i) => `
-      <tr>
-        <td class="num-col">${i + 1}</td>
-        <td>${esc(r.shipper)}</td>
-        <td class="mono">${esc(r.booking_no)}</td>
-        <td><span class="size-badge">${esc(r.container_size)}</span></td>
-        <td class="mono">${esc(r.container_no)}</td>
-        <td>${esc(r.seal_no)}</td>
-        <td>${esc(r.tare_weight)}</td>
-        <td>${esc(r.truck_plate)}</td>
-        <td>${esc(r.date_time)}</td>
-        <td class="muted">${fmtDate(r.created_at)}</td>
-      </tr>
-    `).join('');
+    tbody.innerHTML = records.map((r, i) => {
+      recordsMap[r._id] = r;
+      return `
+        <tr>
+          <td class="num-col">${i + 1}</td>
+          <td>${esc(r.shipper)}</td>
+          <td class="mono">${esc(r.booking_no)}</td>
+          <td><span class="size-badge">${esc(r.container_size)}</span></td>
+          <td class="mono">${esc(r.container_no)}</td>
+          <td>${esc(r.seal_no)}</td>
+          <td>${esc(r.tare_weight)}</td>
+          <td>${esc(r.truck_plate)}</td>
+          <td>${esc(r.date_time)}</td>
+          <td class="muted">${fmtDate(r.created_at)}</td>
+          <td>
+            <button class="act-btn act-edit" onclick="openEdit('${r._id}')">Edit</button>
+            <button class="act-btn act-del"  onclick="delRecord('${r._id}')">Delete</button>
+          </td>
+        </tr>`;
+    }).join('');
   }
 
   function renderEmpty(msg) {
-    tbody.innerHTML = `<tr class="empty-row"><td colspan="10">${msg}</td></tr>`;
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="11">${msg}</td></tr>`;
     countBadge.textContent = '—';
   }
 
@@ -449,22 +522,77 @@ HTML = r"""<!DOCTYPE html>
     if (!iso) return '—';
     try {
       const d = new Date(iso);
-      const date = d.toLocaleDateString('en-GB', { day:'2-digit', month:'2-digit', year:'numeric' });
-      const time = d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
-      return date + ' ' + time;
+      return d.toLocaleDateString('en-GB', { day:'2-digit', month:'2-digit', year:'numeric' })
+           + ' ' + d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
     } catch { return iso; }
   }
 
-  function setStatus(html) {
-    statusBar.innerHTML = html;
+  function setStatus(html) { statusBar.innerHTML = html; }
+
+  // ── Edit Modal ────────────────────────────────────────────────────────
+  function openEdit(id) {
+    const r = recordsMap[id];
+    if (!r) return;
+    document.getElementById('edit-id').value        = id;
+    document.getElementById('e-shipper').value      = r.shipper        || '';
+    document.getElementById('e-booking').value      = r.booking_no     || '';
+    document.getElementById('e-size').value         = r.container_size || '';
+    document.getElementById('e-container').value    = r.container_no   || '';
+    document.getElementById('e-seal').value         = r.seal_no        || '';
+    document.getElementById('e-tare').value         = r.tare_weight    || '';
+    document.getElementById('e-truck').value        = r.truck_plate    || '';
+    document.getElementById('e-datetime').value     = r.date_time      || '';
+    editModal.classList.add('open');
+  }
+
+  function closeModal() { editModal.classList.remove('open'); }
+
+  document.getElementById('cancel-edit-btn').addEventListener('click', closeModal);
+
+  // Close on overlay click
+  editModal.addEventListener('click', e => { if (e.target === editModal) closeModal(); });
+
+  document.getElementById('save-edit-btn').addEventListener('click', async () => {
+    const id  = document.getElementById('edit-id').value;
+    const key = getKey();
+    const data = {
+      shipper:        document.getElementById('e-shipper').value,
+      booking_no:     document.getElementById('e-booking').value,
+      container_size: document.getElementById('e-size').value,
+      container_no:   document.getElementById('e-container').value,
+      seal_no:        document.getElementById('e-seal').value,
+      tare_weight:    document.getElementById('e-tare').value,
+      truck_plate:    document.getElementById('e-truck').value,
+      date_time:      document.getElementById('e-datetime').value,
+    };
+    try {
+      const res = await fetch('/api/records/' + id, {
+        method: 'PUT',
+        headers: { 'X-API-Key': key, 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (res.ok) { closeModal(); loadRecords(); }
+      else { alert('Save failed (' + res.status + ')'); }
+    } catch (e) { alert('Error: ' + e.message); }
+  });
+
+  // ── Delete ────────────────────────────────────────────────────────────
+  async function delRecord(id) {
+    if (!confirm('Delete this record? This cannot be undone.')) return;
+    const key = getKey();
+    try {
+      const res = await fetch('/api/records/' + id, {
+        method: 'DELETE',
+        headers: { 'X-API-Key': key },
+      });
+      if (res.ok) loadRecords();
+      else alert('Delete failed (' + res.status + ')');
+    } catch (e) { alert('Error: ' + e.message); }
   }
 
   // ── Init ──────────────────────────────────────────────────────────────
-  if (getKey()) {
-    loadRecords();
-  } else {
-    authBanner.style.display = 'flex';
-  }
+  if (getKey()) loadRecords();
+  else authBanner.style.display = 'flex';
 </script>
 </body>
 </html>"""
