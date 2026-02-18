@@ -1,28 +1,34 @@
-from services import ocr_client, line_client
+from services import ocr_client, line_client, db
+
+_PROMPT_KEY = "eir"
+_OCR_MODEL  = "flash"
 
 
 def handle(message_id: str, reply_token: str) -> None:
     """
-    Full pipeline for an image received in LINE:
-      1. Download image bytes
-      2. Classify: is EIR?  (lite model — cheap)
-      3. If yes → extract EIR fields  (flash model)
-      4. Reply with formatted text
+    Single-call OCR pipeline:
+      1. Download image
+      2. Run EIR prompt once (flash model)
+      3. If container_no found → it's an EIR → save + reply
+      4. If not → not an EIR → silently ignore
     """
     image_bytes = line_client.get_image_bytes(message_id)
 
-    if not ocr_client.is_eir(image_bytes):
-        return  # Not an EIR — silently ignore
-
-    result = ocr_client.scan(image_bytes, prompt="eir", model="flash")
+    result = ocr_client.scan(image_bytes, prompt=_PROMPT_KEY, model=_OCR_MODEL)
     data   = result.get("data", {})
-    text   = _format(data)
 
-    line_client.reply_text(reply_token, text)
+    if not data.get("container_no"):
+        return  # Not an EIR
+
+    saved, _ = db.save(_PROMPT_KEY, data)
+
+    line_client.reply_text(reply_token, _format(data, saved))
 
 
-def _format(data: dict) -> str:
+def _format(data: dict, saved: bool) -> str:
     def v(key): return data.get(key) or "-"
+
+    status = "บันทึกแล้ว" if saved else "มีในระบบแล้ว"
 
     return (
         f"shipper     : {v('shipper')}\n"
@@ -32,5 +38,6 @@ def _format(data: dict) -> str:
         f"Seal        : {v('seal_no')}\n"
         f"Tare        : {v('tare_weight')}\n"
         f"truck plate : {v('truck_plate')}\n"
-        f"date/time   : {v('date_time')}"
+        f"date/time   : {v('date_time')}\n"
+        f"สถานะ      : {status}"
     )
