@@ -25,7 +25,8 @@ def _format(data: dict) -> str:
     def v(key): return data.get(key) or "-"
 
     return (
-        f"[พบใบ EIR]\n"
+        f"date/time : {v('date_time')}\n"
+        f"shipper   : {v('shipper')}\n"
         f"Container : {v('container_no')}\n"
         f"ขนาด     : {v('container_size')}\n"
         f"Booking   : {v('booking_no')}\n"
