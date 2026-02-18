@@ -25,19 +25,24 @@ def handle(message_id: str, reply_token: str) -> None:
     line_client.reply_text(reply_token, _format(data, saved))
 
 
+_SEP = "─" * 23
+
+
 def _format(data: dict, saved: bool) -> str:
     def v(key): return data.get(key) or "-"
 
-    status = "บันทึกแล้ว" if saved else "มีในระบบแล้ว"
+    status = "Saved" if saved else "Already exists"
 
-    return (
-        f"shipper     : {v('shipper')}\n"
-        f"Booking     : {v('booking_no')}\n"
-        f"size        : {v('container_size')}\n"
-        f"Container   : {v('container_no')}\n"
-        f"Seal        : {v('seal_no')}\n"
-        f"Tare        : {v('tare_weight')}\n"
-        f"truck plate : {v('truck_plate')}\n"
-        f"date/time   : {v('date_time')}\n"
-        f"สถานะ      : {status}"
-    )
+    return "\n".join([
+        _SEP,
+        f"Shipper   : {v('shipper')}",
+        f"Booking   : {v('booking_no')}",
+        f"Size      : {v('container_size')}",
+        f"Container : {v('container_no')}",
+        f"Seal      : {v('seal_no')}",
+        f"Tare      : {v('tare_weight')}",
+        f"Truck     : {v('truck_plate')}",
+        f"Date/Time : {v('date_time')}",
+        _SEP,
+        f"Status    : {status}",
+    ])
