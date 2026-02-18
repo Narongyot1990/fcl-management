@@ -17,8 +17,9 @@ def handle(message_id: str, reply_token: str) -> None:
     result = ocr_client.scan(image_bytes, prompt=_PROMPT_KEY, model=_OCR_MODEL)
     data   = result.get("data", {})
 
-    if not data.get("container_no"):
-        return  # Not an EIR
+    required = ["shipper", "booking_no", "container_size", "container_no"]
+    if not all(data.get(f) for f in required):
+        return  # Incomplete — skip silently
 
     saved, _ = db.save(_PROMPT_KEY, data)
 
