@@ -1,13 +1,7 @@
-from linebot.v3.messaging import (
-    ApiClient, Configuration, MessagingApi, MessagingApiBlob,
-    ReplyMessageRequest, TextMessage,
-)
-from linebot.v3.webhooks import MessageEvent
-
-from services import ocr_client
+from services import ocr_client, line_client
 
 
-def handle(event: MessageEvent, configuration: Configuration):
+def handle(message_id: str, reply_token: str) -> None:
     """
     Full pipeline for an image received in LINE:
       1. Download image bytes
@@ -15,9 +9,7 @@ def handle(event: MessageEvent, configuration: Configuration):
       3. If yes → extract EIR fields  (flash model)
       4. Reply with formatted text
     """
-    with ApiClient(configuration) as client:
-        blob_api = MessagingApiBlob(client)
-        image_bytes = blob_api.get_message_content(event.message.id).read()
+    image_bytes = line_client.get_image_bytes(message_id)
 
     if not ocr_client.is_eir(image_bytes):
         return  # Not an EIR — silently ignore
@@ -26,13 +18,7 @@ def handle(event: MessageEvent, configuration: Configuration):
     data   = result.get("data", {})
     text   = _format(data)
 
-    with ApiClient(configuration) as client:
-        MessagingApi(client).reply_message(
-            ReplyMessageRequest(
-                reply_token=event.reply_token,
-                messages=[TextMessage(text=text)],
-            )
-        )
+    line_client.reply_text(reply_token, text)
 
 
 def _format(data: dict) -> str:
