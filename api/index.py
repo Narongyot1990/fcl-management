@@ -107,6 +107,6 @@ async def webhook(request: Request, background: BackgroundTasks):
         if event.get("type") == "message" and event.get("message", {}).get("type") == "image":
             message_id  = event["message"]["id"]
             reply_token = event.get("replyToken", "")
-            background.add_task(image_handler.handle, message_id, reply_token)
+            background.add_task(image_handler.handle, message_id, reply_token, is_res=False)
 
     return "OK"

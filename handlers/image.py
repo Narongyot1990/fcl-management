@@ -4,7 +4,7 @@ _PROMPT_KEY = "eir"
 _OCR_MODEL  = "flash"
 
 
-def handle(message_id: str, reply_token: str) -> None:
+def handle(message_id: str, reply_token: str, is_res: bool) -> None:
     """
     Single-call OCR pipeline:
       1. Download image
@@ -23,10 +23,10 @@ def handle(message_id: str, reply_token: str) -> None:
 
     saved, _ = db.save(_PROMPT_KEY, data)
 
-    line_client.reply_text(reply_token, _format(data, saved))
+    is_res and line_client.reply_text(reply_token, _format(data, saved)) or None
 
 
-_SEP = "─" * 23
+_SEP = "─" * 13
 
 
 def _format(data: dict, saved: bool) -> str:
