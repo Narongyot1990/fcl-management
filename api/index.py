@@ -10,12 +10,21 @@ load_dotenv()
 
 from fastapi import FastAPI, Request, HTTPException, BackgroundTasks, Security, Body
 from fastapi.security import APIKeyHeader
-from mangum import Mangum
 from services import line_client, db
 from handlers import image as image_handler
 
 app = FastAPI(title="AI Support LINE Bot")
-handler = Mangum(app)
+
+# Vercel expects a handler named 'handler' at module level
+handler = None
+if __name__ == "__main__":
+    # For local development with uvicorn
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+else:
+    # For Vercel deployment
+    from mangum import Mangum
+    handler = Mangum(app)
 
 # ── Auth ──────────────────────────────────────────────────────────────────────
 
