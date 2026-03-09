@@ -1,6 +1,7 @@
 "use client";
 import React, { useRef, useState } from "react";
 import { UploadCloud, X, Image as ImageIcon, Loader2 } from "lucide-react";
+import imageCompression from "browser-image-compression";
 
 interface Props {
   label: string;
@@ -18,8 +19,16 @@ export default function ImageUpload({ label, value, type, onChange }: Props) {
     setError("");
     setUploading(true);
     try {
+      // Compress the image before uploading
+      const options = {
+        maxSizeMB: 1,
+        maxWidthOrHeight: 1024,
+        useWebWorker: true,
+      };
+      const compressedFile = await imageCompression(file, options);
+
       const fd = new FormData();
-      fd.append("file", file);
+      fd.append("file", compressedFile);
       fd.append("type", type);
       const apiKey = typeof window !== "undefined" ? sessionStorage.getItem("eir_api_key") ?? "" : "";
       const res = await fetch("/api/upload-image", {

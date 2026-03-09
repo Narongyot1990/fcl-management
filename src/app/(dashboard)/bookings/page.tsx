@@ -385,9 +385,9 @@ export default function BookingsPage() {
 
                 {/* ── Booking cards ── */}
                 {!isCollapsed && (
-                  <div className="divide-y divide-slate-100">
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 p-4 bg-slate-50/50">
                     {bookings.map((b, i) => (
-                      <div key={b._id} className="p-4 hover:bg-blue-50/20 transition-colors">
+                      <div key={b._id} className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 hover:shadow-md transition-shadow relative">
                         {/* Top row: Booking No + badges + actions */}
                         <div className="flex items-start justify-between gap-3 mb-3">
                           <div className="flex items-center gap-3 flex-wrap">

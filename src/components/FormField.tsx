@@ -26,7 +26,7 @@ export function Input({ className, ...props }: InputProps) {
   return (
     <input
       {...props}
-      className={`w-full px-3 py-2 rounded-lg border border-[var(--border)] text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-slate-400 disabled:bg-slate-50 disabled:text-slate-400 ${className ?? ""}`}
+      className={`w-full px-4 py-3 min-h-[44px] rounded-xl border border-[var(--border)] text-base md:text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-slate-400 disabled:bg-slate-50 disabled:text-slate-400 transition-all ${className ?? ""}`}
     />
   );
 }
@@ -40,7 +40,7 @@ export function Select({ options, placeholder, className, ...props }: SelectProp
   return (
     <select
       {...props}
-      className={`w-full px-3 py-2 rounded-lg border border-[var(--border)] text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-400 ${className ?? ""}`}
+      className={`w-full px-4 py-3 min-h-[44px] rounded-xl border border-[var(--border)] text-base md:text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-400 transition-all ${className ?? ""}`}
     >
       {placeholder && (
         <option value="" disabled>
@@ -63,7 +63,7 @@ export function Textarea({ className, ...props }: TextareaProps) {
     <textarea
       {...props}
       rows={props.rows ?? 3}
-      className={`w-full px-3 py-2 rounded-lg border border-[var(--border)] text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none placeholder:text-slate-400 ${className ?? ""}`}
+      className={`w-full px-4 py-3 min-h-[44px] rounded-xl border border-[var(--border)] text-base md:text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none placeholder:text-slate-400 transition-all ${className ?? ""}`}
     />
   );
 }
