@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { Pencil, Trash2, Search, ChevronDown, ChevronUp, CalendarDays } from "lucide-react";
+import { Pencil, Trash2, Search, ChevronDown, ChevronUp, CalendarDays, Copy, Check } from "lucide-react";
 import { listRecords, createRecord, updateRecord, deleteRecord } from "@/lib/api";
 import type { Booking, Vendor, Container, Customer, LoadingStatus, JobType } from "@/lib/types";
 import PageHeader from "@/components/PageHeader";
@@ -146,7 +146,7 @@ const JOB_TYPE_OPTIONS: { value: JobType; label: string }[] = [
 ];
 
 // ── Number of table columns for colSpan ──────────────────────────────────────
-const COLS = 12;
+const COLS = 13;
 
 export default function BookingsPage() {
   const [records, setRecords] = useState<Booking[]>([]);
@@ -160,6 +160,7 @@ export default function BookingsPage() {
   const [deleteTarget, setDeleteTarget] = useState<Booking | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [containers, setContainers] = useState<Container[]>([]);
@@ -312,6 +313,25 @@ export default function BookingsPage() {
     finally { setDeleting(false); }
   }
 
+  // Copy booking pickup info to clipboard for email
+  function copyPickupInfo(b: Booking) {
+    const text = [
+      b.booking_no,
+      b.container_size,
+      b.container_size_code,
+      b.container_no,
+      b.seal_no,
+      b.tare_weight,
+      b.driver_name,
+      b.driver_phone,
+      b.truck_plate,
+    ].join("\t");
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedId(b._id);
+      setTimeout(() => setCopiedId(null), 2000);
+    });
+  }
+
   const set = (k: keyof BookingForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm((prev) => ({ ...prev, [k]: e.target.value }));
 
@@ -344,17 +364,18 @@ export default function BookingsPage() {
                 <th className="text-left px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Plan Dates</th>
                 <th className="text-left px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Status</th>
                 <th className="text-left px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Progress</th>
-                <th className="px-3 py-3 w-16" />
+                <th className="px-3 py-3 w-10" />
+                <th className="px-3 py-3 w-10" />
               </tr>
             </thead>
 
             {loading ? (
               <tbody>
-                <tr><td colSpan={12} className="px-5 py-10 text-center text-[var(--muted)]">Loading…</td></tr>
+                <tr><td colSpan={13} className="px-5 py-10 text-center text-[var(--muted)]">Loading…</td></tr>
               </tbody>
             ) : records.length === 0 ? (
               <tbody>
-                <tr><td colSpan={12} className="px-5 py-10 text-center text-[var(--muted)]">ยังไม่มี Booking กด Add New เพื่อสร้าง</td></tr>
+                <tr><td colSpan={13} className="px-5 py-10 text-center text-[var(--muted)]">ยังไม่มี Booking กด Add New เพื่อสร้าง</td></tr>
               </tbody>
             ) : (
               Array.from(grouped.entries()).map(([date, bookings]) => {
@@ -366,7 +387,7 @@ export default function BookingsPage() {
                       className="bg-slate-100 hover:bg-slate-200 cursor-pointer"
                       onClick={() => toggleGroup(date)}
                     >
-                      <td colSpan={12} className="px-4 py-2.5 border-y border-slate-200">
+                      <td colSpan={13} className="px-4 py-2.5 border-y border-slate-200">
                         <div className="flex items-center gap-2">
                           {isCollapsed
                             ? <ChevronDown size={14} className="text-slate-500 shrink-0" />
@@ -446,6 +467,15 @@ export default function BookingsPage() {
                               {b.gcl_received && <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700">GCL ✓</span>}
                               {b.return_completed && <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700">Returned ✓</span>}
                             </div>
+                          </td>
+                          <td className="px-3 py-1.5 align-top">
+                            <button
+                              onClick={() => copyPickupInfo(b)}
+                              className={`p-1.5 rounded-lg hover:bg-blue-50 transition-colors ${copiedId === b._id ? "text-green-600" : "text-slate-400 hover:text-blue-600"}`}
+                              title="Copy ข้อมูลสำหรับ Email"
+                            >
+                              {copiedId === b._id ? <Check size={13} /> : <Copy size={13} />}
+                            </button>
                           </td>
                         </tr>
                       </React.Fragment>
