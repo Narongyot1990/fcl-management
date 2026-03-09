@@ -204,10 +204,12 @@ export default function BookingsPage() {
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const [imageModalUrl, setImageModalUrl] = useState("");
   const [imageModalTitle, setImageModalTitle] = useState("");
+  const [imageModalBooking, setImageModalBooking] = useState<Booking | null>(null);
 
-  function openImageModal(url: string, title: string) {
+  function openImageModal(url: string, title: string, booking: Booking) {
     setImageModalUrl(url);
     setImageModalTitle(title);
+    setImageModalBooking(booking);
     setImageModalOpen(true);
   }
 
@@ -501,14 +503,14 @@ export default function BookingsPage() {
                                   {(b.eir_image_url || b.container_image_url) && (
                                     <div className="flex gap-1 ml-auto">
                                       {b.eir_image_url && (
-                                        <button type="button" onClick={() => openImageModal(b.eir_image_url!, "EIR — " + b.booking_no)}
+                                        <button type="button" onClick={() => openImageModal(b.eir_image_url!, "EIR — " + b.booking_no, b)}
                                           className="w-6 h-6 rounded-md bg-blue-100 hover:bg-blue-200 border border-blue-200 flex items-center justify-center transition-colors"
                                           title="ดูรูป EIR">
                                           <span className="text-[10px]">📄</span>
                                         </button>
                                       )}
                                       {b.container_image_url && (
-                                        <button type="button" onClick={() => openImageModal(b.container_image_url!, "Container — " + b.booking_no)}
+                                        <button type="button" onClick={() => openImageModal(b.container_image_url!, "Container — " + b.booking_no, b)}
                                           className="w-6 h-6 rounded-md bg-emerald-100 hover:bg-emerald-200 border border-emerald-200 flex items-center justify-center transition-colors"
                                           title="ดูรูป Container">
                                           <span className="text-[10px]">📦</span>
@@ -741,15 +743,55 @@ export default function BookingsPage() {
           </div>
 
           {/* Image */}
-          <img
-            src={imageModalUrl}
-            alt={imageModalTitle}
-            className="max-w-[90vw] max-h-[85vh] object-contain rounded-xl shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          />
+          <div className="flex-1 w-full flex items-center justify-center p-6 mt-14 mb-[120px]">
+            <img
+              src={imageModalUrl}
+              alt={imageModalTitle}
+              className="max-w-full max-h-full object-contain rounded-xl shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
 
-          {/* Footer hint */}
-          <p className="absolute bottom-5 text-white/50 text-xs">คลิกพื้นหลังเพื่อปิด</p>
+          {/* Bottom Dock: Container Info */}
+          {imageModalBooking && (
+            <div 
+              className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[90%] md:w-auto max-w-4xl bg-black/70 backdrop-blur-xl border border-white/10 rounded-2xl p-4 md:px-8 md:py-5 flex flex-col md:flex-row gap-4 md:gap-8 shadow-2xl pointer-events-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+               {/* 1. Booking */}
+               <div className="flex flex-col">
+                 <span className="text-white/50 text-[10px] uppercase font-bold tracking-widest mb-1">Booking No.</span>
+                 <span className="text-white font-mono font-bold text-base md:text-lg">{imageModalBooking.booking_no}</span>
+               </div>
+               
+               {/* Vertical Divider (Hidden on Mobile) */}
+               <div className="hidden md:block w-px bg-white/20 self-stretch" />
+               <div className="md:hidden h-px w-full bg-white/10" />
+
+               {/* 2. Container Info */}
+               <div className="flex flex-col">
+                 <span className="text-white/50 text-[10px] uppercase font-bold tracking-widest mb-1">Container Details</span>
+                 <div className="flex items-baseline gap-2">
+                   <span className="text-amber-300 font-mono font-black text-lg md:text-xl tracking-tight leading-none">{imageModalBooking.container_no || "N/A"}</span>
+                   <span className="text-white/80 font-medium text-sm">
+                     ({imageModalBooking.container_size || "—"} {imageModalBooking.container_size_code ? `/ ${imageModalBooking.container_size_code}` : ""})
+                   </span>
+                 </div>
+               </div>
+
+               {/* Vertical Divider */}
+               <div className="hidden md:block w-px bg-white/20 self-stretch" />
+               <div className="md:hidden h-px w-full bg-white/10" />
+
+               {/* 3. Tare Weight */}
+               <div className="flex flex-col">
+                 <span className="text-white/50 text-[10px] uppercase font-bold tracking-widest mb-1">Tare Weight</span>
+                 <span className="text-white font-black text-base md:text-lg">{imageModalBooking.tare_weight ? `${imageModalBooking.tare_weight} kg` : "—"}</span>
+               </div>
+            </div>
+          )}
+
+          {/* Background hit area to close is handled by parent div's onClick */}
         </div>
       )}
     </div>
