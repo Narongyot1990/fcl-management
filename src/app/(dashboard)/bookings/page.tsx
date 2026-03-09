@@ -86,6 +86,14 @@ function StepBar({ booking }: { booking: Booking }) {
 // ── Small helper to render "—" when empty ────────────────────────────────────
 const D = ({ v }: { v: string | undefined }) => <>{v || "\u2014"}</>;
 
+// ── Thai date formatter ────────────────────────────────────────────────────────
+const toThaiDate = (iso: string | undefined) => {
+  if (!iso) return "\u2014";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("th-TH", { year: "numeric", month: "short", day: "numeric" });
+};
+
 // ── BookingForm interface ────────────────────────────────────────────────────
 interface BookingForm {
   booking_date: string;
@@ -365,7 +373,7 @@ export default function BookingsPage() {
                             : <ChevronUp size={14} className="text-slate-500 shrink-0" />}
                           <CalendarDays size={14} className="text-blue-500 shrink-0" />
                           <span className="text-sm font-bold text-slate-700">
-                            {date === "No Date" ? "— ไม่มีวันที่ —" : date}
+                            {date === "No Date" ? "— ไม่มีวันที่ —" : toThaiDate(date)}
                           </span>
                           <span className="text-xs text-slate-400">
                             ({bookings.length} booking{bookings.length > 1 ? "s" : ""})
@@ -400,9 +408,9 @@ export default function BookingsPage() {
                           <td className="px-3 py-2 font-mono text-xs align-top">{b.seal_no || <span className="text-slate-300">—</span>}</td>
                           <td className="px-3 py-2 text-xs align-top">{b.tare_weight || <span className="text-slate-300">—</span>}</td>
                           <td className="px-3 py-2 text-[10px] leading-relaxed align-top whitespace-nowrap">
-                            <div><span className="text-slate-400">Pickup: </span><span className="font-medium">{b.plan_pickup_date || "—"}</span></div>
-                            <div><span className="text-slate-400">Loading: </span><span className="font-medium">{b.plan_loading_date || "—"}</span></div>
-                            <div><span className="text-slate-400">Return: </span><span className="font-medium">{b.plan_return_date || "—"}</span></div>
+                            <div><span className="text-slate-400">Pickup: </span><span className="font-medium">{toThaiDate(b.plan_pickup_date)}</span></div>
+                            <div><span className="text-slate-400">Loading: </span><span className="font-medium">{toThaiDate(b.plan_loading_date)}</span></div>
+                            <div><span className="text-slate-400">Return: </span><span className="font-medium">{toThaiDate(b.plan_return_date)}</span></div>
                           </td>
                           <td className="px-3 py-2 align-top">
                             <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[b.loading_status || "pending"]}`}>
@@ -456,13 +464,13 @@ export default function BookingsPage() {
 
           {/* Part 1 — Draft */}
           <Section title="Part 1 \u2014 \u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25\u0e08\u0e2d\u0e07 (Draft)" number={1}>
-            <FormField label="\u0e27\u0e31\u0e19\u0e17\u0e35\u0e48\u0e08\u0e2d\u0e07" required>
+            <FormField label="\u0e27\u0e31\u0e19\u0e17\u0e35\u0e48\u0e08\u0e2d\u0e07">
               <Input type="date" value={form.booking_date} onChange={set("booking_date")} required />
             </FormField>
-            <FormField label="Booking No." required>
+            <FormField label="Booking No.">
               <Input value={form.booking_no} onChange={set("booking_no")} placeholder="e.g. BK-2024-001" required />
             </FormField>
-            <FormField label="Job Type" required>
+            <FormField label="Job Type">
               <Select value={form.job_type} onChange={set("job_type")} options={JOB_TYPE_OPTIONS} />
             </FormField>
             <FormField label="Customer">
