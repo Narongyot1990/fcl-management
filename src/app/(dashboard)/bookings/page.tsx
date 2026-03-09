@@ -1,6 +1,6 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
-import { Pencil, Trash2, Search, ChevronDown, ChevronUp } from "lucide-react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { Pencil, Trash2, Search, ChevronDown, ChevronUp, CalendarDays } from "lucide-react";
 import { listRecords, createRecord, updateRecord, deleteRecord } from "@/lib/api";
 import type { Booking, Vendor, Container, Customer, LoadingStatus, JobType } from "@/lib/types";
 import PageHeader from "@/components/PageHeader";
@@ -8,7 +8,7 @@ import Modal from "@/components/Modal";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { FormField, Input, Select } from "@/components/FormField";
 
-// ── Collapsible section ──────────────────────────────────────────────────────
+// ── Collapsible section (form) ───────────────────────────────────────────────
 function Section({ title, number, children }: { title: string; number: number; children: React.ReactNode }) {
   const [open, setOpen] = useState(true);
   return (
@@ -47,7 +47,7 @@ const STATUS_COLORS: Record<LoadingStatus, string> = {
 };
 
 // ── Step Progress Bar ────────────────────────────────────────────────────────
-const STEPS = ["Draft", "Truck", "Container", "Loading", "Return"];
+const STEPS = ["Draft", "Pickup", "Container", "Loading", "Return"];
 
 function getStep(b: Booking): number {
   if (b.return_completed) return 5;
@@ -71,7 +71,7 @@ function StepBar({ booking }: { booking: Booking }) {
               className={`w-5 h-5 rounded-full text-[9px] font-bold flex items-center justify-center shrink-0 ${
                 done ? "bg-green-500 text-white" : active ? "bg-blue-600 text-white" : "bg-slate-200 text-slate-400"
               }`}>
-              {done ? "✓" : i + 1}
+              {done ? "\u2713" : i + 1}
             </div>
             {i < STEPS.length - 1 && (
               <div className={`w-4 h-0.5 ${done ? "bg-green-400" : "bg-slate-200"}`} />
@@ -83,7 +83,10 @@ function StepBar({ booking }: { booking: Booking }) {
   );
 }
 
-// ── Empty form ───────────────────────────────────────────────────────────────
+// ── Small helper to render "—" when empty ────────────────────────────────────
+const D = ({ v }: { v: string | undefined }) => <>{v || "\u2014"}</>;
+
+// ── BookingForm interface ────────────────────────────────────────────────────
 interface BookingForm {
   booking_date: string;
   booking_no: string;
@@ -93,15 +96,21 @@ interface BookingForm {
   truck_plate: string;
   driver_name: string;
   driver_phone: string;
+  plan_pickup_date: string;
   container_no: string;
   container_size: string;
   container_size_code: string;
   tare_weight: string;
   seal_no: string;
   loading_status: LoadingStatus;
+  plan_loading_date: string;
   pending_at: string;
   loading_at: string;
   loaded_at: string;
+  plan_return_date: string;
+  return_truck_plate: string;
+  return_driver_name: string;
+  return_driver_phone: string;
   gcl_received: boolean;
   return_date: string;
   return_completed: boolean;
@@ -109,10 +118,11 @@ interface BookingForm {
 
 const EMPTY_FORM: BookingForm = {
   booking_date: "", booking_no: "", job_type: "Export", customer_code: "", vendor_code: "",
-  truck_plate: "", driver_name: "", driver_phone: "",
+  truck_plate: "", driver_name: "", driver_phone: "", plan_pickup_date: "",
   container_no: "", container_size: "", container_size_code: "",
   tare_weight: "", seal_no: "",
-  loading_status: "pending", pending_at: "", loading_at: "", loaded_at: "",
+  loading_status: "pending", plan_loading_date: "", pending_at: "", loading_at: "", loaded_at: "",
+  plan_return_date: "", return_truck_plate: "", return_driver_name: "", return_driver_phone: "",
   gcl_received: false, return_date: "", return_completed: false,
 };
 
@@ -127,6 +137,9 @@ const JOB_TYPE_OPTIONS: { value: JobType; label: string }[] = [
   { value: "Import", label: "Import" },
 ];
 
+// ── Number of table columns for colSpan ──────────────────────────────────────
+const COLS = 12;
+
 export default function BookingsPage() {
   const [records, setRecords] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -138,6 +151,7 @@ export default function BookingsPage() {
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Booking | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [containers, setContainers] = useState<Container[]>([]);
@@ -172,6 +186,30 @@ export default function BookingsPage() {
   useEffect(() => { load(); }, [load]);
   useEffect(() => { loadDropdowns(); }, [loadDropdowns]);
 
+  // ── Group bookings by booking_date sorted desc ──
+  const grouped = useMemo(() => {
+    const sorted = [...records].sort((a, b) => {
+      const da = a.booking_date || ""; const db = b.booking_date || "";
+      if (da !== db) return db.localeCompare(da); // date desc
+      return (a.booking_no || "").localeCompare(b.booking_no || ""); // booking_no asc
+    });
+    const map = new Map<string, Booking[]>();
+    for (const b of sorted) {
+      const key = b.booking_date || "No Date";
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(b);
+    }
+    return map;
+  }, [records]);
+
+  function toggleGroup(date: string) {
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(date)) next.delete(date); else next.add(date);
+      return next;
+    });
+  }
+
   // ── Selected vendor helpers ──
   const selectedVendor = vendors.find((v) => v.code === form.vendor_code);
   const truckPlateOptions = (selectedVendor?.truck_plates || []).map((p) => ({ value: p, label: p }));
@@ -184,6 +222,11 @@ export default function BookingsPage() {
   function handleDriverChange(name: string) {
     const driver = selectedVendor?.drivers?.find((d) => d.name === name);
     setForm((f) => ({ ...f, driver_name: name, driver_phone: driver?.phone ?? "" }));
+  }
+
+  function handleReturnDriverChange(name: string) {
+    const driver = selectedVendor?.drivers?.find((d) => d.name === name);
+    setForm((f) => ({ ...f, return_driver_name: name, return_driver_phone: driver?.phone ?? "" }));
   }
 
   // ── Container dropdown helpers ──
@@ -213,15 +256,21 @@ export default function BookingsPage() {
       truck_plate: b.truck_plate ?? "",
       driver_name: b.driver_name ?? "",
       driver_phone: b.driver_phone ?? "",
+      plan_pickup_date: b.plan_pickup_date ?? "",
       container_no: b.container_no ?? "",
       container_size: b.container_size ?? "",
       container_size_code: b.container_size_code ?? "",
       tare_weight: b.tare_weight ?? "",
       seal_no: b.seal_no ?? "",
       loading_status: b.loading_status ?? "pending",
+      plan_loading_date: b.plan_loading_date ?? "",
       pending_at: b.pending_at ?? "",
       loading_at: b.loading_at ?? "",
       loaded_at: b.loaded_at ?? "",
+      plan_return_date: b.plan_return_date ?? "",
+      return_truck_plate: b.return_truck_plate ?? "",
+      return_driver_name: b.return_driver_name ?? "",
+      return_driver_phone: b.return_driver_phone ?? "",
       gcl_received: b.gcl_received ?? false,
       return_date: b.return_date ?? "",
       return_completed: b.return_completed ?? false,
@@ -270,69 +319,118 @@ export default function BookingsPage() {
 
       {error && <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">{error}</div>}
 
-      {/* ── Table ── */}
+      {/* ── Table grouped by date ── */}
       <div className="bg-white rounded-2xl border border-[var(--border)] shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[var(--border)] bg-slate-50">
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">#</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide w-8">#</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Booking No.</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Date</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Type</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Customer</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Vendor</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Truck</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Container</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Size</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Size / Code</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Seal</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Tare</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Plan Dates</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Status</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Progress</th>
-                <th className="px-4 py-3" />
+                <th className="px-4 py-3 w-20" />
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={13} className="px-5 py-10 text-center text-[var(--muted)]">Loading…</td></tr>
+                <tr><td colSpan={COLS} className="px-5 py-10 text-center text-[var(--muted)]">Loading\u2026</td></tr>
               ) : records.length === 0 ? (
-                <tr><td colSpan={13} className="px-5 py-10 text-center text-[var(--muted)]">ยังไม่มี Booking กด Add New เพื่อสร้าง</td></tr>
+                <tr><td colSpan={COLS} className="px-5 py-10 text-center text-[var(--muted)]">\u0e22\u0e31\u0e07\u0e44\u0e21\u0e48\u0e21\u0e35 Booking \u0e01\u0e14 Add New \u0e40\u0e1e\u0e37\u0e48\u0e2d\u0e2a\u0e23\u0e49\u0e32\u0e07</td></tr>
               ) : (
-                records.map((b, i) => (
-                  <tr key={b._id} className="border-b border-[var(--border)] last:border-0 hover:bg-slate-50 transition-colors">
-                    <td className="px-4 py-3 text-xs text-[var(--muted)]">{i + 1}</td>
-                    <td className="px-4 py-3 font-mono font-medium text-violet-700 whitespace-nowrap">{b.booking_no}</td>
-                    <td className="px-4 py-3 text-xs text-[var(--muted)] whitespace-nowrap">{b.booking_date || "—"}</td>
-                    <td className="px-4 py-3">
-                      {b.job_type ? (
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${b.job_type === "Export" ? "bg-blue-100 text-blue-800" : "bg-orange-100 text-orange-800"}`}>
-                          {b.job_type}
-                        </span>
-                      ) : "—"}
-                    </td>
-                    <td className="px-4 py-3 text-xs">{b.customer_code || "—"}</td>
-                    <td className="px-4 py-3 text-xs">{b.vendor_code || "—"}</td>
-                    <td className="px-4 py-3 font-mono text-xs">{b.truck_plate || "—"}</td>
-                    <td className="px-4 py-3 font-mono text-xs whitespace-nowrap">{b.container_no || "—"}</td>
-                    <td className="px-4 py-3">
-                      {b.container_size ? (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">{b.container_size}</span>
-                      ) : "—"}
-                    </td>
-                    <td className="px-4 py-3 font-mono text-xs">{b.seal_no || "—"}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[b.loading_status || "pending"]}`}>
-                        {b.loading_status || "pending"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3"><StepBar booking={b} /></td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1 justify-end">
-                        <button onClick={() => openEdit(b)} className="p-1.5 rounded-lg hover:bg-blue-50 text-[var(--muted)] hover:text-blue-600 transition-colors"><Pencil size={14} /></button>
-                        <button onClick={() => setDeleteTarget(b)} className="p-1.5 rounded-lg hover:bg-red-50 text-[var(--muted)] hover:text-red-600 transition-colors"><Trash2 size={14} /></button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                Array.from(grouped.entries()).map(([date, bookings]) => {
+                  const isCollapsed = collapsed.has(date);
+                  return (
+                    <tbody key={date}>
+                      {/* ── Date group header ── */}
+                      <tr className="bg-slate-100 cursor-pointer" onClick={() => toggleGroup(date)}>
+                        <td colSpan={COLS} className="px-4 py-2.5">
+                          <div className="flex items-center gap-2">
+                            {isCollapsed ? <ChevronDown size={14} className="text-slate-400" /> : <ChevronUp size={14} className="text-slate-400" />}
+                            <CalendarDays size={14} className="text-blue-500" />
+                            <span className="text-sm font-semibold text-slate-700">{date === "No Date" ? "No Date" : date}</span>
+                            <span className="text-xs text-slate-400 ml-1">({bookings.length} booking{bookings.length > 1 ? "s" : ""})</span>
+                          </div>
+                        </td>
+                      </tr>
+                      {/* ── Rows per booking (2 rows each) ── */}
+                      {!isCollapsed && bookings.map((b, i) => (
+                        <>
+                          {/* Row 1: main container info */}
+                          <tr key={b._id + "-1"} className="border-b border-slate-100 hover:bg-slate-50/50">
+                            <td className="px-4 py-2 text-xs text-[var(--muted)]" rowSpan={2}>{i + 1}</td>
+                            <td className="px-4 py-2 font-mono font-medium text-violet-700 whitespace-nowrap" rowSpan={2}>
+                              {b.booking_no}
+                              <div className="text-[10px] text-[var(--muted)] font-normal mt-0.5">Vendor: {b.vendor_code || "\u2014"}</div>
+                            </td>
+                            <td className="px-4 py-2">
+                              {b.job_type ? (
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${b.job_type === "Export" ? "bg-blue-100 text-blue-800" : "bg-orange-100 text-orange-800"}`}>
+                                  {b.job_type}
+                                </span>
+                              ) : "\u2014"}
+                            </td>
+                            <td className="px-4 py-2 text-xs"><D v={b.customer_code} /></td>
+                            <td className="px-4 py-2 font-mono text-xs whitespace-nowrap"><D v={b.container_no} /></td>
+                            <td className="px-4 py-2 text-xs whitespace-nowrap">
+                              {b.container_size ? (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-medium">{b.container_size}</span>
+                              ) : "\u2014"}
+                              {b.container_size_code && <span className="text-[var(--muted)] ml-1">/ {b.container_size_code}</span>}
+                            </td>
+                            <td className="px-4 py-2 font-mono text-xs"><D v={b.seal_no} /></td>
+                            <td className="px-4 py-2 text-xs"><D v={b.tare_weight} /></td>
+                            <td className="px-4 py-2 text-[10px] leading-snug whitespace-nowrap">
+                              <div><span className="text-slate-400">Pickup:</span> <span className="font-medium">{b.plan_pickup_date || "\u2014"}</span></div>
+                              <div><span className="text-slate-400">Loading:</span> <span className="font-medium">{b.plan_loading_date || "\u2014"}</span></div>
+                              <div><span className="text-slate-400">Return:</span> <span className="font-medium">{b.plan_return_date || "\u2014"}</span></div>
+                            </td>
+                            <td className="px-4 py-2">
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[b.loading_status || "pending"]}`}>
+                                {b.loading_status || "pending"}
+                              </span>
+                            </td>
+                            <td className="px-4 py-2"><StepBar booking={b} /></td>
+                            <td className="px-4 py-2" rowSpan={2}>
+                              <div className="flex flex-col items-center gap-1">
+                                <button onClick={() => openEdit(b)} className="p-1.5 rounded-lg hover:bg-blue-50 text-[var(--muted)] hover:text-blue-600 transition-colors"><Pencil size={14} /></button>
+                                <button onClick={() => setDeleteTarget(b)} className="p-1.5 rounded-lg hover:bg-red-50 text-[var(--muted)] hover:text-red-600 transition-colors"><Trash2 size={14} /></button>
+                              </div>
+                            </td>
+                          </tr>
+                          {/* Row 2: driver details */}
+                          <tr key={b._id + "-2"} className="border-b border-[var(--border)] bg-slate-50/40">
+                            <td colSpan={10} className="px-4 py-2 text-xs">
+                              <div className="flex flex-wrap gap-x-8 gap-y-1">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700 uppercase tracking-wider">Pickup</span>
+                                  <span className="font-medium">{b.driver_name || "\u2014"}</span>
+                                  <span className="text-[var(--muted)]">{b.driver_phone || ""}</span>
+                                  <span className="font-mono text-[var(--muted)]">{b.truck_plate || ""}</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-violet-100 text-violet-700 uppercase tracking-wider">Return</span>
+                                  <span className="font-medium">{b.return_driver_name || "\u2014"}</span>
+                                  <span className="text-[var(--muted)]">{b.return_driver_phone || ""}</span>
+                                  <span className="font-mono text-[var(--muted)]">{b.return_truck_plate || ""}</span>
+                                </div>
+                                {b.gcl_received && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700">GCL \u2713</span>}
+                                {b.return_completed && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700">Returned \u2713</span>}
+                              </div>
+                            </td>
+                          </tr>
+                        </>
+                      ))}
+                    </tbody>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -340,12 +438,12 @@ export default function BookingsPage() {
       </div>
 
       {/* ── Modal Form ── */}
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? "แก้ไข Booking" : "สร้าง Booking ใหม่"} size="xl">
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? "\u0e41\u0e01\u0e49\u0e44\u0e02 Booking" : "\u0e2a\u0e23\u0e49\u0e32\u0e07 Booking \u0e43\u0e2b\u0e21\u0e48"} size="xl">
         <form onSubmit={handleSave} className="flex flex-col gap-4">
 
           {/* Part 1 — Draft */}
-          <Section title="Part 1 — ข้อมูลจอง (Draft)" number={1}>
-            <FormField label="วันที่จอง" required>
+          <Section title="Part 1 \u2014 \u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25\u0e08\u0e2d\u0e07 (Draft)" number={1}>
+            <FormField label="\u0e27\u0e31\u0e19\u0e17\u0e35\u0e48\u0e08\u0e2d\u0e07" required>
               <Input type="date" value={form.booking_date} onChange={set("booking_date")} required />
             </FormField>
             <FormField label="Booking No." required>
@@ -356,94 +454,110 @@ export default function BookingsPage() {
             </FormField>
             <FormField label="Customer">
               <Select value={form.customer_code} onChange={set("customer_code")}
-                options={customers.map((c) => ({ value: c.code, label: `${c.code} — ${c.name}` }))}
-                placeholder="เลือก Customer…" />
+                options={customers.map((c) => ({ value: c.code, label: `${c.code} \u2014 ${c.name}` }))}
+                placeholder="\u0e40\u0e25\u0e37\u0e2d\u0e01 Customer\u2026" />
             </FormField>
             <div className="col-span-2">
-              <FormField label="Vendor (ผู้ขนส่ง)">
+              <FormField label="Vendor (\u0e1c\u0e39\u0e49\u0e02\u0e19\u0e2a\u0e48\u0e07)">
                 <Select value={form.vendor_code} onChange={(e) => handleVendorChange(e.target.value)}
-                  options={vendors.map((v) => ({ value: v.code, label: `${v.code} — ${v.name}` }))} placeholder="เลือก Vendor…" />
+                  options={vendors.map((v) => ({ value: v.code, label: `${v.code} \u2014 ${v.name}` }))} placeholder="\u0e40\u0e25\u0e37\u0e2d\u0e01 Vendor\u2026" />
               </FormField>
             </div>
           </Section>
 
-          {/* Part 2 — Truck Assignment */}
-          <Section title="Part 2 — จัดรถ / คนขับ" number={2}>
-            <FormField label="ทะเบียนรถ" hint="ดึงจาก Vendor ที่เลือก">
+          {/* Part 2 — Pickup Truck Assignment */}
+          <Section title="Part 2 \u2014 \u0e08\u0e31\u0e14\u0e23\u0e16 Pickup / \u0e04\u0e19\u0e02\u0e31\u0e1a" number={2}>
+            <FormField label="\u0e17\u0e30\u0e40\u0e1a\u0e35\u0e22\u0e19\u0e23\u0e16" hint="\u0e14\u0e36\u0e07\u0e08\u0e32\u0e01 Vendor \u0e17\u0e35\u0e48\u0e40\u0e25\u0e37\u0e2d\u0e01">
               <Select value={form.truck_plate} onChange={set("truck_plate")}
-                options={truckPlateOptions} placeholder={selectedVendor ? "เลือกทะเบียน…" : "เลือก Vendor ก่อน"} disabled={!selectedVendor} />
+                options={truckPlateOptions} placeholder={selectedVendor ? "\u0e40\u0e25\u0e37\u0e2d\u0e01\u0e17\u0e30\u0e40\u0e1a\u0e35\u0e22\u0e19\u2026" : "\u0e40\u0e25\u0e37\u0e2d\u0e01 Vendor \u0e01\u0e48\u0e2d\u0e19"} disabled={!selectedVendor} />
             </FormField>
-            <FormField label="คนขับ" hint="ดึงจาก Vendor ที่เลือก">
+            <FormField label="\u0e04\u0e19\u0e02\u0e31\u0e1a" hint="\u0e14\u0e36\u0e07\u0e08\u0e32\u0e01 Vendor \u0e17\u0e35\u0e48\u0e40\u0e25\u0e37\u0e2d\u0e01">
               <Select value={form.driver_name} onChange={(e) => handleDriverChange(e.target.value)}
-                options={driverOptions} placeholder={selectedVendor ? "เลือกคนขับ…" : "เลือก Vendor ก่อน"} disabled={!selectedVendor} />
+                options={driverOptions} placeholder={selectedVendor ? "\u0e40\u0e25\u0e37\u0e2d\u0e01\u0e04\u0e19\u0e02\u0e31\u0e1a\u2026" : "\u0e40\u0e25\u0e37\u0e2d\u0e01 Vendor \u0e01\u0e48\u0e2d\u0e19"} disabled={!selectedVendor} />
             </FormField>
-            <div className="col-span-2">
-              <FormField label="เบอร์โทรคนขับ" hint="Auto-fill จากคนขับที่เลือก">
-                <Input value={form.driver_phone} onChange={set("driver_phone")} placeholder="เบอร์โทร" readOnly />
-              </FormField>
-            </div>
+            <FormField label="\u0e40\u0e1a\u0e2d\u0e23\u0e4c\u0e42\u0e17\u0e23\u0e04\u0e19\u0e02\u0e31\u0e1a" hint="Auto-fill">
+              <Input value={form.driver_phone} onChange={set("driver_phone")} placeholder="\u0e40\u0e1a\u0e2d\u0e23\u0e4c\u0e42\u0e17\u0e23" readOnly />
+            </FormField>
+            <FormField label="Plan Pickup Date">
+              <Input type="date" value={form.plan_pickup_date} onChange={set("plan_pickup_date")} />
+            </FormField>
           </Section>
 
           {/* Part 3 — Depot / Container */}
-          <Section title="Part 3 — รับตู้จาก DEPOT" number={3}>
+          <Section title="Part 3 \u2014 \u0e23\u0e31\u0e1a\u0e15\u0e39\u0e49\u0e08\u0e32\u0e01 DEPOT" number={3}>
             <FormField label="Container No.">
               <Input value={form.container_no} onChange={set("container_no")} placeholder="e.g. TCKU1234567" />
             </FormField>
             <FormField label="Container Size" hint="e.g. 40HC">
               <Select value={form.container_size} onChange={(e) => handleSizeChange(e.target.value)}
-                options={sizeOptions} placeholder="เลือก Size…" />
+                options={sizeOptions} placeholder="\u0e40\u0e25\u0e37\u0e2d\u0e01 Size\u2026" />
             </FormField>
             <FormField label="Size Code (ISO)" hint="e.g. 45G1">
               <Select value={form.container_size_code} onChange={(e) => handleCodeChange(e.target.value)}
-                options={codeOptions} placeholder="เลือก Code…" />
+                options={codeOptions} placeholder="\u0e40\u0e25\u0e37\u0e2d\u0e01 Code\u2026" />
             </FormField>
             <FormField label="Tare Weight (kg)">
               <Input value={form.tare_weight} onChange={set("tare_weight")} placeholder="e.g. 3800" />
             </FormField>
             <div className="col-span-2">
               <FormField label="Seal No.">
-                <Input value={form.seal_no} onChange={set("seal_no")} placeholder="หมายเลขซีล" />
+                <Input value={form.seal_no} onChange={set("seal_no")} placeholder="\u0e2b\u0e21\u0e32\u0e22\u0e40\u0e25\u0e02\u0e0b\u0e35\u0e25" />
               </FormField>
             </div>
           </Section>
 
           {/* Part 4 — Loading Status */}
-          <Section title="Part 4 — สถานะโหลดสินค้า" number={4}>
-            <div className="col-span-2">
-              <FormField label="สถานะ">
-                <Select value={form.loading_status} onChange={set("loading_status")} options={LOADING_OPTIONS} />
-              </FormField>
-            </div>
-            <FormField label="Pending เวลา">
+          <Section title="Part 4 \u2014 \u0e2a\u0e16\u0e32\u0e19\u0e30\u0e42\u0e2b\u0e25\u0e14\u0e2a\u0e34\u0e19\u0e04\u0e49\u0e32" number={4}>
+            <FormField label="\u0e2a\u0e16\u0e32\u0e19\u0e30">
+              <Select value={form.loading_status} onChange={set("loading_status")} options={LOADING_OPTIONS} />
+            </FormField>
+            <FormField label="Plan Loading Date">
+              <Input type="date" value={form.plan_loading_date} onChange={set("plan_loading_date")} />
+            </FormField>
+            <FormField label="Pending \u0e40\u0e27\u0e25\u0e32">
               <Input type="datetime-local" value={form.pending_at} onChange={set("pending_at")} />
             </FormField>
-            <FormField label="Loading เวลา">
+            <FormField label="Loading \u0e40\u0e27\u0e25\u0e32">
               <Input type="datetime-local" value={form.loading_at} onChange={set("loading_at")} />
             </FormField>
             <div className="col-span-2">
-              <FormField label="Loaded เวลา">
+              <FormField label="Loaded \u0e40\u0e27\u0e25\u0e32">
                 <Input type="datetime-local" value={form.loaded_at} onChange={set("loaded_at")} />
               </FormField>
             </div>
           </Section>
 
           {/* Part 5 — Return */}
-          <Section title="Part 5 — คืนตู้ท่า" number={5}>
+          <Section title="Part 5 \u2014 \u0e04\u0e37\u0e19\u0e15\u0e39\u0e49\u0e17\u0e48\u0e32" number={5}>
+            <FormField label="Plan Return Date">
+              <Input type="date" value={form.plan_return_date} onChange={set("plan_return_date")} />
+            </FormField>
+            <FormField label="\u0e17\u0e30\u0e40\u0e1a\u0e35\u0e22\u0e19\u0e23\u0e16\u0e04\u0e37\u0e19\u0e15\u0e39\u0e49" hint="\u0e14\u0e36\u0e07\u0e08\u0e32\u0e01 Vendor">
+              <Select value={form.return_truck_plate} onChange={set("return_truck_plate")}
+                options={truckPlateOptions} placeholder={selectedVendor ? "\u0e40\u0e25\u0e37\u0e2d\u0e01\u0e17\u0e30\u0e40\u0e1a\u0e35\u0e22\u0e19\u2026" : "\u0e40\u0e25\u0e37\u0e2d\u0e01 Vendor \u0e01\u0e48\u0e2d\u0e19"} disabled={!selectedVendor} />
+            </FormField>
+            <FormField label="\u0e04\u0e19\u0e02\u0e31\u0e1a\u0e04\u0e37\u0e19\u0e15\u0e39\u0e49" hint="\u0e14\u0e36\u0e07\u0e08\u0e32\u0e01 Vendor">
+              <Select value={form.return_driver_name} onChange={(e) => handleReturnDriverChange(e.target.value)}
+                options={driverOptions} placeholder={selectedVendor ? "\u0e40\u0e25\u0e37\u0e2d\u0e01\u0e04\u0e19\u0e02\u0e31\u0e1a\u2026" : "\u0e40\u0e25\u0e37\u0e2d\u0e01 Vendor \u0e01\u0e48\u0e2d\u0e19"} disabled={!selectedVendor} />
+            </FormField>
+            <FormField label="\u0e40\u0e1a\u0e2d\u0e23\u0e4c\u0e04\u0e19\u0e02\u0e31\u0e1a\u0e04\u0e37\u0e19\u0e15\u0e39\u0e49" hint="Auto-fill">
+              <Input value={form.return_driver_phone} onChange={set("return_driver_phone")} placeholder="\u0e40\u0e1a\u0e2d\u0e23\u0e4c\u0e42\u0e17\u0e23" readOnly />
+            </FormField>
             <div className="col-span-2 flex flex-col gap-4">
-              <Toggle checked={form.gcl_received} onChange={(v) => setForm((f) => ({ ...f, gcl_received: v }))} label="ได้รับ GCL (Good Control List) แล้ว" />
-              <FormField label="วัน-เวลาคืนตู้">
+              <Toggle checked={form.gcl_received} onChange={(v) => setForm((f) => ({ ...f, gcl_received: v }))} label="\u0e44\u0e14\u0e49\u0e23\u0e31\u0e1a GCL (Good Control List) \u0e41\u0e25\u0e49\u0e27" />
+              <FormField label="\u0e27\u0e31\u0e19-\u0e40\u0e27\u0e25\u0e32\u0e04\u0e37\u0e19\u0e15\u0e39\u0e49\u0e08\u0e23\u0e34\u0e07">
                 <Input type="datetime-local" value={form.return_date} onChange={set("return_date")} />
               </FormField>
-              <Toggle checked={form.return_completed} onChange={(v) => setForm((f) => ({ ...f, return_completed: v }))} label="คืนตู้เรียบร้อยแล้ว" />
+              <Toggle checked={form.return_completed} onChange={(v) => setForm((f) => ({ ...f, return_completed: v }))} label="\u0e04\u0e37\u0e19\u0e15\u0e39\u0e49\u0e40\u0e23\u0e35\u0e22\u0e1a\u0e23\u0e49\u0e2d\u0e22\u0e41\u0e25\u0e49\u0e27" />
             </div>
           </Section>
 
           <div className="flex gap-3 justify-end pt-2">
             <button type="button" onClick={() => setModalOpen(false)}
-              className="px-4 py-2 text-sm rounded-lg border border-[var(--border)] hover:bg-slate-50 transition-colors">ยกเลิก</button>
+              className="px-4 py-2 text-sm rounded-lg border border-[var(--border)] hover:bg-slate-50 transition-colors">\u0e22\u0e01\u0e40\u0e25\u0e34\u0e01</button>
             <button type="submit" disabled={saving}
               className="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50 font-medium">
-              {saving ? "กำลังบันทึก…" : editing ? "บันทึก" : "สร้าง Booking"}
+              {saving ? "\u0e01\u0e33\u0e25\u0e31\u0e07\u0e1a\u0e31\u0e19\u0e17\u0e36\u0e01\u2026" : editing ? "\u0e1a\u0e31\u0e19\u0e17\u0e36\u0e01" : "\u0e2a\u0e23\u0e49\u0e32\u0e07 Booking"}
             </button>
           </div>
         </form>
@@ -451,8 +565,8 @@ export default function BookingsPage() {
 
       <ConfirmDialog
         open={!!deleteTarget}
-        title="ลบ Booking"
-        message={`ต้องการลบ booking "${deleteTarget?.booking_no}" ใช่หรือไม่?`}
+        title="\u0e25\u0e1a Booking"
+        message={`\u0e15\u0e49\u0e2d\u0e07\u0e01\u0e32\u0e23\u0e25\u0e1a booking "${deleteTarget?.booking_no}" \u0e43\u0e0a\u0e48\u0e2b\u0e23\u0e37\u0e2d\u0e44\u0e21\u0e48?`}
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
         loading={deleting}

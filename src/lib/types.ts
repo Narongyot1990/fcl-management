@@ -47,10 +47,11 @@ export interface Booking {
   customer_code: string;  // FK → Customer.code
   vendor_code: string;    // FK → Vendor.code
 
-  // Part 2 — Truck Assignment (หลังจองรถ)
+  // Part 2 — Pickup Truck Assignment (หลังจองรถ — ไป pickup ตู้)
   truck_plate: string;    // dropdown จาก vendor
   driver_name: string;    // dropdown จาก vendor.drivers
   driver_phone: string;   // auto-fill จาก vendor.drivers match
+  plan_pickup_date: string;  // วันที่แผน pickup
 
   // Part 3 — Depot / Container (พขร. ไปรับตู้)
   container_no: string;
@@ -61,11 +62,16 @@ export interface Booking {
 
   // Part 4 — Loading status
   loading_status: LoadingStatus;
+  plan_loading_date: string;  // วันที่แผน loading
   pending_at: string;
   loading_at: string;
   loaded_at: string;
 
   // Part 5 — Return (คืนตู้ท่า)
+  plan_return_date: string;    // วันที่แผน return
+  return_truck_plate: string;  // ทะเบียนรถคืนตู้
+  return_driver_name: string;  // คนขับคืนตู้
+  return_driver_phone: string; // เบอร์คนขับคืนตู้
   gcl_received: boolean;  // Good Control List — ได้หรือยัง
   return_date: string;
   return_completed: boolean;
