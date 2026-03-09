@@ -3,8 +3,8 @@ import { useState } from "react";
 import { Sparkles, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 
 interface OcrResult {
-  container_no: string | null;
-  seal_no: string | null;
+  container_size_code: string | null;
+  tare_weight: string | null;
 }
 
 interface Props {
@@ -38,7 +38,7 @@ export default function GeminiOcrButton({ imageUrl, imageLabel, onResult }: Prop
 
       const data: OcrResult = await res.json();
 
-      if (!data.container_no && !data.seal_no) {
+      if (!data.container_size_code && !data.tare_weight) {
         setStatus("low_confidence");
         setMessage("ภาพไม่ชัดพอ หรือ Gemini ไม่มั่นใจ — กรุณากรอกเอง");
         return;
@@ -47,8 +47,8 @@ export default function GeminiOcrButton({ imageUrl, imageLabel, onResult }: Prop
       onResult(data);
 
       const filled: string[] = [];
-      if (data.container_no) filled.push(`Container: ${data.container_no}`);
-      if (data.seal_no) filled.push(`Seal: ${data.seal_no}`);
+      if (data.container_size_code) filled.push(`Code: ${data.container_size_code}`);
+      if (data.tare_weight) filled.push(`Tare: ${data.tare_weight}kg`);
       setStatus("success");
       setMessage(filled.join("  |  "));
 

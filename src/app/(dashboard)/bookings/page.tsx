@@ -627,25 +627,16 @@ export default function BookingsPage() {
               {/* Gemini OCR buttons */}
               <div className="flex flex-wrap gap-3 pt-1 border-t border-slate-100">
                 <GeminiOcrButton
-                  imageUrl={form.eir_image_url}
-                  imageLabel="EIR"
-                  onResult={(r) => setForm((f) => ({
-                    ...f,
-                    ...(r.container_no ? { container_no: r.container_no } : {}),
-                    ...(r.seal_no ? { seal_no: r.seal_no } : {}),
-                  }))}
-                />
-                <GeminiOcrButton
                   imageUrl={form.container_image_url}
                   imageLabel="Container"
                   onResult={(r) => setForm((f) => ({
                     ...f,
-                    ...(r.container_no ? { container_no: r.container_no } : {}),
-                    ...(r.seal_no ? { seal_no: r.seal_no } : {}),
+                    ...(r.container_size_code ? { container_size_code: r.container_size_code } : {}),
+                    ...(r.tare_weight ? { tare_weight: r.tare_weight } : {}),
                   }))}
                 />
                 <p className="text-[11px] text-slate-400 self-center">
-                  AI จะกรอก Container No. และ Seal No. อัตโนมัติ (เฉพาะที่มั่นใจ 95%+ เท่านั้น)
+                  AI จะกรอก Size Code (45G1) และ Tare Weight อัตโนมัติ (เฉพาะที่มั่นใจ 95%+ เท่านั้น)
                 </p>
               </div>
             </div>
