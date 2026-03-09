@@ -17,6 +17,19 @@ interface Props {
 
 type Status = "idle" | "loading" | "success" | "error" | "low_confidence";
 
+/** Fetch an image URL in the browser and return { base64, contentType } */
+async function imageToBase64(url: string): Promise<{ base64: string; contentType: string }> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Failed to load image: ${res.status}`);
+  const blob = await res.blob();
+  const contentType = blob.type || "image/jpeg";
+  const buffer = await blob.arrayBuffer();
+  const base64 = btoa(
+    new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
+  );
+  return { base64, contentType };
+}
+
 export default function GeminiOcrButton({ containerImageUrl, eirImageUrl, onResult }: Props) {
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState("");
@@ -27,10 +40,20 @@ export default function GeminiOcrButton({ containerImageUrl, eirImageUrl, onResu
     setMessage("");
 
     try {
+      // Fetch both images client-side and convert to base64
+      // This works for all URL types (proxy, direct blob, external)
+      const [containerImg, eirImg] = await Promise.all([
+        imageToBase64(containerImageUrl),
+        imageToBase64(eirImageUrl),
+      ]);
+
       const res = await fetch("/api/gemini-ocr", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ containerImageUrl, eirImageUrl }),
+        body: JSON.stringify({
+          containerImage: containerImg,
+          eirImage: eirImg,
+        }),
       });
 
       if (!res.ok) {

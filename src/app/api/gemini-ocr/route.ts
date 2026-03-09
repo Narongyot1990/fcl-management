@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { list } from "@vercel/blob";
 
 export const runtime = "nodejs";
 
@@ -32,53 +31,21 @@ Rules (STRICTLY FOLLOW):
 Response format (JSON only):
 {"container_size_code": "45G1" | null, "tare_weight": "3700" | null, "container_no": "TCKU1234567" | null, "seal_no": "1234567" | null}`;
 
-/**
- * Resolve an image URL to { base64, contentType }.
- *
- * Handles two cases:
- * 1. Proxy URL like "/api/image/container_xxx.blob" → use list() to find actual blob URL → fetch it
- *    (We can't use get() because put() adds a random suffix to the pathname)
- * 2. Direct URL (Vercel Blob or any absolute URL) → fetch directly
- */
-async function resolveImage(url: string): Promise<{ base64: string; contentType: string }> {
-  let fetchUrl = url;
-
-  // Case 1: Proxy URL → find the real blob URL via list() prefix search
-  const proxyMatch = url.match(/\/api\/image\/(.+)/);
-  if (proxyMatch) {
-    const rawFilename = decodeURIComponent(proxyMatch[1]).replace(/\.blob$/, "");
-    // Strip file extension to get the base name for prefix search
-    const baseName = rawFilename.replace(/\.[^.]+$/, "");
-    const prefix = `itl-files/${baseName}`;
-
-    console.log("[gemini-ocr] Proxy URL detected, searching blobs with prefix:", prefix);
-    const { blobs } = await list({ prefix, limit: 5 });
-
-    if (blobs.length === 0) {
-      throw new Error(`No blob found with prefix: ${prefix}`);
-    }
-
-    // Use the first (most recent or only) match
-    fetchUrl = blobs[0].url;
-    console.log("[gemini-ocr] Found blob:", fetchUrl.slice(0, 100));
-  }
-
-  // Fetch the image
-  console.log("[gemini-ocr] Fetching:", fetchUrl.slice(0, 100));
-  const res = await fetch(fetchUrl);
-  if (!res.ok) throw new Error(`Failed to fetch image: ${res.status} ${fetchUrl.slice(0, 80)}`);
-  const buf = Buffer.from(await res.arrayBuffer());
-  return {
-    base64: buf.toString("base64"),
-    contentType: res.headers.get("content-type") || "image/jpeg",
-  };
+interface ImageData {
+  base64: string;
+  contentType: string;
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { containerImageUrl, eirImageUrl } = await request.json();
-    if (!containerImageUrl || !eirImageUrl) {
-      return NextResponse.json({ error: "containerImageUrl and eirImageUrl are required" }, { status: 400 });
+    // Client sends base64-encoded images directly (no server-side blob resolution needed)
+    const { containerImage, eirImage } = await request.json() as {
+      containerImage: ImageData;
+      eirImage: ImageData;
+    };
+
+    if (!containerImage?.base64 || !eirImage?.base64) {
+      return NextResponse.json({ error: "containerImage and eirImage with base64 data are required" }, { status: 400 });
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
@@ -87,17 +54,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "GEMINI_API_KEY not configured" }, { status: 500 });
     }
 
-    console.log("[gemini-ocr] Resolving images...");
-    console.log("[gemini-ocr] Container URL:", containerImageUrl.slice(0, 80));
-    console.log("[gemini-ocr] EIR URL:", eirImageUrl.slice(0, 80));
-
-    // Resolve both images to base64 — handles blob SDK + direct fetch
-    const [containerImg, eirImg] = await Promise.all([
-      resolveImage(containerImageUrl),
-      resolveImage(eirImageUrl),
-    ]);
-
-    console.log("[gemini-ocr] Images resolved. Container:", containerImg.contentType, "EIR:", eirImg.contentType);
+    console.log("[gemini-ocr] Received base64 images. Container:", containerImage.contentType, "EIR:", eirImage.contentType);
 
     const payload = {
       contents: [
@@ -107,15 +64,15 @@ export async function POST(request: NextRequest) {
             { text: "Image 1 - CONTAINER door photo:" },
             {
               inline_data: {
-                mime_type: containerImg.contentType,
-                data: containerImg.base64,
+                mime_type: containerImage.contentType,
+                data: containerImage.base64,
               },
             },
             { text: "Image 2 - EIR document:" },
             {
               inline_data: {
-                mime_type: eirImg.contentType,
-                data: eirImg.base64,
+                mime_type: eirImage.contentType,
+                data: eirImage.base64,
               },
             },
           ],
