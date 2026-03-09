@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     console.log("Filename:", filename);
 
     const blob = await put(filename, file, {
-      access: "public",
+      access: "private",
     });
     console.log("✅ Blob uploaded:", blob.url);
 
