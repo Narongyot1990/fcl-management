@@ -48,9 +48,9 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: 
 const STEPS = ["Booking", "Pickup", "Loading", "Return"];
 
 function getStep(b: Booking): number {
-  if (b.return_completed) return 3;
-  if (b.gcl_received || b.return_date || b.loading_status === "loaded") return 2;
-  if (b.loading_status === "loading" || b.truck_plate) return 1;
+  if (b.return_completed || b.return_date) return 3;
+  if (b.loaded_at) return 2;
+  if (b.loading_at || b.pending_at || b.truck_plate) return 1;
   return 0;
 }
 
@@ -77,11 +77,24 @@ function StepBar({ booking }: { booking: Booking }) {
       />
       
       <div className="relative flex justify-between w-full">
-        {STEPS.map((label, i) => {
-          const done = i <= current;
+        {STEPS.map((baseLabel, i) => {
+          let done = i <= current;
+          
+          // Step 3 (index 2): Special dynamic label logic
+          let label = baseLabel;
+          if (i === 2) {
+            if (booking.loaded_at) { label = "Loaded"; done = true; }
+            else if (booking.loading_at) { label = "Loading"; done = false; }
+            else if (booking.pending_at) { label = "Pending"; done = false; }
+            else { done = false; }
+          }
+          
+          // Step 4 (index 3): Determine by Return Completed switch or Return Date
+          if (i === 3) { done = !!booking.return_completed || !!booking.return_date; }
+
           const stepDate = getStepDate(booking, i);
           return (
-            <div key={label} className="flex flex-col items-center gap-1.5 w-10">
+            <div key={baseLabel} className="flex flex-col items-center gap-1.5 w-10">
               <div title={label}
                 className={`w-7 h-7 rounded-full text-[10px] font-bold flex items-center justify-center shrink-0 z-10 ring-4 ring-slate-50 transition-colors ${
                   done ? "bg-green-500 text-white" : "bg-slate-200 text-slate-400"
@@ -166,12 +179,6 @@ const EMPTY_FORM: BookingForm = {
   plan_return_date: "", return_truck_plate: "", return_driver_name: "", return_driver_phone: "",
   gcl_received: false, return_date: "", return_completed: false,
 };
-
-const LOADING_OPTIONS: { value: LoadingStatus; label: string }[] = [
-  { value: "pending", label: "Pending" },
-  { value: "loading", label: "Loading" },
-  { value: "loaded", label: "Loaded" },
-];
 
 const JOB_TYPE_OPTIONS: { value: JobType; label: string }[] = [
   { value: "Export", label: "Export" },
@@ -667,10 +674,7 @@ export default function BookingsPage() {
           </div>
 
           {/* ── Loading Status ── */}
-          <Section title="Loading Status" icon="📊" cols={3}>
-            <FormField label="สถานะ">
-              <Select value={form.loading_status} onChange={set("loading_status")} options={LOADING_OPTIONS} />
-            </FormField>
+          <Section title="Loading Status" icon="📊" cols={2}>
             <FormField label="Plan Loading">
               <Input type="date" value={form.plan_loading_date} onChange={set("plan_loading_date")} />
             </FormField>
