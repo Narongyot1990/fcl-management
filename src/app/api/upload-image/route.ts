@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { put } from "@vercel/blob";
+import { put, head } from "@vercel/blob";
 
 export const runtime = "nodejs";
 
@@ -36,6 +36,9 @@ export async function POST(request: NextRequest) {
       access: "private",
     });
     console.log("✅ Blob uploaded:", blob.url);
+
+    // For private blobs, the URL from put() is already a signed URL
+    console.log("✅ Signed URL:", blob.url);
 
     return NextResponse.json({ url: blob.url, filename });
   } catch (error) {
