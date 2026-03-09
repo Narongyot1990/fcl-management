@@ -390,28 +390,30 @@ export default function BookingsPage() {
                       <div key={b._id} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-6 hover:shadow-md transition-shadow relative space-y-4">
                         {/* Top row: Booking No + badges + actions */}
                         <div className="flex items-start justify-between gap-3">
-                          <div className="flex items-center gap-3 flex-wrap">
-                            <span className="text-xs text-slate-400 font-medium w-5">{i + 1}.</span>
-                            <span className="font-mono font-bold text-violet-700 text-sm">{b.booking_no}</span>
-                            {b.job_type && (
-                              <span className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold ${b.job_type === "Export" ? "bg-blue-100 text-blue-700" : "bg-orange-100 text-orange-700"}`}>
-                                {b.job_type}
-                              </span>
-                            )}
-                            <span className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-medium ${STATUS_COLORS[b.loading_status || "pending"]}`}>
-                              {b.loading_status || "pending"}
-                            </span>
-                            {b.gcl_received && <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700">GCL ✓</span>}
-                            {b.return_completed && <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700">คืนแล้ว ✓</span>}
+                          <div className="flex flex-col min-w-0 flex-1">
+                             <span className="text-sm font-black text-slate-800 truncate leading-tight">{b.customer_code || "No Customer"}</span>
+                             <div className="flex items-center gap-2 mt-1 flex-wrap">
+                               <span className="font-mono font-bold text-violet-700 text-xs">{b.booking_no}</span>
+                               {b.job_type && (
+                                 <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold ${b.job_type === "Export" ? "bg-blue-100 text-blue-700" : "bg-orange-100 text-orange-700"}`}>
+                                   {b.job_type}
+                                 </span>
+                               )}
+                               <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold ${STATUS_COLORS[b.loading_status || "pending"]}`}>
+                                 {b.loading_status || "pending"}
+                               </span>
+                               {b.gcl_received && <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700">GCL ✓</span>}
+                               {b.return_completed && <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700">คืนแล้ว ✓</span>}
+                             </div>
                           </div>
-                          <div className="flex items-center gap-1 shrink-0">
+                          <div className="flex items-center gap-1 shrink-0 bg-slate-50 rounded-lg p-1 border border-slate-100">
                             <button onClick={() => copyPickupInfo(b)}
-                              className={`p-1.5 rounded-lg hover:bg-blue-50 transition-colors ${copiedId === b._id ? "text-green-600" : "text-slate-400 hover:text-blue-600"}`}
+                              className={`p-1.5 rounded-md hover:bg-white transition-colors ${copiedId === b._id ? "text-green-600 bg-white shadow-sm" : "text-slate-400 hover:text-blue-600 hover:shadow-sm"}`}
                               title="Copy ข้อมูล">
                               {copiedId === b._id ? <Check size={14} /> : <Copy size={14} />}
                             </button>
-                            <button onClick={() => openEdit(b)} className="p-1.5 rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition-colors" title="แก้ไข"><Pencil size={14} /></button>
-                            <button onClick={() => setDeleteTarget(b)} className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors" title="ลบ"><Trash2 size={14} /></button>
+                            <button onClick={() => openEdit(b)} className="p-1.5 rounded-md hover:bg-white text-slate-400 hover:text-blue-600 hover:shadow-sm transition-colors" title="แก้ไข"><Pencil size={14} /></button>
+                            <button onClick={() => setDeleteTarget(b)} className="p-1.5 rounded-md hover:bg-white text-slate-400 hover:text-red-600 hover:shadow-sm transition-colors" title="ลบ"><Trash2 size={14} /></button>
                           </div>
                         </div>
 
@@ -419,29 +421,29 @@ export default function BookingsPage() {
                         <div className="rounded-xl bg-slate-50 border border-slate-100 px-3 py-3"><StepBar booking={b} /></div>
 
                         <div className="grid grid-cols-2 gap-3 sm:gap-4 text-xs">
-                          <div className="rounded-lg bg-slate-50/80 px-2.5 py-2 min-w-0">
-                            <span className="text-slate-400 block text-[10px] uppercase font-semibold">Customer</span>
-                            <span className="font-medium text-slate-700 truncate block mt-0.5">{b.customer_code || "—"}</span>
+                          <div className="col-span-2 rounded-xl bg-slate-50/80 px-4 py-3 border border-slate-100">
+                            <span className="text-slate-400 block text-[10px] uppercase font-semibold mb-0.5">Container & Seal</span>
+                            <div className="flex items-baseline gap-2 flex-wrap">
+                               <span className="font-mono font-black text-lg text-slate-800 tracking-tight">{b.container_no || "—"}</span>
+                               {b.seal_no && (
+                                 <>
+                                   <span className="text-slate-300">|</span>
+                                   <span className="font-mono font-bold text-sm text-blue-700">{b.seal_no}</span>
+                                 </>
+                               )}
+                            </div>
                           </div>
-                          <div className="rounded-lg bg-slate-50/80 px-2.5 py-2 min-w-0">
+                          <div className="rounded-lg bg-slate-50/80 px-3 py-2.5 min-w-0">
                             <span className="text-slate-400 block text-[10px] uppercase font-semibold">Vendor</span>
-                            <span className="font-medium text-slate-700 truncate block mt-0.5">{b.vendor_code || "—"}</span>
+                            <span className="font-medium text-slate-700 truncate block mt-0.5 text-sm">{b.vendor_code || "—"}</span>
                           </div>
-                          <div className="rounded-lg bg-slate-50/80 px-2.5 py-2 min-w-0 col-span-2 sm:col-span-1">
-                            <span className="text-slate-400 block text-[10px] uppercase font-semibold">Container</span>
-                            <span className="font-mono font-medium text-slate-700 truncate block mt-0.5">{b.container_no || "—"}</span>
-                          </div>
-                          <div className="rounded-lg bg-slate-50/80 px-2.5 py-2 min-w-0">
+                          <div className="rounded-lg bg-slate-50/80 px-3 py-2.5 min-w-0">
                             <span className="text-slate-400 block text-[10px] uppercase font-semibold">Size / Code</span>
                             <span className="font-medium text-slate-700 truncate block mt-0.5">
                               {b.container_size || "—"}{b.container_size_code && <span className="text-slate-400 ml-1">/ {b.container_size_code}</span>}
                             </span>
                           </div>
-                          <div className="rounded-lg bg-slate-50/80 px-2.5 py-2 min-w-0">
-                            <span className="text-slate-400 block text-[10px] uppercase font-semibold">Seal No.</span>
-                            <span className="font-mono font-medium text-slate-700 truncate block mt-0.5">{b.seal_no || "—"}</span>
-                          </div>
-                          <div className="rounded-lg bg-slate-50/80 px-2.5 py-2 min-w-0">
+                          <div className="rounded-lg bg-slate-50/80 px-3 py-2.5 min-w-0 col-span-2">
                             <span className="text-slate-400 block text-[10px] uppercase font-semibold">Tare (kg)</span>
                             <span className="font-medium text-slate-700 truncate block mt-0.5">{b.tare_weight || "—"}</span>
                           </div>
@@ -464,25 +466,25 @@ export default function BookingsPage() {
                         </div>
 
                         {/* Driver info row */}
-                        <div className="flex flex-col gap-2 text-xs sm:flex-row sm:flex-wrap sm:gap-x-6 sm:gap-y-2">
-                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-1.5 rounded-lg bg-emerald-50/60 px-3 py-2.5">
-                            <div className="flex items-center gap-2">
-                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700 uppercase">Pickup</span>
-                              <span className="font-medium text-slate-700 truncate max-w-[120px]">{b.driver_name || "—"}</span>
+                        <div className="flex flex-col gap-3 text-xs sm:flex-row sm:gap-4">
+                          <div className="flex flex-col gap-1.5 rounded-xl bg-emerald-50/60 border border-emerald-100/50 px-4 py-3 flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-emerald-100 text-emerald-800 uppercase tracking-wide">Pickup</span>
                             </div>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              {b.driver_phone && <span className="text-slate-400">{b.driver_phone}</span>}
-                              {b.truck_plate && <span className="font-mono bg-white border border-emerald-100 px-1.5 py-0.5 rounded text-slate-600 shadow-sm">{b.truck_plate}</span>}
+                            <span className="font-bold text-slate-800 text-sm">{b.driver_name || "ไม่มีข้อมูลคนขับ"}</span>
+                            <div className="flex flex-col gap-1 mt-0.5">
+                              {b.driver_phone && <span className="text-slate-500 font-medium">{b.driver_phone}</span>}
+                              {b.truck_plate && <span className="font-mono font-bold bg-white border border-emerald-200 px-2 py-1 rounded-md text-slate-700 shadow-sm self-start mt-1">{b.truck_plate}</span>}
                             </div>
                           </div>
-                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-1.5 rounded-lg bg-violet-50/60 px-3 py-2.5">
-                            <div className="flex items-center gap-2">
-                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-violet-100 text-violet-700 uppercase">Return</span>
-                              <span className="font-medium text-slate-700 truncate max-w-[120px]">{b.return_driver_name || "—"}</span>
+                          <div className="flex flex-col gap-1.5 rounded-xl bg-violet-50/60 border border-violet-100/50 px-4 py-3 flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-violet-100 text-violet-800 uppercase tracking-wide">Return</span>
                             </div>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              {b.return_driver_phone && <span className="text-slate-400">{b.return_driver_phone}</span>}
-                              {b.return_truck_plate && <span className="font-mono bg-white border border-violet-100 px-1.5 py-0.5 rounded text-slate-600 shadow-sm">{b.return_truck_plate}</span>}
+                            <span className="font-bold text-slate-800 text-sm">{b.return_driver_name || "ไม่มีข้อมูลคนขับ"}</span>
+                            <div className="flex flex-col gap-1 mt-0.5">
+                              {b.return_driver_phone && <span className="text-slate-500 font-medium">{b.return_driver_phone}</span>}
+                              {b.return_truck_plate && <span className="font-mono font-bold bg-white border border-violet-200 px-2 py-1 rounded-md text-slate-700 shadow-sm self-start mt-1">{b.return_truck_plate}</span>}
                             </div>
                           </div>
                         </div>

@@ -172,21 +172,32 @@ export default function Home() {
                       const cfg = STATUS_CFG[status as keyof typeof STATUS_CFG];
                       return (
                         <div key={b._id} className="p-4 flex flex-col gap-3 hover:bg-slate-50/80 transition-colors">
-                          <div className="flex items-center justify-between">
-                            <span className="font-mono font-bold text-violet-700 text-sm">{b.booking_no}</span>
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide ${cfg.color}`}>
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex flex-col min-w-0">
+                               <span className="text-xs font-bold text-slate-800 truncate">{b.customer_code || "No Customer"}</span>
+                               <span className="font-mono text-violet-700 text-xs mt-0.5 truncate">{b.booking_no}</span>
+                            </div>
+                            <span className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide ${cfg.color}`}>
                               {cfg.label}
                             </span>
                           </div>
                           
-                          <div className="grid grid-cols-2 gap-2 bg-slate-50/50 p-2.5 rounded-lg border border-slate-100">
+                          <div className="bg-slate-50/50 p-3 rounded-lg border border-slate-100 flex flex-col gap-2">
                             <div>
-                              <p className="text-[10px] text-slate-400 font-semibold uppercase">Vendor</p>
-                              <p className="text-xs text-[var(--foreground)] font-medium truncate mt-0.5">{b.vendor_code || "—"}</p>
+                               <p className="text-[10px] text-slate-400 font-semibold uppercase">Container / Seal</p>
+                               <p className="text-base font-black font-mono text-slate-800 truncate mt-0.5 tracking-tight">
+                                  {b.container_no || "—"} <span className="text-slate-400 mx-1 font-normal">|</span> {b.seal_no ? <span className="text-blue-700">{b.seal_no}</span> : "—"}
+                               </p>
                             </div>
-                            <div>
-                              <p className="text-[10px] text-slate-400 font-semibold uppercase">Container</p>
-                              <p className="text-xs font-mono text-slate-600 truncate mt-0.5">{b.container_no || "—"}</p>
+                            <div className="grid grid-cols-2 gap-2 mt-1">
+                              <div>
+                                <p className="text-[10px] text-slate-400 font-semibold uppercase">Vendor</p>
+                                <p className="text-xs text-[var(--foreground)] font-medium truncate mt-0.5">{b.vendor_code || "—"}</p>
+                              </div>
+                              <div>
+                                <p className="text-[10px] text-slate-400 font-semibold uppercase">Size</p>
+                                <p className="text-xs text-[var(--foreground)] font-medium truncate mt-0.5">{b.container_size || "—"}</p>
+                              </div>
                             </div>
                           </div>
                           
