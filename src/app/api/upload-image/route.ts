@@ -37,10 +37,11 @@ export async function POST(request: NextRequest) {
     });
     console.log("✅ Blob uploaded:", blob.url);
 
-    // For private blobs, the URL from put() is already a signed URL
-    console.log("✅ Signed URL:", blob.url);
+    // Return proxy URL for private blob access
+    const proxyUrl = `/api/image/${filename}`;
+    console.log("✅ Proxy URL:", proxyUrl);
 
-    return NextResponse.json({ url: blob.url, filename });
+    return NextResponse.json({ url: proxyUrl, filename });
   } catch (error) {
     console.error("❌ Blob upload error:", error);
     console.error("Error details:", error instanceof Error ? error.message : "Unknown");
