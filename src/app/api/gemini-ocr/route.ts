@@ -49,12 +49,17 @@ export async function POST(request: NextRequest) {
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
-    // Default to gemini-3-flash for highest OCR accuracy. Handle variations.
-    const userModel = process.env.GEMINI_MODEL || "gemini-3-flash";
-    const model = 
-      userModel === "gemini-3.0-flash" ? "gemini-3-flash" :
-      userModel === "gemini-2.0-flash" ? "gemini-2-flash" :
-      userModel;
+    // Map user-friendly names to actual API model names (from ListModels API)
+    const MODEL_MAP: Record<string, string> = {
+      "gemini-3-flash":     "gemini-3-flash-preview",
+      "gemini-3.0-flash":   "gemini-3-flash-preview",
+      "gemini-2-flash":     "gemini-2.0-flash",
+      "gemini-2.0-flash":   "gemini-2.0-flash",
+      "gemini-2.5-flash":   "gemini-2.5-flash",
+      "gemini-2.5-pro":     "gemini-2.5-pro",
+    };
+    const userModel = process.env.GEMINI_MODEL || "gemini-3-flash-preview";
+    const model = MODEL_MAP[userModel] || userModel;
     if (!apiKey) {
       return NextResponse.json({ error: "GEMINI_API_KEY not configured" }, { status: 500 });
     }
@@ -85,9 +90,7 @@ export async function POST(request: NextRequest) {
       ],
       generationConfig: {
         temperature: 0,
-        topK: 1,
-        topP: 1,
-        maxOutputTokens: 512,
+        maxOutputTokens: 2048,
       },
     };
 
@@ -107,7 +110,12 @@ export async function POST(request: NextRequest) {
     }
 
     const geminiData = await geminiRes.json();
-    const rawText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? "";
+    // Thinking models return multiple parts: thought parts + text part
+    // Find the last non-thought text part which contains the actual answer
+    const parts = geminiData?.candidates?.[0]?.content?.parts ?? [];
+    const textParts = parts.filter((p: { text?: string; thought?: boolean }) => p.text && !p.thought);
+    const rawText = (textParts.length > 0 ? textParts[textParts.length - 1].text : parts[parts.length - 1]?.text ?? "").trim();
+    console.log("[gemini-ocr] Parts count:", parts.length, "Text parts:", textParts.length);
     console.log("[gemini-ocr] Raw response:", rawText);
 
     // Strip markdown fences if present
