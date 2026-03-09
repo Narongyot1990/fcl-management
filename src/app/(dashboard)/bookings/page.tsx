@@ -385,11 +385,11 @@ export default function BookingsPage() {
 
                 {/* ── Booking cards ── */}
                 {!isCollapsed && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 p-4 bg-slate-50/50">
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 p-5 bg-slate-50/50">
                     {bookings.map((b, i) => (
-                      <div key={b._id} className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 hover:shadow-md transition-shadow relative">
+                      <div key={b._id} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-6 hover:shadow-md transition-shadow relative space-y-4">
                         {/* Top row: Booking No + badges + actions */}
-                        <div className="flex items-start justify-between gap-3 mb-3">
+                        <div className="flex items-start justify-between gap-3">
                           <div className="flex items-center gap-3 flex-wrap">
                             <span className="text-xs text-slate-400 font-medium w-5">{i + 1}.</span>
                             <span className="font-mono font-bold text-violet-700 text-sm">{b.booking_no}</span>
@@ -416,54 +416,60 @@ export default function BookingsPage() {
                         </div>
 
                         {/* Progress bar */}
-                        <div className="mb-3"><StepBar booking={b} /></div>
+                        <div className="rounded-xl bg-slate-50 border border-slate-100 px-3 py-3"><StepBar booking={b} /></div>
 
                         {/* Details grid */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-x-4 gap-y-2 text-xs">
-                          <div>
+                        <div className="grid grid-cols-2 gap-3 sm:gap-4 text-xs">
+                          <div className="rounded-lg bg-slate-50/80 px-3 py-2">
                             <span className="text-slate-400 block">Customer</span>
                             <span className="font-medium text-slate-700">{b.customer_code || "—"}</span>
                           </div>
-                          <div>
+                          <div className="rounded-lg bg-slate-50/80 px-3 py-2">
                             <span className="text-slate-400 block">Vendor</span>
                             <span className="font-medium text-slate-700">{b.vendor_code || "—"}</span>
                           </div>
-                          <div>
+                          <div className="rounded-lg bg-slate-50/80 px-3 py-2">
                             <span className="text-slate-400 block">Container</span>
                             <span className="font-mono font-medium text-slate-700">{b.container_no || "—"}</span>
                           </div>
-                          <div>
+                          <div className="rounded-lg bg-slate-50/80 px-3 py-2">
                             <span className="text-slate-400 block">Size / Code</span>
                             <span className="font-medium text-slate-700">
                               {b.container_size || "—"}{b.container_size_code && <span className="text-slate-400 ml-1">/ {b.container_size_code}</span>}
                             </span>
                           </div>
-                          <div>
+                          <div className="rounded-lg bg-slate-50/80 px-3 py-2">
                             <span className="text-slate-400 block">Seal No.</span>
                             <span className="font-mono font-medium text-slate-700">{b.seal_no || "—"}</span>
                           </div>
-                          <div>
+                          <div className="rounded-lg bg-slate-50/80 px-3 py-2">
                             <span className="text-slate-400 block">Tare (kg)</span>
                             <span className="font-medium text-slate-700">{b.tare_weight || "—"}</span>
                           </div>
                         </div>
 
                         {/* Plan dates row */}
-                        <div className="flex flex-wrap gap-x-6 gap-y-1 mt-2 text-xs">
-                          <div><span className="text-slate-400">Pickup: </span><span className="font-medium text-slate-700">{toThaiDate(b.plan_pickup_date)}</span></div>
-                          <div><span className="text-slate-400">Loading: </span><span className="font-medium text-slate-700">{toThaiDate(b.plan_loading_date)}</span></div>
-                          <div><span className="text-slate-400">Return: </span><span className="font-medium text-slate-700">{toThaiDate(b.plan_return_date)}</span></div>
+                        <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs rounded-xl border border-slate-100 bg-white">
+                          <div className="px-3 py-2">
+                            <span className="text-slate-400">Pickup: </span><span className="font-medium text-slate-700">{toThaiDate(b.plan_pickup_date)}</span>
+                          </div>
+                          <div className="px-3 py-2">
+                            <span className="text-slate-400">Loading: </span><span className="font-medium text-slate-700">{toThaiDate(b.plan_loading_date)}</span>
+                          </div>
+                          <div className="px-3 py-2">
+                            <span className="text-slate-400">Return: </span><span className="font-medium text-slate-700">{toThaiDate(b.plan_return_date)}</span>
+                          </div>
                         </div>
 
                         {/* Driver info row */}
-                        <div className="flex flex-wrap gap-x-6 gap-y-1.5 mt-2 text-xs">
-                          <div className="flex items-center gap-1.5">
+                        <div className="flex flex-col gap-2 text-xs sm:flex-row sm:flex-wrap sm:gap-x-6 sm:gap-y-2">
+                          <div className="flex items-center gap-1.5 rounded-lg bg-emerald-50/60 px-3 py-2">
                             <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700 uppercase">Pickup</span>
                             <span className="font-medium text-slate-700">{b.driver_name || "—"}</span>
                             {b.driver_phone && <span className="text-slate-400">{b.driver_phone}</span>}
                             {b.truck_plate && <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-600">{b.truck_plate}</span>}
                           </div>
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1.5 rounded-lg bg-violet-50/60 px-3 py-2">
                             <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-violet-100 text-violet-700 uppercase">Return</span>
                             <span className="font-medium text-slate-700">{b.return_driver_name || "—"}</span>
                             {b.return_driver_phone && <span className="text-slate-400">{b.return_driver_phone}</span>}
@@ -473,10 +479,10 @@ export default function BookingsPage() {
 
                         {/* Images row */}
                         {(b.eir_image_url || b.container_image_url) && (
-                          <div className="flex gap-3 mt-3">
+                          <div className="flex flex-wrap gap-3 pt-1">
                             {b.eir_image_url && (
                               <button type="button" onClick={() => openImageModal(b.eir_image_url, "EIR — " + b.booking_no)}
-                                className="relative group w-20 h-14 rounded-lg overflow-hidden border border-blue-200 hover:border-blue-400 transition-colors shrink-0">
+                                className="relative group w-24 h-16 rounded-xl overflow-hidden border border-blue-200 hover:border-blue-400 transition-colors shrink-0 shadow-sm">
                                 <img src={b.eir_image_url} alt="EIR" className="w-full h-full object-cover" />
                                 <div className="absolute inset-0 bg-blue-600/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                   <ZoomIn size={16} className="text-white" />
@@ -486,7 +492,7 @@ export default function BookingsPage() {
                             )}
                             {b.container_image_url && (
                               <button type="button" onClick={() => openImageModal(b.container_image_url, "Container — " + b.booking_no)}
-                                className="relative group w-20 h-14 rounded-lg overflow-hidden border border-emerald-200 hover:border-emerald-400 transition-colors shrink-0">
+                                className="relative group w-24 h-16 rounded-xl overflow-hidden border border-emerald-200 hover:border-emerald-400 transition-colors shrink-0 shadow-sm">
                                 <img src={b.container_image_url} alt="Container" className="w-full h-full object-cover" />
                                 <div className="absolute inset-0 bg-emerald-600/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                   <ZoomIn size={16} className="text-white" />
