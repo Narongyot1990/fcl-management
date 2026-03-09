@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Pencil, Trash2, Search, ChevronDown, ChevronUp, CalendarDays } from "lucide-react";
 import { listRecords, createRecord, updateRecord, deleteRecord } from "@/lib/api";
 import type { Booking, Vendor, Container, Customer, LoadingStatus, JobType } from "@/lib/types";
@@ -322,117 +322,130 @@ export default function BookingsPage() {
       {/* ── Table grouped by date ── */}
       <div className="bg-white rounded-2xl border border-[var(--border)] shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm border-collapse">
             <thead>
-              <tr className="border-b border-[var(--border)] bg-slate-50">
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide w-8">#</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Booking No.</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Type</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Customer</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Container</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Size / Code</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Seal</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Tare</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Plan Dates</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Status</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Progress</th>
-                <th className="px-4 py-3 w-20" />
+              <tr className="border-b-2 border-[var(--border)] bg-slate-50">
+                <th className="text-left px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide w-8">#</th>
+                <th className="text-left px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Booking No.</th>
+                <th className="text-left px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Type</th>
+                <th className="text-left px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Customer</th>
+                <th className="text-left px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Container No.</th>
+                <th className="text-left px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Size / Code</th>
+                <th className="text-left px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Seal</th>
+                <th className="text-left px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Tare (kg)</th>
+                <th className="text-left px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Plan Dates</th>
+                <th className="text-left px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Status</th>
+                <th className="text-left px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Progress</th>
+                <th className="px-3 py-3 w-16" />
               </tr>
             </thead>
-            <tbody>
-              {loading ? (
-                <tr><td colSpan={COLS} className="px-5 py-10 text-center text-[var(--muted)]">Loading\u2026</td></tr>
-              ) : records.length === 0 ? (
-                <tr><td colSpan={COLS} className="px-5 py-10 text-center text-[var(--muted)]">\u0e22\u0e31\u0e07\u0e44\u0e21\u0e48\u0e21\u0e35 Booking \u0e01\u0e14 Add New \u0e40\u0e1e\u0e37\u0e48\u0e2d\u0e2a\u0e23\u0e49\u0e32\u0e07</td></tr>
-              ) : (
-                Array.from(grouped.entries()).map(([date, bookings]) => {
-                  const isCollapsed = collapsed.has(date);
-                  return (
-                    <tbody key={date}>
-                      {/* ── Date group header ── */}
-                      <tr className="bg-slate-100 cursor-pointer" onClick={() => toggleGroup(date)}>
-                        <td colSpan={COLS} className="px-4 py-2.5">
-                          <div className="flex items-center gap-2">
-                            {isCollapsed ? <ChevronDown size={14} className="text-slate-400" /> : <ChevronUp size={14} className="text-slate-400" />}
-                            <CalendarDays size={14} className="text-blue-500" />
-                            <span className="text-sm font-semibold text-slate-700">{date === "No Date" ? "No Date" : date}</span>
-                            <span className="text-xs text-slate-400 ml-1">({bookings.length} booking{bookings.length > 1 ? "s" : ""})</span>
-                          </div>
-                        </td>
-                      </tr>
-                      {/* ── Rows per booking (2 rows each) ── */}
-                      {!isCollapsed && bookings.map((b, i) => (
-                        <>
-                          {/* Row 1: main container info */}
-                          <tr key={b._id + "-1"} className="border-b border-slate-100 hover:bg-slate-50/50">
-                            <td className="px-4 py-2 text-xs text-[var(--muted)]" rowSpan={2}>{i + 1}</td>
-                            <td className="px-4 py-2 font-mono font-medium text-violet-700 whitespace-nowrap" rowSpan={2}>
-                              {b.booking_no}
-                              <div className="text-[10px] text-[var(--muted)] font-normal mt-0.5">Vendor: {b.vendor_code || "\u2014"}</div>
-                            </td>
-                            <td className="px-4 py-2" rowSpan={2}>
-                              {b.job_type ? (
-                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${b.job_type === "Export" ? "bg-blue-100 text-blue-800" : "bg-orange-100 text-orange-800"}`}>
-                                  {b.job_type}
-                                </span>
-                              ) : "\u2014"}
-                            </td>
-                            <td className="px-4 py-2 text-xs" rowSpan={2}><D v={b.customer_code} /></td>
-                            <td className="px-4 py-2 font-mono text-xs whitespace-nowrap" rowSpan={2}><D v={b.container_no} /></td>
-                            <td className="px-4 py-2 text-xs whitespace-nowrap" rowSpan={2}>
-                              {b.container_size ? (
-                                <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-medium">{b.container_size}</span>
-                              ) : "\u2014"}
-                              {b.container_size_code && <span className="text-[var(--muted)] ml-1">/ {b.container_size_code}</span>}
-                            </td>
-                            <td className="px-4 py-2 font-mono text-xs" rowSpan={2}><D v={b.seal_no} /></td>
-                            <td className="px-4 py-2 text-xs" rowSpan={2}><D v={b.tare_weight} /></td>
-                            <td className="px-4 py-2 text-[10px] leading-snug whitespace-nowrap" rowSpan={2}>
-                              <div><span className="text-slate-400">Pickup:</span> <span className="font-medium">{b.plan_pickup_date || "\u2014"}</span></div>
-                              <div><span className="text-slate-400">Loading:</span> <span className="font-medium">{b.plan_loading_date || "\u2014"}</span></div>
-                              <div><span className="text-slate-400">Return:</span> <span className="font-medium">{b.plan_return_date || "\u2014"}</span></div>
-                            </td>
-                            <td className="px-4 py-2" rowSpan={2}>
-                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[b.loading_status || "pending"]}`}>
-                                {b.loading_status || "pending"}
-                              </span>
-                            </td>
-                            <td className="px-4 py-2" rowSpan={2}><StepBar booking={b} /></td>
-                            <td className="px-4 py-2" rowSpan={2}>
-                              <div className="flex flex-col items-center gap-1">
-                                <button onClick={() => openEdit(b)} className="p-1.5 rounded-lg hover:bg-blue-50 text-[var(--muted)] hover:text-blue-600 transition-colors"><Pencil size={14} /></button>
-                                <button onClick={() => setDeleteTarget(b)} className="p-1.5 rounded-lg hover:bg-red-50 text-[var(--muted)] hover:text-red-600 transition-colors"><Trash2 size={14} /></button>
+
+            {loading ? (
+              <tbody>
+                <tr><td colSpan={12} className="px-5 py-10 text-center text-[var(--muted)]">Loading…</td></tr>
+              </tbody>
+            ) : records.length === 0 ? (
+              <tbody>
+                <tr><td colSpan={12} className="px-5 py-10 text-center text-[var(--muted)]">ยังไม่มี Booking กด Add New เพื่อสร้าง</td></tr>
+              </tbody>
+            ) : (
+              Array.from(grouped.entries()).map(([date, bookings]) => {
+                const isCollapsed = collapsed.has(date);
+                return (
+                  <tbody key={date}>
+                    {/* ── Date group header row ── */}
+                    <tr
+                      className="bg-slate-100 hover:bg-slate-200 cursor-pointer"
+                      onClick={() => toggleGroup(date)}
+                    >
+                      <td colSpan={12} className="px-4 py-2.5 border-y border-slate-200">
+                        <div className="flex items-center gap-2">
+                          {isCollapsed
+                            ? <ChevronDown size={14} className="text-slate-500 shrink-0" />
+                            : <ChevronUp size={14} className="text-slate-500 shrink-0" />}
+                          <CalendarDays size={14} className="text-blue-500 shrink-0" />
+                          <span className="text-sm font-bold text-slate-700">
+                            {date === "No Date" ? "— ไม่มีวันที่ —" : date}
+                          </span>
+                          <span className="text-xs text-slate-400">
+                            ({bookings.length} booking{bookings.length > 1 ? "s" : ""})
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+
+                    {/* ── 2 rows per booking ── */}
+                    {!isCollapsed && bookings.map((b, i) => (
+                      <React.Fragment key={b._id}>
+                        {/* Row A — main info */}
+                        <tr className="hover:bg-blue-50/30 border-b border-slate-100">
+                          <td className="px-3 py-2 text-xs text-slate-400 align-top">{i + 1}</td>
+                          <td className="px-3 py-2 align-top">
+                            <div className="font-mono font-semibold text-violet-700 whitespace-nowrap">{b.booking_no}</div>
+                            <div className="text-[10px] text-slate-400 mt-0.5">Vendor: {b.vendor_code || "—"}</div>
+                          </td>
+                          <td className="px-3 py-2 align-top">
+                            {b.job_type
+                              ? <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${b.job_type === "Export" ? "bg-blue-100 text-blue-800" : "bg-orange-100 text-orange-800"}`}>{b.job_type}</span>
+                              : <span className="text-slate-300">—</span>}
+                          </td>
+                          <td className="px-3 py-2 text-xs align-top">{b.customer_code || <span className="text-slate-300">—</span>}</td>
+                          <td className="px-3 py-2 font-mono text-xs align-top whitespace-nowrap">{b.container_no || <span className="text-slate-300">—</span>}</td>
+                          <td className="px-3 py-2 text-xs align-top whitespace-nowrap">
+                            {b.container_size
+                              ? <span className="inline-flex px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-medium">{b.container_size}</span>
+                              : <span className="text-slate-300">—</span>}
+                            {b.container_size_code && <span className="text-slate-400 ml-1 font-mono text-[10px]">/ {b.container_size_code}</span>}
+                          </td>
+                          <td className="px-3 py-2 font-mono text-xs align-top">{b.seal_no || <span className="text-slate-300">—</span>}</td>
+                          <td className="px-3 py-2 text-xs align-top">{b.tare_weight || <span className="text-slate-300">—</span>}</td>
+                          <td className="px-3 py-2 text-[10px] leading-relaxed align-top whitespace-nowrap">
+                            <div><span className="text-slate-400">Pickup: </span><span className="font-medium">{b.plan_pickup_date || "—"}</span></div>
+                            <div><span className="text-slate-400">Loading: </span><span className="font-medium">{b.plan_loading_date || "—"}</span></div>
+                            <div><span className="text-slate-400">Return: </span><span className="font-medium">{b.plan_return_date || "—"}</span></div>
+                          </td>
+                          <td className="px-3 py-2 align-top">
+                            <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[b.loading_status || "pending"]}`}>
+                              {b.loading_status || "pending"}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2 align-top"><StepBar booking={b} /></td>
+                          <td className="px-3 py-2 align-top" rowSpan={2}>
+                            <div className="flex flex-col items-center gap-1">
+                              <button onClick={() => openEdit(b)} className="p-1.5 rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition-colors" title="แก้ไข"><Pencil size={13} /></button>
+                              <button onClick={() => setDeleteTarget(b)} className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors" title="ลบ"><Trash2 size={13} /></button>
+                            </div>
+                          </td>
+                        </tr>
+
+                        {/* Row B — driver details (spans all data cols except action) */}
+                        <tr className="border-b border-slate-200 bg-slate-50/60">
+                          <td className="px-3 py-1.5" />
+                          <td colSpan={10} className="px-3 py-1.5">
+                            <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-xs">
+                              <div className="flex items-center gap-1.5">
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700 uppercase tracking-wider">Pickup</span>
+                                <span className="font-medium text-slate-700">{b.driver_name || "—"}</span>
+                                {b.driver_phone && <span className="text-slate-400">{b.driver_phone}</span>}
+                                {b.truck_plate && <span className="font-mono text-slate-500 bg-slate-100 px-1 rounded">{b.truck_plate}</span>}
                               </div>
-                            </td>
-                          </tr>
-                          {/* Row 2: driver details */}
-                          <tr key={b._id + "-2"} className="border-b border-[var(--border)] bg-slate-50/40">
-                            <td colSpan={10} className="px-4 py-2 text-xs">
-                              <div className="flex flex-wrap gap-x-8 gap-y-1">
-                                <div className="flex items-center gap-1.5">
-                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700 uppercase tracking-wider">Pickup</span>
-                                  <span className="font-medium">{b.driver_name || "\u2014"}</span>
-                                  <span className="text-[var(--muted)]">{b.driver_phone || ""}</span>
-                                  <span className="font-mono text-[var(--muted)]">{b.truck_plate || ""}</span>
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-violet-100 text-violet-700 uppercase tracking-wider">Return</span>
-                                  <span className="font-medium">{b.return_driver_name || "\u2014"}</span>
-                                  <span className="text-[var(--muted)]">{b.return_driver_phone || ""}</span>
-                                  <span className="font-mono text-[var(--muted)]">{b.return_truck_plate || ""}</span>
-                                </div>
-                                {b.gcl_received && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700">GCL \u2713</span>}
-                                {b.return_completed && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700">Returned \u2713</span>}
+                              <div className="flex items-center gap-1.5">
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-violet-100 text-violet-700 uppercase tracking-wider">Return</span>
+                                <span className="font-medium text-slate-700">{b.return_driver_name || "—"}</span>
+                                {b.return_driver_phone && <span className="text-slate-400">{b.return_driver_phone}</span>}
+                                {b.return_truck_plate && <span className="font-mono text-slate-500 bg-slate-100 px-1 rounded">{b.return_truck_plate}</span>}
                               </div>
-                            </td>
-                          </tr>
-                        </>
-                      ))}
-                    </tbody>
-                  );
-                })
-              )}
-            </tbody>
+                              {b.gcl_received && <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700">GCL ✓</span>}
+                              {b.return_completed && <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700">Returned ✓</span>}
+                            </div>
+                          </td>
+                        </tr>
+                      </React.Fragment>
+                    ))}
+                  </tbody>
+                );
+              })
+            )}
           </table>
         </div>
       </div>
