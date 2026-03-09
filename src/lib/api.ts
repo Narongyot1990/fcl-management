@@ -7,11 +7,10 @@ function getKey(): string {
   return sessionStorage.getItem("eir_api_key") ?? "";
 }
 
-function headers(extra: Record<string, string> = {}): HeadersInit {
+function headers(): HeadersInit {
   return {
     "Content-Type": "application/json",
     "X-API-Key": getKey(),
-    ...extra,
   };
 }
 
@@ -37,7 +36,7 @@ export async function listRecords<T>(
 
 export async function createRecord<T>(
   collection: Collection,
-  data: Omit<T, "_id" | "created_at">
+  data: Record<string, unknown>
 ): Promise<{ created: boolean; record: T }> {
   const res = await fetch(`${BASE}/${collection}`, {
     method: "POST",
@@ -65,39 +64,6 @@ export async function deleteRecord(
   id: string
 ): Promise<{ deleted: boolean }> {
   const res = await fetch(`${BASE}/${collection}/${id}`, {
-    method: "DELETE",
-    headers: headers(),
-  });
-  return handleRes(res);
-}
-
-export async function listEIRRecords(
-  filters: Record<string, string> = {}
-): Promise<ApiResponse<import("./types").EIRRecord>> {
-  const params = new URLSearchParams(
-    Object.fromEntries(Object.entries(filters).filter(([, v]) => v))
-  );
-  const url = `/api/records${params.size ? `?${params}` : ""}`;
-  const res = await fetch(url, { headers: headers() });
-  return handleRes(res);
-}
-
-export async function updateEIRRecord(
-  id: string,
-  data: Record<string, unknown>
-): Promise<{ updated: boolean }> {
-  const res = await fetch(`/api/records/${id}`, {
-    method: "PUT",
-    headers: headers(),
-    body: JSON.stringify(data),
-  });
-  return handleRes(res);
-}
-
-export async function deleteEIRRecord(
-  id: string
-): Promise<{ deleted: boolean }> {
-  const res = await fetch(`/api/records/${id}`, {
     method: "DELETE",
     headers: headers(),
   });

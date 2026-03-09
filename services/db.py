@@ -22,14 +22,15 @@ COLLECTIONS: dict[str, str] = {
     "bookings": "bookings",
 }
 
-# Fields used for duplicate detection per prompt.
-# All listed fields must be non-null to perform a dedup check.
 DEDUP_KEYS: dict[str, list[str]] = {
     "eir": ["container_no", "booking_no"],
     "vendors": ["code"],
     "containers": ["code"],
     "bookings": ["booking_no"],
 }
+
+# Fields that should be stored/updated as-is (not stripped), e.g. arrays, booleans
+_RAW_FIELD_TYPES = (list, dict, bool, int, float)
 
 # ── Connection (reused across warm Vercel invocations) ────────────────────────
 
@@ -136,8 +137,10 @@ def update(prompt_key: str, record_id: str, data: dict) -> bool:
             continue
         if prompt_key == "eir" and k not in _UPDATABLE_FIELDS_EIR:
             continue
-        
-        if isinstance(v, str):
+
+        if isinstance(v, _RAW_FIELD_TYPES):
+            patch[k] = v
+        elif isinstance(v, str):
             patch[k] = v.strip() if v.strip() else None
         else:
             patch[k] = v
