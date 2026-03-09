@@ -5,22 +5,24 @@ import { Sparkles, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 interface OcrResult {
   container_size_code: string | null;
   tare_weight: string | null;
+  container_no: string | null;
+  seal_no: string | null;
 }
 
 interface Props {
-  imageUrl: string;
-  imageLabel: string;
+  containerImageUrl: string;
+  eirImageUrl: string;
   onResult: (result: OcrResult) => void;
 }
 
 type Status = "idle" | "loading" | "success" | "error" | "low_confidence";
 
-export default function GeminiOcrButton({ imageUrl, imageLabel, onResult }: Props) {
+export default function GeminiOcrButton({ containerImageUrl, eirImageUrl, onResult }: Props) {
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState("");
 
   async function handleScan() {
-    if (!imageUrl || status === "loading") return;
+    if (!containerImageUrl || !eirImageUrl || status === "loading") return;
     setStatus("loading");
     setMessage("");
 
@@ -28,7 +30,7 @@ export default function GeminiOcrButton({ imageUrl, imageLabel, onResult }: Prop
       const res = await fetch("/api/gemini-ocr", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageUrl }),
+        body: JSON.stringify({ containerImageUrl, eirImageUrl }),
       });
 
       if (!res.ok) {
@@ -38,7 +40,9 @@ export default function GeminiOcrButton({ imageUrl, imageLabel, onResult }: Prop
 
       const data: OcrResult = await res.json();
 
-      if (!data.container_size_code && !data.tare_weight) {
+      // Check if at least some data was extracted
+      const hasData = data.container_size_code || data.tare_weight || data.container_no || data.seal_no;
+      if (!hasData) {
         setStatus("low_confidence");
         setMessage("ภาพไม่ชัดพอ หรือ Gemini ไม่มั่นใจ — กรุณากรอกเอง");
         return;
@@ -49,6 +53,8 @@ export default function GeminiOcrButton({ imageUrl, imageLabel, onResult }: Prop
       const filled: string[] = [];
       if (data.container_size_code) filled.push(`Code: ${data.container_size_code}`);
       if (data.tare_weight) filled.push(`Tare: ${data.tare_weight}kg`);
+      if (data.container_no) filled.push(`No: ${data.container_no}`);
+      if (data.seal_no) filled.push(`Seal: ${data.seal_no}`);
       setStatus("success");
       setMessage(filled.join("  |  "));
 
@@ -72,9 +78,9 @@ export default function GeminiOcrButton({ imageUrl, imageLabel, onResult }: Prop
       <button
         type="button"
         onClick={handleScan}
-        disabled={!imageUrl || status === "loading"}
+        disabled={!containerImageUrl || !eirImageUrl || status === "loading"}
         className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all border shadow-sm
-          ${!imageUrl
+          {!containerImageUrl || !eirImageUrl
             ? "bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed"
             : status === "loading"
             ? "bg-violet-50 text-violet-400 border-violet-100 cursor-wait"
@@ -84,7 +90,7 @@ export default function GeminiOcrButton({ imageUrl, imageLabel, onResult }: Prop
             ? "bg-red-50 text-red-600 border-red-100 hover:bg-red-100"
             : "bg-violet-50 text-violet-700 border-violet-200 hover:bg-violet-100 hover:border-violet-300"
           }`}
-        title={!imageUrl ? `อัปโหลด${imageLabel}ก่อน` : `สแกน${imageLabel}ด้วย Gemini AI`}
+        title={!containerImageUrl || !eirImageUrl ? "อัปโหลดรูป Container และ EIR ก่อน" : "สแกนทั้ง 2 รูปด้วย Gemini AI"}
       >
         {status === "loading" ? (
           <Loader2 size={13} className="animate-spin shrink-0" />
@@ -104,7 +110,7 @@ export default function GeminiOcrButton({ imageUrl, imageLabel, onResult }: Prop
             ? "ความมั่นใจต่ำ"
             : status === "error"
             ? "สแกนล้มเหลว"
-            : `สแกน ${imageLabel} (AI)`}
+            : "สแกนทั้ง 2 รูป (AI)"}
         </span>
       </button>
 
