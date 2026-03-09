@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Pencil, Trash2, Search, ChevronDown, ChevronUp, CalendarDays, Copy, Check, ZoomIn, X } from "lucide-react";
 import ImageUpload from "@/components/ImageUpload";
+import GeminiOcrButton from "@/components/GeminiOcrButton";
 import { listRecords, createRecord, updateRecord, deleteRecord } from "@/lib/api";
 import type { Booking, Vendor, Container, Customer, LoadingStatus, JobType } from "@/lib/types";
 import PageHeader from "@/components/PageHeader";
@@ -598,19 +599,45 @@ export default function BookingsPage() {
                 <Input value={form.seal_no} onChange={set("seal_no")} placeholder="หมายเลขซีล" />
               </FormField>
             </div>
-            <div className="col-span-2 grid grid-cols-2 gap-4">
-              <ImageUpload
-                label="รูป EIR"
-                value={form.eir_image_url}
-                type="eir"
-                onChange={(url) => setForm((f) => ({ ...f, eir_image_url: url }))}
-              />
-              <ImageUpload
-                label="รูป Container"
-                value={form.container_image_url}
-                type="container"
-                onChange={(url) => setForm((f) => ({ ...f, container_image_url: url }))}
-              />
+            <div className="col-span-2 flex flex-col gap-4">
+              <div className="grid grid-cols-2 gap-4">
+                <ImageUpload
+                  label="รูป EIR"
+                  value={form.eir_image_url}
+                  type="eir"
+                  onChange={(url) => setForm((f) => ({ ...f, eir_image_url: url }))}
+                />
+                <ImageUpload
+                  label="รูป Container"
+                  value={form.container_image_url}
+                  type="container"
+                  onChange={(url) => setForm((f) => ({ ...f, container_image_url: url }))}
+                />
+              </div>
+              {/* Gemini OCR buttons */}
+              <div className="flex flex-wrap gap-3 pt-1 border-t border-slate-100">
+                <GeminiOcrButton
+                  imageUrl={form.eir_image_url}
+                  imageLabel="EIR"
+                  onResult={(r) => setForm((f) => ({
+                    ...f,
+                    ...(r.container_no ? { container_no: r.container_no } : {}),
+                    ...(r.seal_no ? { seal_no: r.seal_no } : {}),
+                  }))}
+                />
+                <GeminiOcrButton
+                  imageUrl={form.container_image_url}
+                  imageLabel="Container"
+                  onResult={(r) => setForm((f) => ({
+                    ...f,
+                    ...(r.container_no ? { container_no: r.container_no } : {}),
+                    ...(r.seal_no ? { seal_no: r.seal_no } : {}),
+                  }))}
+                />
+                <p className="text-[11px] text-slate-400 self-center">
+                  AI จะกรอก Container No. และ Seal No. อัตโนมัติ (เฉพาะที่มั่นใจ 95%+ เท่านั้น)
+                </p>
+              </div>
             </div>
           </Section>
 
