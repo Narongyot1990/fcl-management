@@ -459,12 +459,12 @@ export default function BookingsPage() {
       </div>
 
       {/* ── Modal Form ── */}
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? "\u0e41\u0e01\u0e49\u0e44\u0e02 Booking" : "\u0e2a\u0e23\u0e49\u0e32\u0e07 Booking \u0e43\u0e2b\u0e21\u0e48"} size="xl">
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? "แก้ไข Booking" : "สร้าง Booking ใหม่"} size="xl">
         <form onSubmit={handleSave} className="flex flex-col gap-4">
 
           {/* Part 1 — Draft */}
-          <Section title="Part 1 \u2014 \u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25\u0e08\u0e2d\u0e07 (Draft)" number={1}>
-            <FormField label="\u0e27\u0e31\u0e19\u0e17\u0e35\u0e48\u0e08\u0e2d\u0e07">
+          <Section title="Part 1 — ข้อมูลจอง (Draft)" number={1}>
+            <FormField label="วันที่จอง">
               <Input type="date" value={form.booking_date} onChange={set("booking_date")} required />
             </FormField>
             <FormField label="Booking No.">
@@ -475,29 +475,29 @@ export default function BookingsPage() {
             </FormField>
             <FormField label="Customer">
               <Select value={form.customer_code} onChange={set("customer_code")}
-                options={customers.map((c) => ({ value: c.code, label: `${c.code} \u2014 ${c.name}` }))}
-                placeholder="\u0e40\u0e25\u0e37\u0e2d\u0e01 Customer\u2026" />
+                options={customers.map((c) => ({ value: c.code, label: `${c.code} — ${c.name}` }))}
+                placeholder="เลือก Customer…" />
             </FormField>
             <div className="col-span-2">
-              <FormField label="Vendor (\u0e1c\u0e39\u0e49\u0e02\u0e19\u0e2a\u0e48\u0e07)">
+              <FormField label="Vendor (ผู้ขนส่ง)">
                 <Select value={form.vendor_code} onChange={(e) => handleVendorChange(e.target.value)}
-                  options={vendors.map((v) => ({ value: v.code, label: `${v.code} \u2014 ${v.name}` }))} placeholder="\u0e40\u0e25\u0e37\u0e2d\u0e01 Vendor\u2026" />
+                  options={vendors.map((v) => ({ value: v.code, label: `${v.code} — ${v.name}` }))} placeholder="เลือก Vendor…" />
               </FormField>
             </div>
           </Section>
 
           {/* Part 2 — Pickup Truck Assignment */}
-          <Section title="Part 2 \u2014 \u0e08\u0e31\u0e14\u0e23\u0e16 Pickup / \u0e04\u0e19\u0e02\u0e31\u0e1a" number={2}>
-            <FormField label="\u0e17\u0e30\u0e40\u0e1a\u0e35\u0e22\u0e19\u0e23\u0e16" hint="\u0e14\u0e36\u0e07\u0e08\u0e32\u0e01 Vendor \u0e17\u0e35\u0e48\u0e40\u0e25\u0e37\u0e2d\u0e01">
+          <Section title="Part 2 — จัดรถ Pickup / คนขับ" number={2}>
+            <FormField label="ทะเบียนรถ" hint="ดึงจาก Vendor ที่เลือก">
               <Select value={form.truck_plate} onChange={set("truck_plate")}
-                options={truckPlateOptions} placeholder={selectedVendor ? "\u0e40\u0e25\u0e37\u0e2d\u0e01\u0e17\u0e30\u0e40\u0e1a\u0e35\u0e22\u0e19\u2026" : "\u0e40\u0e25\u0e37\u0e2d\u0e01 Vendor \u0e01\u0e48\u0e2d\u0e19"} disabled={!selectedVendor} />
+                options={truckPlateOptions} placeholder={selectedVendor ? "เลือกทะเบียน…" : "เลือก Vendor ก่อน"} disabled={!selectedVendor} />
             </FormField>
-            <FormField label="\u0e04\u0e19\u0e02\u0e31\u0e1a" hint="\u0e14\u0e36\u0e07\u0e08\u0e32\u0e01 Vendor \u0e17\u0e35\u0e48\u0e40\u0e25\u0e37\u0e2d\u0e01">
+            <FormField label="คนขับ" hint="ดึงจาก Vendor ที่เลือก">
               <Select value={form.driver_name} onChange={(e) => handleDriverChange(e.target.value)}
-                options={driverOptions} placeholder={selectedVendor ? "\u0e40\u0e25\u0e37\u0e2d\u0e01\u0e04\u0e19\u0e02\u0e31\u0e1a\u2026" : "\u0e40\u0e25\u0e37\u0e2d\u0e01 Vendor \u0e01\u0e48\u0e2d\u0e19"} disabled={!selectedVendor} />
+                options={driverOptions} placeholder={selectedVendor ? "เลือกคนขับ…" : "เลือก Vendor ก่อน"} disabled={!selectedVendor} />
             </FormField>
-            <FormField label="\u0e40\u0e1a\u0e2d\u0e23\u0e4c\u0e42\u0e17\u0e23\u0e04\u0e19\u0e02\u0e31\u0e1a" hint="Auto-fill">
-              <Input value={form.driver_phone} onChange={set("driver_phone")} placeholder="\u0e40\u0e1a\u0e2d\u0e23\u0e4c\u0e42\u0e17\u0e23" readOnly />
+            <FormField label="เบอร์โทรคนขับ" hint="Auto-fill">
+              <Input value={form.driver_phone} onChange={set("driver_phone")} placeholder="เบอร์โทร" readOnly />
             </FormField>
             <FormField label="Plan Pickup Date">
               <Input type="date" value={form.plan_pickup_date} onChange={set("plan_pickup_date")} />
@@ -505,80 +505,80 @@ export default function BookingsPage() {
           </Section>
 
           {/* Part 3 — Depot / Container */}
-          <Section title="Part 3 \u2014 \u0e23\u0e31\u0e1a\u0e15\u0e39\u0e49\u0e08\u0e32\u0e01 DEPOT" number={3}>
+          <Section title="Part 3 — รับตู้จาก DEPOT" number={3}>
             <FormField label="Container No.">
               <Input value={form.container_no} onChange={set("container_no")} placeholder="e.g. TCKU1234567" />
             </FormField>
             <FormField label="Container Size" hint="e.g. 40HC">
               <Select value={form.container_size} onChange={(e) => handleSizeChange(e.target.value)}
-                options={sizeOptions} placeholder="\u0e40\u0e25\u0e37\u0e2d\u0e01 Size\u2026" />
+                options={sizeOptions} placeholder="เลือก Size…" />
             </FormField>
             <FormField label="Size Code (ISO)" hint="e.g. 45G1">
               <Select value={form.container_size_code} onChange={(e) => handleCodeChange(e.target.value)}
-                options={codeOptions} placeholder="\u0e40\u0e25\u0e37\u0e2d\u0e01 Code\u2026" />
+                options={codeOptions} placeholder="เลือก Code…" />
             </FormField>
             <FormField label="Tare Weight (kg)">
               <Input value={form.tare_weight} onChange={set("tare_weight")} placeholder="e.g. 3800" />
             </FormField>
             <div className="col-span-2">
               <FormField label="Seal No.">
-                <Input value={form.seal_no} onChange={set("seal_no")} placeholder="\u0e2b\u0e21\u0e32\u0e22\u0e40\u0e25\u0e02\u0e0b\u0e35\u0e25" />
+                <Input value={form.seal_no} onChange={set("seal_no")} placeholder="หมายเลขซีล" />
               </FormField>
             </div>
           </Section>
 
           {/* Part 4 — Loading Status */}
-          <Section title="Part 4 \u2014 \u0e2a\u0e16\u0e32\u0e19\u0e30\u0e42\u0e2b\u0e25\u0e14\u0e2a\u0e34\u0e19\u0e04\u0e49\u0e32" number={4}>
-            <FormField label="\u0e2a\u0e16\u0e32\u0e19\u0e30">
+          <Section title="Part 4 — สถานะโหลดสินค้า" number={4}>
+            <FormField label="สถานะ">
               <Select value={form.loading_status} onChange={set("loading_status")} options={LOADING_OPTIONS} />
             </FormField>
             <FormField label="Plan Loading Date">
               <Input type="date" value={form.plan_loading_date} onChange={set("plan_loading_date")} />
             </FormField>
-            <FormField label="Pending \u0e40\u0e27\u0e25\u0e32">
+            <FormField label="Pending เวลา">
               <Input type="datetime-local" value={form.pending_at} onChange={set("pending_at")} />
             </FormField>
-            <FormField label="Loading \u0e40\u0e27\u0e25\u0e32">
+            <FormField label="Loading เวลา">
               <Input type="datetime-local" value={form.loading_at} onChange={set("loading_at")} />
             </FormField>
             <div className="col-span-2">
-              <FormField label="Loaded \u0e40\u0e27\u0e25\u0e32">
+              <FormField label="Loaded เวลา">
                 <Input type="datetime-local" value={form.loaded_at} onChange={set("loaded_at")} />
               </FormField>
             </div>
           </Section>
 
           {/* Part 5 — Return */}
-          <Section title="Part 5 \u2014 \u0e04\u0e37\u0e19\u0e15\u0e39\u0e49\u0e17\u0e48\u0e32" number={5}>
+          <Section title="Part 5 — คืนตู้ท่า" number={5}>
             <FormField label="Plan Return Date">
               <Input type="date" value={form.plan_return_date} onChange={set("plan_return_date")} />
             </FormField>
-            <FormField label="\u0e17\u0e30\u0e40\u0e1a\u0e35\u0e22\u0e19\u0e23\u0e16\u0e04\u0e37\u0e19\u0e15\u0e39\u0e49" hint="\u0e14\u0e36\u0e07\u0e08\u0e32\u0e01 Vendor">
+            <FormField label="ทะเบียนรถคืนตู้" hint="ดึงจาก Vendor">
               <Select value={form.return_truck_plate} onChange={set("return_truck_plate")}
-                options={truckPlateOptions} placeholder={selectedVendor ? "\u0e40\u0e25\u0e37\u0e2d\u0e01\u0e17\u0e30\u0e40\u0e1a\u0e35\u0e22\u0e19\u2026" : "\u0e40\u0e25\u0e37\u0e2d\u0e01 Vendor \u0e01\u0e48\u0e2d\u0e19"} disabled={!selectedVendor} />
+                options={truckPlateOptions} placeholder={selectedVendor ? "เลือกทะเบียน…" : "เลือก Vendor ก่อน"} disabled={!selectedVendor} />
             </FormField>
-            <FormField label="\u0e04\u0e19\u0e02\u0e31\u0e1a\u0e04\u0e37\u0e19\u0e15\u0e39\u0e49" hint="\u0e14\u0e36\u0e07\u0e08\u0e32\u0e01 Vendor">
+            <FormField label="คนขับคืนตู้" hint="ดึงจาก Vendor">
               <Select value={form.return_driver_name} onChange={(e) => handleReturnDriverChange(e.target.value)}
-                options={driverOptions} placeholder={selectedVendor ? "\u0e40\u0e25\u0e37\u0e2d\u0e01\u0e04\u0e19\u0e02\u0e31\u0e1a\u2026" : "\u0e40\u0e25\u0e37\u0e2d\u0e01 Vendor \u0e01\u0e48\u0e2d\u0e19"} disabled={!selectedVendor} />
+                options={driverOptions} placeholder={selectedVendor ? "เลือกคนขับ…" : "เลือก Vendor ก่อน"} disabled={!selectedVendor} />
             </FormField>
-            <FormField label="\u0e40\u0e1a\u0e2d\u0e23\u0e4c\u0e04\u0e19\u0e02\u0e31\u0e1a\u0e04\u0e37\u0e19\u0e15\u0e39\u0e49" hint="Auto-fill">
-              <Input value={form.return_driver_phone} onChange={set("return_driver_phone")} placeholder="\u0e40\u0e1a\u0e2d\u0e23\u0e4c\u0e42\u0e17\u0e23" readOnly />
+            <FormField label="เบอร์คนขับคืนตู้" hint="Auto-fill">
+              <Input value={form.return_driver_phone} onChange={set("return_driver_phone")} placeholder="เบอร์โทร" readOnly />
             </FormField>
             <div className="col-span-2 flex flex-col gap-4">
-              <Toggle checked={form.gcl_received} onChange={(v) => setForm((f) => ({ ...f, gcl_received: v }))} label="\u0e44\u0e14\u0e49\u0e23\u0e31\u0e1a GCL (Good Control List) \u0e41\u0e25\u0e49\u0e27" />
-              <FormField label="\u0e27\u0e31\u0e19-\u0e40\u0e27\u0e25\u0e32\u0e04\u0e37\u0e19\u0e15\u0e39\u0e49\u0e08\u0e23\u0e34\u0e07">
+              <Toggle checked={form.gcl_received} onChange={(v) => setForm((f) => ({ ...f, gcl_received: v }))} label="ได้รับ GCL (Good Control List) แล้ว" />
+              <FormField label="วัน-เวลาคืนตู้จริง">
                 <Input type="datetime-local" value={form.return_date} onChange={set("return_date")} />
               </FormField>
-              <Toggle checked={form.return_completed} onChange={(v) => setForm((f) => ({ ...f, return_completed: v }))} label="\u0e04\u0e37\u0e19\u0e15\u0e39\u0e49\u0e40\u0e23\u0e35\u0e22\u0e1a\u0e23\u0e49\u0e2d\u0e22\u0e41\u0e25\u0e49\u0e27" />
+              <Toggle checked={form.return_completed} onChange={(v) => setForm((f) => ({ ...f, return_completed: v }))} label="คืนตู้เรียบร้อยแล้ว" />
             </div>
           </Section>
 
           <div className="flex gap-3 justify-end pt-2">
             <button type="button" onClick={() => setModalOpen(false)}
-              className="px-4 py-2 text-sm rounded-lg border border-[var(--border)] hover:bg-slate-50 transition-colors">\u0e22\u0e01\u0e40\u0e25\u0e34\u0e01</button>
+              className="px-4 py-2 text-sm rounded-lg border border-[var(--border)] hover:bg-slate-50 transition-colors">ยกเลิก</button>
             <button type="submit" disabled={saving}
               className="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50 font-medium">
-              {saving ? "\u0e01\u0e33\u0e25\u0e31\u0e07\u0e1a\u0e31\u0e19\u0e17\u0e36\u0e01\u2026" : editing ? "\u0e1a\u0e31\u0e19\u0e17\u0e36\u0e01" : "\u0e2a\u0e23\u0e49\u0e32\u0e07 Booking"}
+              {saving ? "กำลังบันทึก…" : editing ? "บันทึก" : "สร้าง Booking"}
             </button>
           </div>
         </form>
@@ -586,8 +586,8 @@ export default function BookingsPage() {
 
       <ConfirmDialog
         open={!!deleteTarget}
-        title="\u0e25\u0e1a Booking"
-        message={`\u0e15\u0e49\u0e2d\u0e07\u0e01\u0e32\u0e23\u0e25\u0e1a booking "${deleteTarget?.booking_no}" \u0e43\u0e0a\u0e48\u0e2b\u0e23\u0e37\u0e2d\u0e44\u0e21\u0e48?`}
+        title="ลบ Booking"
+        message={`ต้องการลบ booking "${deleteTarget?.booking_no}" ใช่หรือไม่?`}
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
         loading={deleting}
