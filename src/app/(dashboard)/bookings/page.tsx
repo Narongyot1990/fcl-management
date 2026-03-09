@@ -370,34 +370,34 @@ export default function BookingsPage() {
                               {b.booking_no}
                               <div className="text-[10px] text-[var(--muted)] font-normal mt-0.5">Vendor: {b.vendor_code || "\u2014"}</div>
                             </td>
-                            <td className="px-4 py-2">
+                            <td className="px-4 py-2" rowSpan={2}>
                               {b.job_type ? (
                                 <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${b.job_type === "Export" ? "bg-blue-100 text-blue-800" : "bg-orange-100 text-orange-800"}`}>
                                   {b.job_type}
                                 </span>
                               ) : "\u2014"}
                             </td>
-                            <td className="px-4 py-2 text-xs"><D v={b.customer_code} /></td>
-                            <td className="px-4 py-2 font-mono text-xs whitespace-nowrap"><D v={b.container_no} /></td>
-                            <td className="px-4 py-2 text-xs whitespace-nowrap">
+                            <td className="px-4 py-2 text-xs" rowSpan={2}><D v={b.customer_code} /></td>
+                            <td className="px-4 py-2 font-mono text-xs whitespace-nowrap" rowSpan={2}><D v={b.container_no} /></td>
+                            <td className="px-4 py-2 text-xs whitespace-nowrap" rowSpan={2}>
                               {b.container_size ? (
                                 <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-medium">{b.container_size}</span>
                               ) : "\u2014"}
                               {b.container_size_code && <span className="text-[var(--muted)] ml-1">/ {b.container_size_code}</span>}
                             </td>
-                            <td className="px-4 py-2 font-mono text-xs"><D v={b.seal_no} /></td>
-                            <td className="px-4 py-2 text-xs"><D v={b.tare_weight} /></td>
-                            <td className="px-4 py-2 text-[10px] leading-snug whitespace-nowrap">
+                            <td className="px-4 py-2 font-mono text-xs" rowSpan={2}><D v={b.seal_no} /></td>
+                            <td className="px-4 py-2 text-xs" rowSpan={2}><D v={b.tare_weight} /></td>
+                            <td className="px-4 py-2 text-[10px] leading-snug whitespace-nowrap" rowSpan={2}>
                               <div><span className="text-slate-400">Pickup:</span> <span className="font-medium">{b.plan_pickup_date || "\u2014"}</span></div>
                               <div><span className="text-slate-400">Loading:</span> <span className="font-medium">{b.plan_loading_date || "\u2014"}</span></div>
                               <div><span className="text-slate-400">Return:</span> <span className="font-medium">{b.plan_return_date || "\u2014"}</span></div>
                             </td>
-                            <td className="px-4 py-2">
+                            <td className="px-4 py-2" rowSpan={2}>
                               <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[b.loading_status || "pending"]}`}>
                                 {b.loading_status || "pending"}
                               </span>
                             </td>
-                            <td className="px-4 py-2"><StepBar booking={b} /></td>
+                            <td className="px-4 py-2" rowSpan={2}><StepBar booking={b} /></td>
                             <td className="px-4 py-2" rowSpan={2}>
                               <div className="flex flex-col items-center gap-1">
                                 <button onClick={() => openEdit(b)} className="p-1.5 rounded-lg hover:bg-blue-50 text-[var(--muted)] hover:text-blue-600 transition-colors"><Pencil size={14} /></button>
@@ -407,7 +407,7 @@ export default function BookingsPage() {
                           </tr>
                           {/* Row 2: driver details */}
                           <tr key={b._id + "-2"} className="border-b border-[var(--border)] bg-slate-50/40">
-                            <td colSpan={10} className="px-4 py-2 text-xs">
+                            <td colSpan={1} className="px-4 py-2 text-xs">
                               <div className="flex flex-wrap gap-x-8 gap-y-1">
                                 <div className="flex items-center gap-1.5">
                                   <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700 uppercase tracking-wider">Pickup</span>
