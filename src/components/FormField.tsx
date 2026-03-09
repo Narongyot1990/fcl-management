@@ -5,9 +5,14 @@ interface FormFieldProps {
   required?: boolean;
   children: React.ReactNode;
   hint?: string;
+  hintType?: "default" | "error" | "success";
 }
 
-export function FormField({ label, required, children, hint }: FormFieldProps) {
+export function FormField({ label, required, children, hint, hintType }: FormFieldProps) {
+  const hintColor =
+    hintType === "error" ? "text-red-500 font-medium" :
+    hintType === "success" ? "text-emerald-600 font-medium" :
+    "text-[var(--muted)]";
   return (
     <div className="flex flex-col gap-1.5">
       <label className="text-xs font-medium text-slate-600 uppercase tracking-wide">
@@ -15,7 +20,7 @@ export function FormField({ label, required, children, hint }: FormFieldProps) {
         {required && <span className="text-red-500 ml-0.5">*</span>}
       </label>
       {children}
-      {hint && <p className="text-xs text-[var(--muted)]">{hint}</p>}
+      {hint && <p className={`text-xs ${hintColor}`}>{hint}</p>}
     </div>
   );
 }

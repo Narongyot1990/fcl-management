@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Pencil, Trash2, Search, ChevronDown, ChevronUp, CalendarDays, Copy, Check, ZoomIn, X } from "lucide-react";
 import ImageUpload from "@/components/ImageUpload";
 import GeminiOcrButton from "@/components/GeminiOcrButton";
+import { containerNoMessage } from "@/lib/containerValidation";
 import { listRecords, createRecord, updateRecord, deleteRecord } from "@/lib/api";
 import type { Booking, Vendor, Container, Customer, LoadingStatus, JobType } from "@/lib/types";
 import PageHeader from "@/components/PageHeader";
@@ -580,8 +581,17 @@ export default function BookingsPage() {
 
           {/* Part 3 — Depot / Container */}
           <Section title="Part 3 — รับตู้จาก DEPOT" number={3}>
-            <FormField label="Container No.">
-              <Input value={form.container_no} onChange={set("container_no")} placeholder="e.g. TCKU1234567" />
+            <FormField
+              label="Container No."
+              hint={containerNoMessage(form.container_no) ?? (form.container_no.length === 11 ? "✓ ISO 6346 valid" : undefined)}
+              hintType={containerNoMessage(form.container_no) ? "error" : form.container_no.length === 11 ? "success" : "default"}
+            >
+              <Input
+                value={form.container_no}
+                onChange={set("container_no")}
+                placeholder="e.g. TCKU1234567"
+                className={containerNoMessage(form.container_no) ? "!border-red-400 focus:!ring-red-400" : form.container_no.length === 11 ? "!border-emerald-400 focus:!ring-emerald-400" : ""}
+              />
             </FormField>
             <FormField label="Container Size" hint="e.g. 40HC">
               <Select value={form.container_size} onChange={(e) => handleSizeChange(e.target.value)}
