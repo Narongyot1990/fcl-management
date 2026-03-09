@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { head } from "@vercel/blob";
+import { type NextRequest, NextResponse } from "next/server";
+import { get } from "@vercel/blob";
 
 export async function GET(
   request: NextRequest,
@@ -7,25 +7,20 @@ export async function GET(
 ) {
   try {
     const { filename } = await params;
-    // Construct the private blob URL
-    const blobUrl = `https://itl-files.vercel.app/${filename}`;
-    
-    // Get signed URL for the private blob
-    const blob = await head(blobUrl);
-    
-    // Fetch the image content
-    const imageResponse = await fetch(blob.url);
-    const imageBuffer = await imageResponse.arrayBuffer();
-    
-    // Return the image with proper headers
-    return new NextResponse(imageBuffer, {
+    const result = await get(filename, { access: "private" });
+
+    if (!result || result.statusCode !== 200) {
+      return new NextResponse("Not found", { status: 404 });
+    }
+
+    return new NextResponse(result.stream, {
       headers: {
-        "Content-Type": imageResponse.headers.get("Content-Type") || "image/jpeg",
-        "Cache-Control": "public, max-age=86400", // Cache for 1 day
+        "Content-Type": result.blob.contentType || "image/jpeg",
+        "Cache-Control": "public, max-age=86400",
       },
     });
   } catch (error) {
     console.error("Image proxy error:", error);
-    return NextResponse.json({ error: "Image not found" }, { status: 404 });
+    return new NextResponse("Not found", { status: 404 });
   }
 }

@@ -361,188 +361,149 @@ export default function BookingsPage() {
 
       {error && <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">{error}</div>}
 
-      {/* ── Table grouped by date ── */}
-      <div className="bg-white rounded-2xl border border-[var(--border)] shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm border-collapse">
-            <thead>
-              <tr className="border-b-2 border-[var(--border)] bg-slate-50">
-                <th className="text-left px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide w-8">#</th>
-                <th className="text-left px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Booking No.</th>
-                <th className="text-left px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Type</th>
-                <th className="text-left px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Customer</th>
-                <th className="text-left px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Container No.</th>
-                <th className="text-left px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Size / Code</th>
-                <th className="text-left px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Seal</th>
-                <th className="text-left px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Tare (kg)</th>
-                <th className="text-left px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Plan Dates</th>
-                <th className="text-left px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Status</th>
-                <th className="text-left px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Progress</th>
-                <th className="px-3 py-3 w-10" />
-                <th className="px-3 py-3 w-10" />
-              </tr>
-            </thead>
+      {/* ── Bookings grouped by date ── */}
+      <div className="flex flex-col gap-4">
+        {loading ? (
+          <div className="bg-white rounded-2xl border border-[var(--border)] shadow-sm px-5 py-10 text-center text-[var(--muted)]">Loading…</div>
+        ) : records.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-[var(--border)] shadow-sm px-5 py-10 text-center text-[var(--muted)]">ยังไม่มี Booking กด Add New เพื่อสร้าง</div>
+        ) : (
+          Array.from(grouped.entries()).map(([date, bookings]) => {
+            const isCollapsed = collapsed.has(date);
+            return (
+              <div key={date} className="bg-white rounded-2xl border border-[var(--border)] shadow-sm overflow-hidden">
+                {/* ── Date header ── */}
+                <button type="button" onClick={() => toggleGroup(date)}
+                  className="w-full flex items-center justify-between px-5 py-3 bg-slate-50 hover:bg-slate-100 transition-colors border-b border-slate-200">
+                  <div className="flex items-center gap-2">
+                    <CalendarDays size={15} className="text-blue-500 shrink-0" />
+                    <span className="text-sm font-bold text-slate-700">{date === "No Date" ? "— ไม่มีวันที่ —" : toThaiDate(date)}</span>
+                    <span className="text-xs text-slate-400 ml-1">({bookings.length} รายการ)</span>
+                  </div>
+                  {isCollapsed ? <ChevronDown size={14} className="text-slate-400" /> : <ChevronUp size={14} className="text-slate-400" />}
+                </button>
 
-            {loading ? (
-              <tbody>
-                <tr><td colSpan={13} className="px-5 py-10 text-center text-[var(--muted)]">Loading…</td></tr>
-              </tbody>
-            ) : records.length === 0 ? (
-              <tbody>
-                <tr><td colSpan={13} className="px-5 py-10 text-center text-[var(--muted)]">ยังไม่มี Booking กด Add New เพื่อสร้าง</td></tr>
-              </tbody>
-            ) : (
-              Array.from(grouped.entries()).map(([date, bookings]) => {
-                const isCollapsed = collapsed.has(date);
-                return (
-                  <tbody key={date}>
-                    {/* ── Date group header row ── */}
-                    <tr
-                      className="bg-slate-100 hover:bg-slate-200 cursor-pointer"
-                      onClick={() => toggleGroup(date)}
-                    >
-                      <td colSpan={13} className="px-4 py-2.5 border-y border-slate-200">
-                        <div className="flex items-center gap-2">
-                          {isCollapsed
-                            ? <ChevronDown size={14} className="text-slate-500 shrink-0" />
-                            : <ChevronUp size={14} className="text-slate-500 shrink-0" />}
-                          <CalendarDays size={14} className="text-blue-500 shrink-0" />
-                          <span className="text-sm font-bold text-slate-700">
-                            {date === "No Date" ? "— ไม่มีวันที่ —" : toThaiDate(date)}
-                          </span>
-                          <span className="text-xs text-slate-400">
-                            ({bookings.length} booking{bookings.length > 1 ? "s" : ""})
-                          </span>
-                        </div>
-                      </td>
-                    </tr>
-
-                    {/* ── 2 rows per booking ── */}
-                    {!isCollapsed && bookings.map((b, i) => (
-                      <React.Fragment key={b._id}>
-                        {/* Row A — main info */}
-                        <tr className="hover:bg-blue-50/30 border-b border-slate-100">
-                          <td className="px-3 py-2 text-xs text-slate-400 align-top">{i + 1}</td>
-                          <td className="px-3 py-2 align-top">
-                            <div className="font-mono font-semibold text-violet-700 whitespace-nowrap">{b.booking_no}</div>
-                            <div className="text-[10px] text-slate-400 mt-0.5">Vendor: {b.vendor_code || "—"}</div>
-                          </td>
-                          <td className="px-3 py-2 align-top">
-                            {b.job_type
-                              ? <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${b.job_type === "Export" ? "bg-blue-100 text-blue-800" : "bg-orange-100 text-orange-800"}`}>{b.job_type}</span>
-                              : <span className="text-slate-300">—</span>}
-                          </td>
-                          <td className="px-3 py-2 text-xs align-top">{b.customer_code || <span className="text-slate-300">—</span>}</td>
-                          <td className="px-3 py-2 font-mono text-xs align-top whitespace-nowrap">
-                            <div className="flex flex-col gap-1">
-                              <span className="font-mono">{b.container_no || <span className="text-slate-300">—</span>}</span>
-                              {(b.eir_image_url || b.container_image_url) && (
-                                <div className="flex gap-1.5 mt-0.5">
-                                  {b.eir_image_url && (
-                                    <button
-                                      type="button"
-                                      onClick={() => openImageModal(b.eir_image_url, "EIR — " + b.booking_no)}
-                                      className="relative group w-10 h-10 rounded overflow-hidden border border-blue-200 hover:border-blue-400 transition-colors shrink-0"
-                                      title="ดูรูป EIR"
-                                    >
-                                      <img src={b.eir_image_url} alt="EIR" className="w-full h-full object-cover" />
-                                      <div className="absolute inset-0 bg-blue-600/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                        <ZoomIn size={12} className="text-white" />
-                                      </div>
-                                      <span className="absolute bottom-0 left-0 right-0 bg-blue-600/80 text-white text-[8px] font-bold text-center leading-tight py-0.5">EIR</span>
-                                    </button>
-                                  )}
-                                  {b.container_image_url && (
-                                    <button
-                                      type="button"
-                                      onClick={() => openImageModal(b.container_image_url, "Container — " + b.booking_no)}
-                                      className="relative group w-10 h-10 rounded overflow-hidden border border-emerald-200 hover:border-emerald-400 transition-colors shrink-0"
-                                      title="ดูรูป Container"
-                                    >
-                                      <img src={b.container_image_url} alt="Container" className="w-full h-full object-cover" />
-                                      <div className="absolute inset-0 bg-emerald-600/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                        <ZoomIn size={12} className="text-white" />
-                                      </div>
-                                      <span className="absolute bottom-0 left-0 right-0 bg-emerald-600/80 text-white text-[8px] font-bold text-center leading-tight py-0.5">CTR</span>
-                                    </button>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-3 py-2 text-xs align-top whitespace-nowrap">
-                            {b.container_size
-                              ? <span className="inline-flex px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-medium">{b.container_size}</span>
-                              : <span className="text-slate-300">—</span>}
-                            {b.container_size_code && <span className="text-slate-400 ml-1 font-mono text-[10px]">/ {b.container_size_code}</span>}
-                          </td>
-                          <td className="px-3 py-2 font-mono text-xs align-top">{b.seal_no || <span className="text-slate-300">—</span>}</td>
-                          <td className="px-3 py-2 text-xs align-top">{b.tare_weight || <span className="text-slate-300">—</span>}</td>
-                          <td className="px-3 py-2 text-[10px] leading-relaxed align-top whitespace-nowrap">
-                            <div><span className="text-slate-400">Pickup: </span><span className="font-medium">{toThaiDate(b.plan_pickup_date)}</span></div>
-                            <div><span className="text-slate-400">Loading: </span><span className="font-medium">{toThaiDate(b.plan_loading_date)}</span></div>
-                            <div><span className="text-slate-400">Return: </span><span className="font-medium">{toThaiDate(b.plan_return_date)}</span></div>
-                          </td>
-                          <td className="px-3 py-2 align-top">
-                            <div className="flex flex-col gap-1">
-                              <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[b.loading_status || "pending"]}`}>
-                                {b.loading_status || "pending"}
+                {/* ── Booking cards ── */}
+                {!isCollapsed && (
+                  <div className="divide-y divide-slate-100">
+                    {bookings.map((b, i) => (
+                      <div key={b._id} className="p-4 hover:bg-blue-50/20 transition-colors">
+                        {/* Top row: Booking No + badges + actions */}
+                        <div className="flex items-start justify-between gap-3 mb-3">
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <span className="text-xs text-slate-400 font-medium w-5">{i + 1}.</span>
+                            <span className="font-mono font-bold text-violet-700 text-sm">{b.booking_no}</span>
+                            {b.job_type && (
+                              <span className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold ${b.job_type === "Export" ? "bg-blue-100 text-blue-700" : "bg-orange-100 text-orange-700"}`}>
+                                {b.job_type}
                               </span>
-                              {b.gcl_received && (
-                                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-700">
-                                  ✓ GCL
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-3 py-2 align-top"><StepBar booking={b} /></td>
-                          <td className="px-3 py-2 align-top" rowSpan={2}>
-                            <div className="flex flex-col items-center gap-1">
-                              <button onClick={() => openEdit(b)} className="p-1.5 rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition-colors" title="แก้ไข"><Pencil size={13} /></button>
-                              <button onClick={() => setDeleteTarget(b)} className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors" title="ลบ"><Trash2 size={13} /></button>
-                            </div>
-                          </td>
-                        </tr>
-
-                        {/* Row B — driver details (spans all data cols except action) */}
-                        <tr className="border-b border-slate-200 bg-slate-50/60">
-                          <td className="px-3 py-1.5" />
-                          <td colSpan={10} className="px-3 py-1.5">
-                            <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-xs">
-                              <div className="flex items-center gap-1.5">
-                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700 uppercase tracking-wider">Pickup</span>
-                                <span className="font-medium text-slate-700">{b.driver_name || "—"}</span>
-                                {b.driver_phone && <span className="text-slate-400">{b.driver_phone}</span>}
-                                {b.truck_plate && <span className="font-mono text-slate-500 bg-slate-100 px-1 rounded">{b.truck_plate}</span>}
-                              </div>
-                              <div className="flex items-center gap-1.5">
-                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-violet-100 text-violet-700 uppercase tracking-wider">Return</span>
-                                <span className="font-medium text-slate-700">{b.return_driver_name || "—"}</span>
-                                {b.return_driver_phone && <span className="text-slate-400">{b.return_driver_phone}</span>}
-                                {b.return_truck_plate && <span className="font-mono text-slate-500 bg-slate-100 px-1 rounded">{b.return_truck_plate}</span>}
-                              </div>
-                              {b.gcl_received && <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700">GCL ✓</span>}
-                              {b.return_completed && <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700">Returned ✓</span>}
-                            </div>
-                          </td>
-                          <td className="px-3 py-1.5 align-top">
-                            <button
-                              onClick={() => copyPickupInfo(b)}
+                            )}
+                            <span className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-medium ${STATUS_COLORS[b.loading_status || "pending"]}`}>
+                              {b.loading_status || "pending"}
+                            </span>
+                            {b.gcl_received && <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700">GCL ✓</span>}
+                            {b.return_completed && <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700">คืนแล้ว ✓</span>}
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button onClick={() => copyPickupInfo(b)}
                               className={`p-1.5 rounded-lg hover:bg-blue-50 transition-colors ${copiedId === b._id ? "text-green-600" : "text-slate-400 hover:text-blue-600"}`}
-                              title="Copy ข้อมูลสำหรับ Email"
-                            >
-                              {copiedId === b._id ? <Check size={13} /> : <Copy size={13} />}
+                              title="Copy ข้อมูล">
+                              {copiedId === b._id ? <Check size={14} /> : <Copy size={14} />}
                             </button>
-                          </td>
-                        </tr>
-                      </React.Fragment>
+                            <button onClick={() => openEdit(b)} className="p-1.5 rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition-colors" title="แก้ไข"><Pencil size={14} /></button>
+                            <button onClick={() => setDeleteTarget(b)} className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors" title="ลบ"><Trash2 size={14} /></button>
+                          </div>
+                        </div>
+
+                        {/* Progress bar */}
+                        <div className="mb-3"><StepBar booking={b} /></div>
+
+                        {/* Details grid */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-x-4 gap-y-2 text-xs">
+                          <div>
+                            <span className="text-slate-400 block">Customer</span>
+                            <span className="font-medium text-slate-700">{b.customer_code || "—"}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 block">Vendor</span>
+                            <span className="font-medium text-slate-700">{b.vendor_code || "—"}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 block">Container</span>
+                            <span className="font-mono font-medium text-slate-700">{b.container_no || "—"}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 block">Size / Code</span>
+                            <span className="font-medium text-slate-700">
+                              {b.container_size || "—"}{b.container_size_code && <span className="text-slate-400 ml-1">/ {b.container_size_code}</span>}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 block">Seal No.</span>
+                            <span className="font-mono font-medium text-slate-700">{b.seal_no || "—"}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 block">Tare (kg)</span>
+                            <span className="font-medium text-slate-700">{b.tare_weight || "—"}</span>
+                          </div>
+                        </div>
+
+                        {/* Plan dates row */}
+                        <div className="flex flex-wrap gap-x-6 gap-y-1 mt-2 text-xs">
+                          <div><span className="text-slate-400">Pickup: </span><span className="font-medium text-slate-700">{toThaiDate(b.plan_pickup_date)}</span></div>
+                          <div><span className="text-slate-400">Loading: </span><span className="font-medium text-slate-700">{toThaiDate(b.plan_loading_date)}</span></div>
+                          <div><span className="text-slate-400">Return: </span><span className="font-medium text-slate-700">{toThaiDate(b.plan_return_date)}</span></div>
+                        </div>
+
+                        {/* Driver info row */}
+                        <div className="flex flex-wrap gap-x-6 gap-y-1.5 mt-2 text-xs">
+                          <div className="flex items-center gap-1.5">
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700 uppercase">Pickup</span>
+                            <span className="font-medium text-slate-700">{b.driver_name || "—"}</span>
+                            {b.driver_phone && <span className="text-slate-400">{b.driver_phone}</span>}
+                            {b.truck_plate && <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-600">{b.truck_plate}</span>}
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-violet-100 text-violet-700 uppercase">Return</span>
+                            <span className="font-medium text-slate-700">{b.return_driver_name || "—"}</span>
+                            {b.return_driver_phone && <span className="text-slate-400">{b.return_driver_phone}</span>}
+                            {b.return_truck_plate && <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-600">{b.return_truck_plate}</span>}
+                          </div>
+                        </div>
+
+                        {/* Images row */}
+                        {(b.eir_image_url || b.container_image_url) && (
+                          <div className="flex gap-3 mt-3">
+                            {b.eir_image_url && (
+                              <button type="button" onClick={() => openImageModal(b.eir_image_url, "EIR — " + b.booking_no)}
+                                className="relative group w-20 h-14 rounded-lg overflow-hidden border border-blue-200 hover:border-blue-400 transition-colors shrink-0">
+                                <img src={b.eir_image_url} alt="EIR" className="w-full h-full object-cover" />
+                                <div className="absolute inset-0 bg-blue-600/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                  <ZoomIn size={16} className="text-white" />
+                                </div>
+                                <span className="absolute bottom-0 left-0 right-0 bg-blue-600/80 text-white text-[9px] font-bold text-center py-0.5">EIR</span>
+                              </button>
+                            )}
+                            {b.container_image_url && (
+                              <button type="button" onClick={() => openImageModal(b.container_image_url, "Container — " + b.booking_no)}
+                                className="relative group w-20 h-14 rounded-lg overflow-hidden border border-emerald-200 hover:border-emerald-400 transition-colors shrink-0">
+                                <img src={b.container_image_url} alt="Container" className="w-full h-full object-cover" />
+                                <div className="absolute inset-0 bg-emerald-600/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                  <ZoomIn size={16} className="text-white" />
+                                </div>
+                                <span className="absolute bottom-0 left-0 right-0 bg-emerald-600/80 text-white text-[9px] font-bold text-center py-0.5">Container</span>
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     ))}
-                  </tbody>
-                );
-              })
-            )}
-          </table>
-        </div>
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
       </div>
 
       {/* ── Modal Form ── */}
