@@ -49,8 +49,12 @@ export async function POST(request: NextRequest) {
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
-    // Use gemini-2.0-flash (correct model name). gemini-3.0-flash doesn't exist.
-    const model = process.env.GEMINI_MODEL === "gemini-3.0-flash" ? "gemini-2.0-flash" : (process.env.GEMINI_MODEL || "gemini-2.0-flash");
+    // Use gemini-2-flash (correct API name). Handle common user variations.
+    const userModel = process.env.GEMINI_MODEL || "gemini-2-flash";
+    const model = 
+      userModel === "gemini-3.0-flash" ? "gemini-2-flash" :
+      userModel === "gemini-2.0-flash" ? "gemini-2-flash" :
+      userModel;
     if (!apiKey) {
       return NextResponse.json({ error: "GEMINI_API_KEY not configured" }, { status: 500 });
     }
