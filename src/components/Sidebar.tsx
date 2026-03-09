@@ -43,8 +43,8 @@ export default function Sidebar() {
       {/* Mobile top bar */}
       <header className="md:hidden fixed top-0 left-0 right-0 z-40 h-14 bg-[var(--sidebar-bg)] border-b border-slate-700 px-4 flex items-center justify-between">
         <div>
-          <h1 className="text-white font-bold text-sm leading-tight">EIR Control</h1>
-          <p className="text-slate-400 text-[10px]">Equipment Interchange Receipt</p>
+          <h1 className="text-white font-bold text-sm leading-tight">FCL Management</h1>
+          <p className="text-slate-400 text-[10px]">Full Container Load System</p>
         </div>
         <button
           type="button"
@@ -68,8 +68,8 @@ export default function Sidebar() {
           <aside className="absolute left-0 top-0 h-full w-72 max-w-[85vw] bg-[var(--sidebar-bg)] flex flex-col shadow-2xl">
             <div className="px-5 py-4 border-b border-slate-700 flex items-center justify-between">
               <div>
-                <h1 className="text-white font-bold text-base leading-tight">EIR Control</h1>
-                <p className="text-slate-400 text-xs mt-0.5">Equipment Interchange Receipt</p>
+                <h1 className="text-white font-bold text-base leading-tight">FCL Management</h1>
+                <p className="text-slate-400 text-xs mt-0.5">Full Container Load System</p>
               </div>
               <button
                 type="button"
@@ -84,7 +84,7 @@ export default function Sidebar() {
               {renderLinks(() => setMobileOpen(false))}
             </nav>
             <div className="px-5 py-4 border-t border-slate-700">
-              <p className="text-xs text-slate-500">EIR System v2.0</p>
+              <p className="text-xs text-slate-500">FCL System v2.0</p>
             </div>
           </aside>
         </div>
@@ -93,14 +93,14 @@ export default function Sidebar() {
       {/* Desktop sidebar */}
       <aside className="hidden md:flex w-60 shrink-0 bg-[var(--sidebar-bg)] flex-col min-h-screen md:sticky md:top-0 md:h-screen">
         <div className="px-5 py-5 border-b border-slate-700">
-          <h1 className="text-white font-bold text-base leading-tight">EIR Control</h1>
-          <p className="text-slate-400 text-xs mt-0.5">Equipment Interchange Receipt</p>
+          <h1 className="text-white font-bold text-base leading-tight">FCL Management</h1>
+          <p className="text-slate-400 text-xs mt-0.5">Full Container Load System</p>
         </div>
         <nav className="flex-1 py-4 flex flex-col gap-0.5 px-2">
           {renderLinks()}
         </nav>
         <div className="px-5 py-4 border-t border-slate-700">
-          <p className="text-xs text-slate-500">EIR System v2.0</p>
+          <p className="text-xs text-slate-500">FCL System v2.0</p>
         </div>
       </aside>
     </>

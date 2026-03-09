@@ -8,6 +8,7 @@ interface Props {
   imageSrc: string;
   onConfirm: (croppedBlob: Blob) => void;
   onCancel: () => void;
+  onSkip?: () => void;
 }
 
 async function getCroppedBlob(
@@ -62,7 +63,7 @@ async function getCroppedBlob(
   });
 }
 
-export default function ImageCropModal({ imageSrc, onConfirm, onCancel }: Props) {
+export default function ImageCropModal({ imageSrc, onConfirm, onCancel, onSkip }: Props) {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
@@ -162,15 +163,24 @@ export default function ImageCropModal({ imageSrc, onConfirm, onCancel }: Props)
             <button
               type="button"
               onClick={onCancel}
-              className="px-4 py-2 rounded-lg border border-white/20 text-white/70 text-sm hover:bg-white/10 transition-colors"
+              className="px-3 py-2 rounded-lg border border-white/20 text-white/70 text-xs hover:bg-white/10 transition-colors"
             >
               ยกเลิก
             </button>
+            {onSkip && (
+              <button
+                type="button"
+                onClick={onSkip}
+                className="px-3 py-2 rounded-lg border border-white/20 text-white/70 text-xs hover:bg-white/10 transition-colors"
+              >
+                ข้ามครอป
+              </button>
+            )}
             <button
               type="button"
               onClick={handleConfirm}
               disabled={processing}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold transition-colors disabled:opacity-50"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-xs font-semibold transition-colors disabled:opacity-50"
             >
               <Check size={14} />
               {processing ? "กำลังครอป…" : "ยืนยัน"}

@@ -7,23 +7,30 @@ export async function GET(
 ) {
   try {
     const { filename } = await params;
-    // Remove .blob extension if present, then strip file extension for prefix search
-    const cleanFilename = filename.replace(/\.blob$/, "");
-    const baseName = cleanFilename.replace(/\.[^.]+$/, "");
-    const prefix = `itl-files/${baseName}`;
+    const cleanFilename = decodeURIComponent(filename).replace(/\.blob$/, "");
 
-    console.log("Image proxy - searching with prefix:", prefix);
-    const { blobs } = await list({ prefix, limit: 1 });
+    // Try multiple search strategies for the blob
+    const prefixes = [
+      `itl-files/${cleanFilename}`,                          // exact: itl-files/eir_123.jpg
+      `itl-files/${cleanFilename.replace(/\.[^.]+$/, "")}`,  // no ext: itl-files/eir_123
+    ];
 
-    if (blobs.length === 0) {
-      console.log("Image not found for prefix:", prefix);
-      return new NextResponse("Not found", { status: 404 });
+    for (const prefix of prefixes) {
+      const { blobs } = await list({ prefix, limit: 1 });
+      if (blobs.length > 0) {
+        // Redirect to the actual public blob URL with cache headers
+        return new NextResponse(null, {
+          status: 302,
+          headers: {
+            Location: blobs[0].url,
+            "Cache-Control": "public, max-age=31536000, immutable",
+            "Access-Control-Allow-Origin": "*",
+          },
+        });
+      }
     }
 
-    // Redirect to the actual blob URL (public, CDN-cached)
-    const blobUrl = blobs[0].url;
-    console.log("Image proxy - redirecting to:", blobUrl.slice(0, 80));
-    return NextResponse.redirect(blobUrl, { status: 302 });
+    return new NextResponse("Not found", { status: 404 });
   } catch (error) {
     console.error("Image proxy error:", error);
     return new NextResponse("Not found", { status: 404 });

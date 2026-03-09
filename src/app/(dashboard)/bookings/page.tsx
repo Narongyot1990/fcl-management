@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { Pencil, Trash2, Search, ChevronDown, ChevronUp, CalendarDays, Copy, Check, ZoomIn, X } from "lucide-react";
+import { Pencil, Trash2, Search, ChevronDown, ChevronUp, ChevronRight, CalendarDays, Copy, Check, ZoomIn, X } from "lucide-react";
 import ImageUpload from "@/components/ImageUpload";
 import GeminiOcrButton from "@/components/GeminiOcrButton";
 import { containerNoMessage } from "@/lib/containerValidation";
@@ -12,8 +12,8 @@ import ConfirmDialog from "@/components/ConfirmDialog";
 import { FormField, Input, Select } from "@/components/FormField";
 
 // ── Collapsible section (form) ───────────────────────────────────────────────
-function Section({ title, icon, children, cols = 2 }: { title: string; icon?: string; children: React.ReactNode; cols?: number }) {
-  const [open, setOpen] = useState(true);
+function Section({ title, icon, children, cols = 2, defaultOpen = true }: { title: string; icon?: string; children: React.ReactNode; cols?: number; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
   return (
     <div className="border border-slate-200 rounded-lg overflow-hidden">
       <button type="button" onClick={() => setOpen((p) => !p)}
@@ -200,6 +200,7 @@ export default function BookingsPage() {
   const [deleteTarget, setDeleteTarget] = useState<Booking | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const [imageModalUrl, setImageModalUrl] = useState("");
@@ -266,6 +267,14 @@ export default function BookingsPage() {
     setCollapsed((prev) => {
       const next = new Set(prev);
       if (next.has(date)) next.delete(date); else next.add(date);
+      return next;
+    });
+  }
+
+  function toggleCard(id: string) {
+    setExpandedCards((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
   }
@@ -390,11 +399,11 @@ export default function BookingsPage() {
 
   return (
     <div>
-      <PageHeader title="Bookings" subtitle="จัดการ Booking — 5 ขั้นตอน lifecycle" onAdd={openCreate}>
+      <PageHeader title="Bookings" subtitle="จัดการ Booking" onAdd={openCreate}>
         <div className="relative">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="ค้นหา Booking No…"
-            className="pl-9 pr-4 py-2 text-sm border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-56" />
+            className="pl-8 pr-3 py-1.5 text-xs border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-44" />
         </div>
       </PageHeader>
 
@@ -424,123 +433,105 @@ export default function BookingsPage() {
 
                 {/* ── Booking cards ── */}
                 {!isCollapsed && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 p-5 bg-slate-50/50">
-                    {bookings.map((b, i) => (
-                      <div key={b._id} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-6 hover:shadow-md transition-shadow relative space-y-4">
-                        {/* Section 1: Booking Core Info */}
-                        <div className="flex flex-col gap-3">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex flex-col min-w-0 flex-1">
-                               <span className="text-sm font-black text-slate-800 truncate leading-tight">{b.customer_code || "No Customer"}</span>
-                               <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                 <span className="font-mono font-bold text-violet-700 text-xs">{b.booking_no}</span>
-                                 {b.job_type && (
-                                   <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold ${b.job_type === "Export" ? "bg-blue-100 text-blue-700" : "bg-orange-100 text-orange-700"}`}>
-                                     {b.job_type}
-                                   </span>
-                                 )}
-                                 {b.gcl_received && <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700">GCL ✓</span>}
-                                 {b.return_completed && <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700">คืนแล้ว ✓</span>}
-                               </div>
-                            </div>
-                            <div className="flex items-center gap-1 shrink-0 bg-slate-50 rounded-lg p-1 border border-slate-100">
-                              <button onClick={() => copyPickupInfo(b)}
-                                className={`p-1.5 rounded-md hover:bg-white transition-colors ${copiedId === b._id ? "text-green-600 bg-white shadow-sm" : "text-slate-400 hover:text-blue-600 hover:shadow-sm"}`}
-                                title="Copy ข้อมูล">
-                                {copiedId === b._id ? <Check size={14} /> : <Copy size={14} />}
-                              </button>
-                              <button onClick={() => openEdit(b)} className="p-1.5 rounded-md hover:bg-white text-slate-400 hover:text-blue-600 hover:shadow-sm transition-colors" title="แก้ไข"><Pencil size={14} /></button>
-                              <button onClick={() => setDeleteTarget(b)} className="p-1.5 rounded-md hover:bg-white text-slate-400 hover:text-red-600 hover:shadow-sm transition-colors" title="ลบ"><Trash2 size={14} /></button>
-                            </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 p-3 bg-slate-50/50">
+                    {bookings.map((b) => {
+                      const isExpanded = expandedCards.has(b._id);
+                      const step = getStep(b);
+                      return (
+                      <div key={b._id} className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
+                        {/* ── Always-visible compact header ── */}
+                        <div className="flex items-center gap-2.5 px-3.5 py-2.5 cursor-pointer" onClick={() => toggleCard(b._id)}>
+                          <ChevronRight size={14} className={`text-slate-400 shrink-0 transition-transform ${isExpanded ? "rotate-90" : ""}`} />
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <span className="font-mono font-bold text-violet-700 text-xs truncate">{b.booking_no}</span>
+                            {b.job_type && (
+                              <span className={`shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold ${b.job_type === "Export" ? "bg-blue-50 text-blue-700" : "bg-orange-50 text-orange-700"}`}>
+                                {b.job_type}
+                              </span>
+                            )}
+                            <span className="text-slate-300 text-[10px] hidden sm:inline">|</span>
+                            <span className="text-xs text-slate-500 truncate hidden sm:inline">{b.container_no || "—"}</span>
+                            <span className="text-slate-300 text-[10px] hidden sm:inline">|</span>
+                            <span className="text-xs text-slate-500 truncate hidden sm:inline">{b.customer_code || "—"}</span>
                           </div>
-                          
-                          {/* Progress bar */}
-                          <div className="rounded-xl bg-slate-50 border border-slate-100 px-4 py-4 pb-3"><StepBar booking={b} /></div>
-
-                          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-x-6 gap-y-2 text-xs rounded-xl bg-white">
-                            <div className="flex justify-between sm:block border-b border-slate-50 sm:border-0 last:border-0 pl-1">
-                              <span className="text-slate-400 text-[10px] uppercase font-semibold sm:normal-case sm:font-normal">Vendor:</span>
-                              <span className="font-bold text-slate-700 sm:ml-2">{b.vendor_code || "—"}</span>
-                            </div>
+                          {/* Status badges */}
+                          <div className="flex items-center gap-1 shrink-0">
+                            {b.return_completed && <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-green-100 text-green-700">Done</span>}
+                            {!b.return_completed && <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${step >= 2 ? "bg-green-100 text-green-700" : step >= 1 ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-500"}`}>{STEPS[step]}</span>}
+                          </div>
+                          {/* Action buttons always visible */}
+                          <div className="flex items-center gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                            <button onClick={() => copyPickupInfo(b)}
+                              className={`p-1 rounded hover:bg-slate-100 transition-colors ${copiedId === b._id ? "text-green-600" : "text-slate-400 hover:text-blue-600"}`}
+                              title="Copy ข้อมูล">
+                              {copiedId === b._id ? <Check size={13} /> : <Copy size={13} />}
+                            </button>
+                            <button onClick={() => openEdit(b)} className="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-blue-600 transition-colors" title="แก้ไข"><Pencil size={13} /></button>
+                            <button onClick={() => setDeleteTarget(b)} className="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-red-600 transition-colors" title="ลบ"><Trash2 size={13} /></button>
                           </div>
                         </div>
 
-                        {/* Section 2: Container Info */}
-                        <div className="border border-slate-200 rounded-xl bg-slate-50/50 p-4 relative mt-2">
-                           <span className="absolute -top-2.5 left-4 bg-white px-2 text-[10px] font-bold uppercase tracking-widest text-slate-500 rounded-sm shadow-sm border border-slate-200">Container Details</span>
-                           <div className="flex flex-col gap-4 mt-1">
-                             <div className="flex items-baseline gap-2 flex-wrap">
-                                <span className="font-mono font-black text-base sm:text-lg text-slate-800 tracking-tight">{b.container_no || "No Container"}</span>
-                                {b.seal_no && (
-                                  <>
-                                    <span className="text-slate-300">|</span>
-                                    <span className="font-mono font-bold text-xs sm:text-sm text-blue-700">{b.seal_no}</span>
-                                  </>
-                                )}
-                             </div>
-                             <div className="grid grid-cols-2 gap-3 text-xs">
-                               <div className="bg-white rounded-lg px-3 py-2 border border-slate-100 shadow-sm">
-                                  <span className="text-slate-400 block text-[9px] uppercase font-bold tracking-wide">Size / Code</span>
-                                  <span className="font-medium text-slate-700 block mt-0.5">
-                                    {b.container_size || "—"}{b.container_size_code && <span className="text-slate-400 ml-1">/ {b.container_size_code}</span>}
-                                  </span>
-                               </div>
-                               <div className="bg-white rounded-lg px-3 py-2 border border-slate-100 shadow-sm">
-                                  <span className="text-slate-400 block text-[9px] uppercase font-bold tracking-wide">Tare (kg)</span>
-                                  <span className="font-medium text-slate-700 block mt-0.5">{b.tare_weight || "—"}</span>
-                               </div>
-                             </div>
-                           </div>
-                        </div>
+                        {/* ── Expanded details ── */}
+                        {isExpanded && (
+                          <div className="px-3.5 pb-3.5 pt-0 space-y-3 border-t border-slate-100">
+                            {/* Progress bar */}
+                            <div className="rounded-lg bg-slate-50 border border-slate-100 px-3 py-3 mt-3"><StepBar booking={b} /></div>
 
-                        {/* Section 3: Truck/Logistics Info */}
-                        <div className="border border-slate-200 rounded-xl bg-slate-50/50 p-4 relative mt-2">
-                           <span className="absolute -top-2.5 left-4 bg-white px-2 text-[10px] font-bold uppercase tracking-widest text-slate-500 rounded-sm shadow-sm border border-slate-200">Logistics / Truck</span>
-                           <div className="flex flex-col gap-3 text-xs sm:flex-row sm:gap-4 mt-2">
-                             <div className="flex flex-col gap-1.5 rounded-xl bg-emerald-50/60 border border-emerald-100/80 px-4 py-3 flex-1 shadow-sm">
-                               <div className="flex items-center gap-2 mb-0.5">
-                                 <span className="px-2 py-0.5 rounded text-[9px] font-black bg-emerald-600 text-white uppercase tracking-wider">Pickup</span>
+                            {/* Info row */}
+                            <div className="flex items-center gap-3 text-xs flex-wrap">
+                              <span className="text-slate-500">Customer: <span className="font-bold text-slate-700">{b.customer_code || "—"}</span></span>
+                              <span className="text-slate-300">|</span>
+                              <span className="text-slate-500">Vendor: <span className="font-bold text-slate-700">{b.vendor_code || "—"}</span></span>
+                              {b.gcl_received && <><span className="text-slate-300">|</span><span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-green-100 text-green-700">GCL ✓</span></>}
+                            </div>
+
+                            {/* Container Info */}
+                            <div className="border border-slate-200 rounded-lg bg-slate-50/50 p-3 relative">
+                              <span className="absolute -top-2 left-3 bg-white px-1.5 text-[9px] font-bold uppercase tracking-widest text-slate-400 border border-slate-100 rounded-sm">Container</span>
+                              <div className="flex flex-col gap-2 mt-1">
+                                <div className="flex items-baseline gap-2 flex-wrap">
+                                  <span className="font-mono font-black text-sm text-slate-800 tracking-tight">{b.container_no || "—"}</span>
+                                  {b.seal_no && <><span className="text-slate-300">|</span><span className="font-mono font-bold text-xs text-blue-700">{b.seal_no}</span></>}
+                                </div>
+                                <div className="flex gap-3 text-xs">
+                                  <span className="text-slate-400">Size: <span className="font-medium text-slate-700">{b.container_size || "—"}{b.container_size_code ? ` / ${b.container_size_code}` : ""}</span></span>
+                                  <span className="text-slate-400">Tare: <span className="font-medium text-slate-700">{b.tare_weight ? `${b.tare_weight} kg` : "—"}</span></span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Logistics: Pickup & Return side by side */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                              <div className="flex flex-col gap-1 rounded-lg bg-emerald-50/60 border border-emerald-100/80 px-3 py-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="px-1.5 py-0.5 rounded text-[8px] font-black bg-emerald-600 text-white uppercase">Pickup</span>
                                   {(b.eir_image_url || b.container_image_url) && (
                                     <div className="flex gap-1 ml-auto">
                                       {b.eir_image_url && (
                                         <button type="button" onClick={() => openImageModal(b.eir_image_url!, "EIR — " + b.booking_no, b)}
-                                          className="w-6 h-6 rounded-md bg-blue-100 hover:bg-blue-200 border border-blue-200 flex items-center justify-center transition-colors"
-                                          title="ดูรูป EIR">
-                                          <span className="text-[10px]">📄</span>
-                                        </button>
+                                          className="w-5 h-5 rounded bg-blue-100 hover:bg-blue-200 border border-blue-200 flex items-center justify-center text-[9px]" title="ดูรูป EIR">📄</button>
                                       )}
                                       {b.container_image_url && (
                                         <button type="button" onClick={() => openImageModal(b.container_image_url!, "Container — " + b.booking_no, b)}
-                                          className="w-6 h-6 rounded-md bg-emerald-100 hover:bg-emerald-200 border border-emerald-200 flex items-center justify-center transition-colors"
-                                          title="ดูรูป Container">
-                                          <span className="text-[10px]">📦</span>
-                                        </button>
+                                          className="w-5 h-5 rounded bg-emerald-100 hover:bg-emerald-200 border border-emerald-200 flex items-center justify-center text-[9px]" title="ดูรูป Container">📦</button>
                                       )}
                                     </div>
                                   )}
-                               </div>
-                               <span className="font-bold text-slate-800 text-sm mt-0.5">{b.driver_name || "ไม่มีข้อมูลคนขับ"}</span>
-                               <div className="flex flex-col gap-1 mt-0.5">
-                                 {b.driver_phone && <span className="text-slate-500 font-medium">{b.driver_phone}</span>}
-                                 {b.truck_plate && <span className="font-mono font-bold bg-white border border-emerald-200 px-2.5 py-1 rounded-md text-emerald-800 shadow-sm self-start mt-1 tracking-tight">{b.truck_plate}</span>}
-                               </div>
-                             </div>
-                             <div className="flex flex-col gap-1.5 rounded-xl bg-violet-50/60 border border-violet-100/80 px-4 py-3 flex-1 shadow-sm">
-                               <div className="flex items-center gap-2 mb-0.5">
-                                 <span className="px-2 py-0.5 rounded text-[9px] font-black bg-violet-600 text-white uppercase tracking-wider">Return</span>
-                               </div>
-                               <span className="font-bold text-slate-800 text-sm mt-0.5">{b.return_driver_name || "ไม่มีข้อมูลคนขับ"}</span>
-                               <div className="flex flex-col gap-1 mt-0.5">
-                                 {b.return_driver_phone && <span className="text-slate-500 font-medium">{b.return_driver_phone}</span>}
-                                 {b.return_truck_plate && <span className="font-mono font-bold bg-white border border-violet-200 px-2.5 py-1 rounded-md text-violet-800 shadow-sm self-start mt-1 tracking-tight">{b.return_truck_plate}</span>}
-                               </div>
-                             </div>
-                           </div>
-                        </div>
-
-
+                                </div>
+                                <span className="font-bold text-slate-700 text-xs">{b.driver_name || "—"}</span>
+                                {b.truck_plate && <span className="font-mono font-bold text-emerald-800 text-[11px]">{b.truck_plate}</span>}
+                              </div>
+                              <div className="flex flex-col gap-1 rounded-lg bg-violet-50/60 border border-violet-100/80 px-3 py-2">
+                                <span className="px-1.5 py-0.5 rounded text-[8px] font-black bg-violet-600 text-white uppercase self-start">Return</span>
+                                <span className="font-bold text-slate-700 text-xs">{b.return_driver_name || "—"}</span>
+                                {b.return_truck_plate && <span className="font-mono font-bold text-violet-800 text-[11px]">{b.return_truck_plate}</span>}
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -633,7 +624,7 @@ export default function BookingsPage() {
 
           {/* ── Pickup + Return side-by-side ── */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <Section title="Pickup รับตู้" icon="🚛">
+            <Section title="Pickup รับตู้" icon="🚛" defaultOpen={!editing}>
               <FormField label="Plan Pickup">
                 <Input type="date" value={form.plan_pickup_date} onChange={set("plan_pickup_date")} />
               </FormField>
@@ -650,7 +641,7 @@ export default function BookingsPage() {
               </FormField>
             </Section>
 
-            <Section title="Return คืนตู้" icon="🔄">
+            <Section title="Return คืนตู้" icon="🔄" defaultOpen={!editing}>
               <FormField label="Plan Return">
                 <Input type="date" value={form.plan_return_date} onChange={set("plan_return_date")} />
               </FormField>
@@ -676,7 +667,7 @@ export default function BookingsPage() {
           </div>
 
           {/* ── Loading Status ── */}
-          <Section title="Loading Status" icon="📊" cols={2}>
+          <Section title="Loading Status" icon="📊" cols={2} defaultOpen={!editing}>
             <FormField label="Plan Loading">
               <Input type="date" value={form.plan_loading_date} onChange={set("plan_loading_date")} />
             </FormField>

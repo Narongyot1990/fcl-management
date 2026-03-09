@@ -5,8 +5,8 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "EIR Control System",
-  description: "Equipment Interchange Receipt management dashboard",
+  title: "FCL Management System",
+  description: "Full Container Load management dashboard",
 };
 
 export default function RootLayout({

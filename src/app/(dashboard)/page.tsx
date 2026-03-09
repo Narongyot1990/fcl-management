@@ -52,7 +52,7 @@ export default function Home() {
     <div className="flex flex-col gap-8 pb-10">
       <div className="mb-2">
         <h1 className="text-2xl font-bold text-[var(--foreground)]">Dashboard</h1>
-        <p className="text-sm text-[var(--muted)] mt-1">EIR Control System — ภาพรวมระบบทั้งหมด</p>
+        <p className="text-sm text-[var(--muted)] mt-1">FCL Management — ภาพรวมระบบทั้งหมด</p>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
