@@ -42,15 +42,10 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: 
   );
 }
 
-// ── Status badge ─────────────────────────────────────────────────────────────
-const STATUS_COLORS: Record<LoadingStatus, string> = {
-  pending: "bg-amber-100 text-amber-800",
-  loading: "bg-blue-100 text-blue-800",
-  loaded: "bg-green-100 text-green-800",
-};
+
 
 // ── Step Progress Bar ────────────────────────────────────────────────────────
-const STEPS = ["Draft", "Pickup", "Loading", "Return"];
+const STEPS = ["Booking", "Pickup", "Loading", "Return"];
 
 function getStep(b: Booking): number {
   if (b.return_completed) return 3;
@@ -78,28 +73,27 @@ function StepBar({ booking }: { booking: Booking }) {
       {/* Active Line Fill */}
       <div 
         className="absolute top-[14px] left-0 h-0.5 bg-green-500 transition-all duration-300"
-        style={{ width: current === 0 ? "0%" : `${(Math.min(current, STEPS.length - 1)) * (100 / (STEPS.length - 1))}%` }} 
+        style={{ width: `${(current / (STEPS.length - 1)) * 100}%` }} 
       />
       
       <div className="relative flex justify-between w-full">
         {STEPS.map((label, i) => {
-          const done = i < current;
-          const active = i === current;
+          const done = i <= current;
           const stepDate = getStepDate(booking, i);
           return (
             <div key={label} className="flex flex-col items-center gap-1.5 w-10">
               <div title={label}
                 className={`w-7 h-7 rounded-full text-[10px] font-bold flex items-center justify-center shrink-0 z-10 ring-4 ring-slate-50 transition-colors ${
-                  done ? "bg-green-500 text-white" : active ? "bg-blue-600 text-white shadow-sm" : "bg-slate-200 text-slate-400"
+                  done ? "bg-green-500 text-white" : "bg-slate-200 text-slate-400"
                 }`}>
                 {done ? "\u2713" : i + 1}
               </div>
               <div className="flex flex-col items-center mt-0.5">
-                <span className={`text-[9px] font-bold uppercase tracking-wider ${done || active ? "text-slate-700" : "text-slate-400"}`}>
+                <span className={`text-[9px] font-bold uppercase tracking-wider ${done ? "text-slate-700" : "text-slate-400"}`}>
                   {label}
                 </span>
                 {stepDate && (
-                  <span className={`text-[9px] font-medium leading-tight mt-0.5 ${done || active ? "text-slate-500" : "text-slate-300"}`}>
+                  <span className={`text-[9px] font-medium leading-tight mt-0.5 ${done ? "text-slate-500" : "text-slate-300"}`}>
                     {toShortDate(stepDate)}
                   </span>
                 )}
@@ -436,9 +430,6 @@ export default function BookingsPage() {
                                      {b.job_type}
                                    </span>
                                  )}
-                                 <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold ${STATUS_COLORS[b.loading_status || "pending"]}`}>
-                                   {b.loading_status || "pending"}
-                                 </span>
                                  {b.gcl_received && <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700">GCL ✓</span>}
                                  {b.return_completed && <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700">คืนแล้ว ✓</span>}
                                </div>
