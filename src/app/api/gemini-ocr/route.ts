@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { get } from "@vercel/blob";
+import { list } from "@vercel/blob";
 
 export const runtime = "nodejs";
 
@@ -35,39 +35,38 @@ Response format (JSON only):
 /**
  * Resolve an image URL to { base64, contentType }.
  *
- * Handles three cases:
- * 1. Proxy URL like "/api/image/container_xxx.jpg"  → extract filename → @vercel/blob get()
- * 2. Direct Vercel Blob URL like "https://xxx.public.blob.vercel-storage.com/itl-files/..."  → fetch directly
- * 3. Any other absolute URL → fetch directly
+ * Handles two cases:
+ * 1. Proxy URL like "/api/image/container_xxx.blob" → use list() to find actual blob URL → fetch it
+ *    (We can't use get() because put() adds a random suffix to the pathname)
+ * 2. Direct URL (Vercel Blob or any absolute URL) → fetch directly
  */
 async function resolveImage(url: string): Promise<{ base64: string; contentType: string }> {
-  // Case 1: Our proxy route — read blob directly via SDK (no HTTP self-call)
+  let fetchUrl = url;
+
+  // Case 1: Proxy URL → find the real blob URL via list() prefix search
   const proxyMatch = url.match(/\/api\/image\/(.+)/);
   if (proxyMatch) {
-    const filename = decodeURIComponent(proxyMatch[1]).replace(/\.blob$/, "");
-    console.log("[gemini-ocr] Reading blob directly:", `itl-files/${filename}`);
-    const result = await get(`itl-files/${filename}`, { access: "public" });
-    if (!result || result.statusCode !== 200) throw new Error(`Blob not found: ${filename}`);
+    const rawFilename = decodeURIComponent(proxyMatch[1]).replace(/\.blob$/, "");
+    // Strip file extension to get the base name for prefix search
+    const baseName = rawFilename.replace(/\.[^.]+$/, "");
+    const prefix = `itl-files/${baseName}`;
 
-    // result.stream is the ReadableStream from @vercel/blob get()
-    const reader = result.stream.getReader();
-    const chunks: Uint8Array[] = [];
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      if (value) chunks.push(value);
+    console.log("[gemini-ocr] Proxy URL detected, searching blobs with prefix:", prefix);
+    const { blobs } = await list({ prefix, limit: 5 });
+
+    if (blobs.length === 0) {
+      throw new Error(`No blob found with prefix: ${prefix}`);
     }
-    const buf = Buffer.concat(chunks);
-    return {
-      base64: buf.toString("base64"),
-      contentType: result.blob.contentType || "image/jpeg",
-    };
+
+    // Use the first (most recent or only) match
+    fetchUrl = blobs[0].url;
+    console.log("[gemini-ocr] Found blob:", fetchUrl.slice(0, 100));
   }
 
-  // Case 2 & 3: Direct URL — just fetch
-  console.log("[gemini-ocr] Fetching URL directly:", url.slice(0, 80));
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Failed to fetch image: ${res.status} ${url.slice(0, 80)}`);
+  // Fetch the image
+  console.log("[gemini-ocr] Fetching:", fetchUrl.slice(0, 100));
+  const res = await fetch(fetchUrl);
+  if (!res.ok) throw new Error(`Failed to fetch image: ${res.status} ${fetchUrl.slice(0, 80)}`);
   const buf = Buffer.from(await res.arrayBuffer());
   return {
     base64: buf.toString("base64"),

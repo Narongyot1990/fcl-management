@@ -1,29 +1,29 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { get } from "@vercel/blob";
+import { list } from "@vercel/blob";
 
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ filename: string }> }
 ) {
   try {
     const { filename } = await params;
-    // Remove .blob extension if present
+    // Remove .blob extension if present, then strip file extension for prefix search
     const cleanFilename = filename.replace(/\.blob$/, "");
-    
-    console.log("Image proxy - looking for:", `itl-files/${cleanFilename}`);
-    const result = await get(`itl-files/${cleanFilename}`, { access: "public" });
+    const baseName = cleanFilename.replace(/\.[^.]+$/, "");
+    const prefix = `itl-files/${baseName}`;
 
-    if (!result || result.statusCode !== 200) {
-      console.log("Image not found:", result);
+    console.log("Image proxy - searching with prefix:", prefix);
+    const { blobs } = await list({ prefix, limit: 1 });
+
+    if (blobs.length === 0) {
+      console.log("Image not found for prefix:", prefix);
       return new NextResponse("Not found", { status: 404 });
     }
 
-    return new NextResponse(result.stream, {
-      headers: {
-        "Content-Type": result.blob.contentType || "image/jpeg",
-        "Cache-Control": "public, max-age=86400",
-      },
-    });
+    // Redirect to the actual blob URL (public, CDN-cached)
+    const blobUrl = blobs[0].url;
+    console.log("Image proxy - redirecting to:", blobUrl.slice(0, 80));
+    return NextResponse.redirect(blobUrl, { status: 302 });
   } catch (error) {
     console.error("Image proxy error:", error);
     return new NextResponse("Not found", { status: 404 });

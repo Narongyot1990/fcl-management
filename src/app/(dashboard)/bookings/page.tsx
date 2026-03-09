@@ -12,19 +12,19 @@ import ConfirmDialog from "@/components/ConfirmDialog";
 import { FormField, Input, Select } from "@/components/FormField";
 
 // ── Collapsible section (form) ───────────────────────────────────────────────
-function Section({ title, number, children }: { title: string; number: number; children: React.ReactNode }) {
+function Section({ title, icon, children, cols = 2 }: { title: string; icon?: string; children: React.ReactNode; cols?: number }) {
   const [open, setOpen] = useState(true);
   return (
-    <div className="border border-[var(--border)] rounded-xl overflow-hidden">
+    <div className="border border-slate-200 rounded-lg overflow-hidden">
       <button type="button" onClick={() => setOpen((p) => !p)}
-        className="w-full flex items-center justify-between px-5 py-3.5 bg-slate-50 hover:bg-slate-100 transition-colors text-left">
-        <div className="flex items-center gap-3">
-          <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center shrink-0">{number}</span>
-          <span className="text-sm font-semibold text-[var(--foreground)]">{title}</span>
-        </div>
-        {open ? <ChevronUp size={14} className="text-[var(--muted)]" /> : <ChevronDown size={14} className="text-[var(--muted)]" />}
+        className="w-full flex items-center justify-between px-3.5 py-2.5 bg-slate-50/80 hover:bg-slate-100 transition-colors text-left">
+        <span className="text-xs font-bold text-slate-600 uppercase tracking-wide flex items-center gap-1.5">
+          {icon && <span>{icon}</span>}
+          {title}
+        </span>
+        {open ? <ChevronUp size={12} className="text-slate-400" /> : <ChevronDown size={12} className="text-slate-400" />}
       </button>
-      {open && <div className="p-5 grid grid-cols-2 gap-4">{children}</div>}
+      {open && <div className={`px-3.5 py-3 grid gap-3 ${cols === 3 ? "grid-cols-3" : cols === 4 ? "grid-cols-4" : "grid-cols-2"}`}>{children}</div>}
     </div>
   );
 }
@@ -535,15 +535,15 @@ export default function BookingsPage() {
 
       {/* ── Modal Form ── */}
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? "แก้ไข Booking" : "สร้าง Booking ใหม่"} size="xl">
-        <form onSubmit={handleSave} className="flex flex-col gap-4">
+        <form onSubmit={handleSave} className="flex flex-col gap-3">
 
-          {/* Part 1 — Draft */}
-          <Section title="Part 1 — ข้อมูลจอง (Draft)" number={1}>
+          {/* ── Booking Info ── */}
+          <Section title="Booking" icon="📋">
             <FormField label="วันที่จอง">
               <Input type="date" value={form.booking_date} onChange={set("booking_date")} required />
             </FormField>
             <FormField label="Booking No.">
-              <Input value={form.booking_no} onChange={set("booking_no")} placeholder="e.g. BK-2024-001" required />
+              <Input value={form.booking_no} onChange={set("booking_no")} placeholder="BK-2024-001" required />
             </FormField>
             <FormField label="Job Type">
               <Select value={form.job_type} onChange={set("job_type")} options={JOB_TYPE_OPTIONS} />
@@ -561,26 +561,8 @@ export default function BookingsPage() {
             </div>
           </Section>
 
-          {/* Part 2 — Pickup Truck Assignment */}
-          <Section title="Part 2 — จัดรถ Pickup / คนขับ" number={2}>
-            <FormField label="ทะเบียนรถ" hint="ดึงจาก Vendor ที่เลือก">
-              <Select value={form.truck_plate} onChange={set("truck_plate")}
-                options={truckPlateOptions} placeholder={selectedVendor ? "เลือกทะเบียน…" : "เลือก Vendor ก่อน"} disabled={!selectedVendor} />
-            </FormField>
-            <FormField label="คนขับ" hint="ดึงจาก Vendor ที่เลือก">
-              <Select value={form.driver_name} onChange={(e) => handleDriverChange(e.target.value)}
-                options={driverOptions} placeholder={selectedVendor ? "เลือกคนขับ…" : "เลือก Vendor ก่อน"} disabled={!selectedVendor} />
-            </FormField>
-            <FormField label="เบอร์โทรคนขับ" hint="Auto-fill">
-              <Input value={form.driver_phone} onChange={set("driver_phone")} placeholder="เบอร์โทร" readOnly />
-            </FormField>
-            <FormField label="Plan Pickup Date">
-              <Input type="date" value={form.plan_pickup_date} onChange={set("plan_pickup_date")} />
-            </FormField>
-          </Section>
-
-          {/* Part 3 — Depot / Container */}
-          <Section title="Part 3 — รับตู้จาก DEPOT" number={3}>
+          {/* ── Container ── */}
+          <Section title="Container" icon="📦">
             <FormField
               label="Container No."
               hint={containerNoMessage(form.container_no) ?? (form.container_no.length === 11 ? "✓ ISO 6346 valid" : undefined)}
@@ -589,43 +571,34 @@ export default function BookingsPage() {
               <Input
                 value={form.container_no}
                 onChange={set("container_no")}
-                placeholder="e.g. TCKU1234567"
+                placeholder="TCKU1234567"
                 className={containerNoMessage(form.container_no) ? "!border-red-400 focus:!ring-red-400" : form.container_no.length === 11 ? "!border-emerald-400 focus:!ring-emerald-400" : ""}
               />
             </FormField>
-            <FormField label="Container Size" hint="e.g. 40HC">
+            <FormField label="Seal No.">
+              <Input value={form.seal_no} onChange={set("seal_no")} placeholder="หมายเลขซีล" />
+            </FormField>
+            <FormField label="Size" hint="e.g. 40HC">
               <Select value={form.container_size} onChange={(e) => handleSizeChange(e.target.value)}
                 options={sizeOptions} placeholder="เลือก Size…" />
             </FormField>
-            <FormField label="Size Code (ISO)" hint="e.g. 45G1">
+            <FormField label="ISO Code" hint="e.g. 45G1">
               <Select value={form.container_size_code} onChange={(e) => handleCodeChange(e.target.value)}
                 options={codeOptions} placeholder="เลือก Code…" />
             </FormField>
-            <FormField label="Tare Weight (kg)">
-              <Input value={form.tare_weight} onChange={set("tare_weight")} placeholder="e.g. 3800" />
+            <FormField label="Tare (kg)">
+              <Input value={form.tare_weight} onChange={set("tare_weight")} placeholder="3800" />
             </FormField>
-            <div className="col-span-2">
-              <FormField label="Seal No.">
-                <Input value={form.seal_no} onChange={set("seal_no")} placeholder="หมายเลขซีล" />
-              </FormField>
-            </div>
-            <div className="col-span-2 flex flex-col gap-4">
-              <div className="grid grid-cols-2 gap-4">
-                <ImageUpload
-                  label="รูป EIR"
-                  value={form.eir_image_url}
-                  type="eir"
-                  onChange={(url) => setForm((f) => ({ ...f, eir_image_url: url }))}
-                />
-                <ImageUpload
-                  label="รูป Container"
-                  value={form.container_image_url}
-                  type="container"
-                  onChange={(url) => setForm((f) => ({ ...f, container_image_url: url }))}
-                />
+            <div />
+            {/* Images + AI */}
+            <div className="col-span-2 flex flex-col gap-3">
+              <div className="grid grid-cols-2 gap-3">
+                <ImageUpload label="รูป EIR" value={form.eir_image_url} type="eir"
+                  onChange={(url) => setForm((f) => ({ ...f, eir_image_url: url }))} />
+                <ImageUpload label="รูป Container" value={form.container_image_url} type="container"
+                  onChange={(url) => setForm((f) => ({ ...f, container_image_url: url }))} />
               </div>
-              {/* Gemini OCR buttons */}
-              <div className="flex flex-wrap gap-3 pt-1 border-t border-slate-100">
+              <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-slate-100">
                 <GeminiOcrButton
                   containerImageUrl={form.container_image_url}
                   eirImageUrl={form.eir_image_url}
@@ -637,19 +610,61 @@ export default function BookingsPage() {
                     ...(r.seal_no ? { seal_no: r.seal_no } : {}),
                   }))}
                 />
-                <p className="text-[11px] text-slate-400 self-center">
-                  AI จะกรอกทุกอย่างอัตโนมัติจากทั้ง 2 รูป (เฉพาะที่มั่นใจ 95%+ เท่านั้น)
-                </p>
+                <p className="text-[10px] text-slate-400">AI อ่านจากรูปอัตโนมัติ (95%+ confidence)</p>
               </div>
             </div>
           </Section>
 
-          {/* Part 4 — Loading Status */}
-          <Section title="Part 4 — สถานะโหลดสินค้า" number={4}>
+          {/* ── Pickup + Return side-by-side ── */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <Section title="Pickup รับตู้" icon="🚛">
+              <FormField label="Plan Pickup">
+                <Input type="date" value={form.plan_pickup_date} onChange={set("plan_pickup_date")} />
+              </FormField>
+              <FormField label="ทะเบียนรถ">
+                <Select value={form.truck_plate} onChange={set("truck_plate")}
+                  options={truckPlateOptions} placeholder={selectedVendor ? "เลือกทะเบียน…" : "เลือก Vendor ก่อน"} disabled={!selectedVendor} />
+              </FormField>
+              <FormField label="คนขับ">
+                <Select value={form.driver_name} onChange={(e) => handleDriverChange(e.target.value)}
+                  options={driverOptions} placeholder={selectedVendor ? "เลือกคนขับ…" : "เลือก Vendor ก่อน"} disabled={!selectedVendor} />
+              </FormField>
+              <FormField label="เบอร์โทร">
+                <Input value={form.driver_phone} onChange={set("driver_phone")} placeholder="Auto-fill" readOnly />
+              </FormField>
+            </Section>
+
+            <Section title="Return คืนตู้" icon="🔄">
+              <FormField label="Plan Return">
+                <Input type="date" value={form.plan_return_date} onChange={set("plan_return_date")} />
+              </FormField>
+              <FormField label="ทะเบียนรถ">
+                <Select value={form.return_truck_plate} onChange={set("return_truck_plate")}
+                  options={truckPlateOptions} placeholder={selectedVendor ? "เลือกทะเบียน…" : "เลือก Vendor ก่อน"} disabled={!selectedVendor} />
+              </FormField>
+              <FormField label="คนขับ">
+                <Select value={form.return_driver_name} onChange={(e) => handleReturnDriverChange(e.target.value)}
+                  options={driverOptions} placeholder={selectedVendor ? "เลือกคนขับ…" : "เลือก Vendor ก่อน"} disabled={!selectedVendor} />
+              </FormField>
+              <FormField label="เบอร์โทร">
+                <Input value={form.return_driver_phone} onChange={set("return_driver_phone")} placeholder="Auto-fill" readOnly />
+              </FormField>
+              <div className="col-span-2 flex flex-col gap-2">
+                <FormField label="คืนตู้จริง">
+                  <Input type="datetime-local" value={form.return_date} onChange={set("return_date")} />
+                </FormField>
+                <Toggle checked={form.gcl_received} onChange={(v) => setForm((f) => ({ ...f, gcl_received: v }))} label="ได้รับ GCL แล้ว" />
+                <Toggle checked={form.return_completed} onChange={(v) => setForm((f) => ({ ...f, return_completed: v }))} label="คืนตู้เรียบร้อย" />
+              </div>
+            </Section>
+          </div>
+
+          {/* ── Loading Status ── */}
+          <Section title="Loading Status" icon="📊" cols={3}>
             <FormField label="สถานะ">
               <Select value={form.loading_status} onChange={set("loading_status")} options={LOADING_OPTIONS} />
             </FormField>
-            <FormField label="Plan Loading Date">
+            <FormField label="Plan Loading">
               <Input type="date" value={form.plan_loading_date} onChange={set("plan_loading_date")} />
             </FormField>
             <FormField label="Pending เวลา">
@@ -658,36 +673,9 @@ export default function BookingsPage() {
             <FormField label="Loading เวลา">
               <Input type="datetime-local" value={form.loading_at} onChange={set("loading_at")} />
             </FormField>
-            <div className="col-span-2">
-              <FormField label="Loaded เวลา">
-                <Input type="datetime-local" value={form.loaded_at} onChange={set("loaded_at")} />
-              </FormField>
-            </div>
-          </Section>
-
-          {/* Part 5 — Return */}
-          <Section title="Part 5 — คืนตู้ท่า" number={5}>
-            <FormField label="Plan Return Date">
-              <Input type="date" value={form.plan_return_date} onChange={set("plan_return_date")} />
+            <FormField label="Loaded เวลา">
+              <Input type="datetime-local" value={form.loaded_at} onChange={set("loaded_at")} />
             </FormField>
-            <FormField label="ทะเบียนรถคืนตู้" hint="ดึงจาก Vendor">
-              <Select value={form.return_truck_plate} onChange={set("return_truck_plate")}
-                options={truckPlateOptions} placeholder={selectedVendor ? "เลือกทะเบียน…" : "เลือก Vendor ก่อน"} disabled={!selectedVendor} />
-            </FormField>
-            <FormField label="คนขับคืนตู้" hint="ดึงจาก Vendor">
-              <Select value={form.return_driver_name} onChange={(e) => handleReturnDriverChange(e.target.value)}
-                options={driverOptions} placeholder={selectedVendor ? "เลือกคนขับ…" : "เลือก Vendor ก่อน"} disabled={!selectedVendor} />
-            </FormField>
-            <FormField label="เบอร์คนขับคืนตู้" hint="Auto-fill">
-              <Input value={form.return_driver_phone} onChange={set("return_driver_phone")} placeholder="เบอร์โทร" readOnly />
-            </FormField>
-            <div className="col-span-2 flex flex-col gap-4">
-              <Toggle checked={form.gcl_received} onChange={(v) => setForm((f) => ({ ...f, gcl_received: v }))} label="ได้รับ GCL (Good Control List) แล้ว" />
-              <FormField label="วัน-เวลาคืนตู้จริง">
-                <Input type="datetime-local" value={form.return_date} onChange={set("return_date")} />
-              </FormField>
-              <Toggle checked={form.return_completed} onChange={(v) => setForm((f) => ({ ...f, return_completed: v }))} label="คืนตู้เรียบร้อยแล้ว" />
-            </div>
           </Section>
 
           <div className="flex gap-3 justify-end pt-2">
