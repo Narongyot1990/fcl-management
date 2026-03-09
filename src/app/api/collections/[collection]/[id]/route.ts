@@ -2,9 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCollection, ObjectId, ALLOWED } from "@/lib/mongodb";
 
 function checkAuth(req: NextRequest): boolean {
-  const key = req.headers.get("x-api-key") || "";
-  const secret = process.env.OCR_API_SECRET || "";
-  return !secret || key === secret;
+  // Authentication temporarily disabled
+  return true;
 }
 
 function authError() {

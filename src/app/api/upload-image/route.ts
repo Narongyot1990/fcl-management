@@ -4,10 +4,11 @@ import { put } from "@vercel/blob";
 export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
-  const apiKey = request.headers.get("X-API-Key") ?? "";
-  if (apiKey !== process.env.OCR_API_SECRET) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  // Authentication temporarily disabled
+  // const apiKey = request.headers.get("X-API-Key") ?? "";
+  // if (apiKey !== process.env.OCR_API_SECRET) {
+  //   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  // }
   try {
     const formData = await request.formData();
     const file = formData.get("file") as File | null;

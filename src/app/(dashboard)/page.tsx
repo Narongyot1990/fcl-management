@@ -65,7 +65,7 @@ export default function Home() {
               <span className="w-1.5 h-5 bg-blue-600 rounded-full"></span> 
               Operations Status
             </h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {(Object.entries(STATUS_CFG) as [LoadingStatus | "returned", typeof STATUS_CFG["pending"]][]).map(([key, cfg]) => {
                 const Icon = cfg.icon;
                 return (
@@ -87,7 +87,7 @@ export default function Home() {
               <span className="w-1.5 h-5 bg-indigo-600 rounded-full"></span> 
               Logistics
             </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {[
                 { href: "/vendors", icon: Truck, title: "Vendors", subtitle: "ผู้ขนส่งและเครือข่ายรถ", count: vendorCount, color: "bg-blue-50 text-blue-600" },
                 { href: "/containers", icon: Package, title: "Containers", subtitle: "จัดการลานตู้คอนเทนเนอร์", count: containerCount, color: "bg-emerald-50 text-emerald-600" },
@@ -118,7 +118,8 @@ export default function Home() {
             </div>
             
             <div className="bg-white rounded-2xl border border-[var(--border)] shadow-sm overflow-hidden">
-              <div className="overflow-x-auto">
+              {/* Desktop Table View */}
+              <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-[var(--border)] bg-slate-50">
@@ -157,6 +158,47 @@ export default function Home() {
                     )}
                   </tbody>
                 </table>
+              </div>
+
+              {/* Mobile Card View */}
+              <div className="md:hidden flex flex-col divide-y divide-[var(--border)]">
+                 {loading ? (
+                    <div className="px-5 py-10 text-center text-[var(--muted)] text-sm">Loading…</div>
+                  ) : recentBookings.length === 0 ? (
+                    <div className="px-5 py-10 text-center text-[var(--muted)] text-sm">ยังไม่มี Booking</div>
+                  ) : (
+                    recentBookings.map((b) => {
+                      const status = b.return_completed ? "returned" : (b.loading_status || "pending");
+                      const cfg = STATUS_CFG[status as keyof typeof STATUS_CFG];
+                      return (
+                        <div key={b._id} className="p-4 flex flex-col gap-3 hover:bg-slate-50/80 transition-colors">
+                          <div className="flex items-center justify-between">
+                            <span className="font-mono font-bold text-violet-700 text-sm">{b.booking_no}</span>
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide ${cfg.color}`}>
+                              {cfg.label}
+                            </span>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-2 bg-slate-50/50 p-2.5 rounded-lg border border-slate-100">
+                            <div>
+                              <p className="text-[10px] text-slate-400 font-semibold uppercase">Vendor</p>
+                              <p className="text-xs text-[var(--foreground)] font-medium truncate mt-0.5">{b.vendor_code || "—"}</p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] text-slate-400 font-semibold uppercase">Container</p>
+                              <p className="text-xs font-mono text-slate-600 truncate mt-0.5">{b.container_no || "—"}</p>
+                            </div>
+                          </div>
+                          
+                          {b.return_completed && (
+                            <div className="flex items-center">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-green-100 text-green-800">Return Done</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
               </div>
             </div>
           </section>

@@ -418,62 +418,72 @@ export default function BookingsPage() {
                         {/* Progress bar */}
                         <div className="rounded-xl bg-slate-50 border border-slate-100 px-3 py-3"><StepBar booking={b} /></div>
 
-                        {/* Details grid */}
                         <div className="grid grid-cols-2 gap-3 sm:gap-4 text-xs">
-                          <div className="rounded-lg bg-slate-50/80 px-3 py-2">
-                            <span className="text-slate-400 block">Customer</span>
-                            <span className="font-medium text-slate-700">{b.customer_code || "—"}</span>
+                          <div className="rounded-lg bg-slate-50/80 px-2.5 py-2 min-w-0">
+                            <span className="text-slate-400 block text-[10px] uppercase font-semibold">Customer</span>
+                            <span className="font-medium text-slate-700 truncate block mt-0.5">{b.customer_code || "—"}</span>
                           </div>
-                          <div className="rounded-lg bg-slate-50/80 px-3 py-2">
-                            <span className="text-slate-400 block">Vendor</span>
-                            <span className="font-medium text-slate-700">{b.vendor_code || "—"}</span>
+                          <div className="rounded-lg bg-slate-50/80 px-2.5 py-2 min-w-0">
+                            <span className="text-slate-400 block text-[10px] uppercase font-semibold">Vendor</span>
+                            <span className="font-medium text-slate-700 truncate block mt-0.5">{b.vendor_code || "—"}</span>
                           </div>
-                          <div className="rounded-lg bg-slate-50/80 px-3 py-2">
-                            <span className="text-slate-400 block">Container</span>
-                            <span className="font-mono font-medium text-slate-700">{b.container_no || "—"}</span>
+                          <div className="rounded-lg bg-slate-50/80 px-2.5 py-2 min-w-0 col-span-2 sm:col-span-1">
+                            <span className="text-slate-400 block text-[10px] uppercase font-semibold">Container</span>
+                            <span className="font-mono font-medium text-slate-700 truncate block mt-0.5">{b.container_no || "—"}</span>
                           </div>
-                          <div className="rounded-lg bg-slate-50/80 px-3 py-2">
-                            <span className="text-slate-400 block">Size / Code</span>
-                            <span className="font-medium text-slate-700">
+                          <div className="rounded-lg bg-slate-50/80 px-2.5 py-2 min-w-0">
+                            <span className="text-slate-400 block text-[10px] uppercase font-semibold">Size / Code</span>
+                            <span className="font-medium text-slate-700 truncate block mt-0.5">
                               {b.container_size || "—"}{b.container_size_code && <span className="text-slate-400 ml-1">/ {b.container_size_code}</span>}
                             </span>
                           </div>
-                          <div className="rounded-lg bg-slate-50/80 px-3 py-2">
-                            <span className="text-slate-400 block">Seal No.</span>
-                            <span className="font-mono font-medium text-slate-700">{b.seal_no || "—"}</span>
+                          <div className="rounded-lg bg-slate-50/80 px-2.5 py-2 min-w-0">
+                            <span className="text-slate-400 block text-[10px] uppercase font-semibold">Seal No.</span>
+                            <span className="font-mono font-medium text-slate-700 truncate block mt-0.5">{b.seal_no || "—"}</span>
                           </div>
-                          <div className="rounded-lg bg-slate-50/80 px-3 py-2">
-                            <span className="text-slate-400 block">Tare (kg)</span>
-                            <span className="font-medium text-slate-700">{b.tare_weight || "—"}</span>
+                          <div className="rounded-lg bg-slate-50/80 px-2.5 py-2 min-w-0">
+                            <span className="text-slate-400 block text-[10px] uppercase font-semibold">Tare (kg)</span>
+                            <span className="font-medium text-slate-700 truncate block mt-0.5">{b.tare_weight || "—"}</span>
                           </div>
                         </div>
 
                         {/* Plan dates row */}
-                        <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs rounded-xl border border-slate-100 bg-white">
-                          <div className="px-3 py-2">
-                            <span className="text-slate-400">Pickup: </span><span className="font-medium text-slate-700">{toThaiDate(b.plan_pickup_date)}</span>
+                        <div className="flex flex-col sm:flex-row sm:flex-wrap gap-x-6 gap-y-2 text-xs rounded-xl border border-slate-100 bg-white">
+                          <div className="px-3 py-2 sm:py-2.5 flex justify-between sm:block border-b border-slate-50 sm:border-0 last:border-0">
+                            <span className="text-slate-400 text-[10px] uppercase font-semibold sm:normal-case sm:font-normal">Pickup:</span>
+                            <span className="font-medium text-slate-700 sm:ml-2">{toThaiDate(b.plan_pickup_date)}</span>
                           </div>
-                          <div className="px-3 py-2">
-                            <span className="text-slate-400">Loading: </span><span className="font-medium text-slate-700">{toThaiDate(b.plan_loading_date)}</span>
+                          <div className="px-3 py-2 sm:py-2.5 flex justify-between sm:block border-b border-slate-50 sm:border-0 last:border-0">
+                            <span className="text-slate-400 text-[10px] uppercase font-semibold sm:normal-case sm:font-normal">Loading:</span>
+                            <span className="font-medium text-slate-700 sm:ml-2">{toThaiDate(b.plan_loading_date)}</span>
                           </div>
-                          <div className="px-3 py-2">
-                            <span className="text-slate-400">Return: </span><span className="font-medium text-slate-700">{toThaiDate(b.plan_return_date)}</span>
+                          <div className="px-3 py-2 sm:py-2.5 flex justify-between sm:block border-b border-slate-50 sm:border-0 last:border-0">
+                            <span className="text-slate-400 text-[10px] uppercase font-semibold sm:normal-case sm:font-normal">Return:</span>
+                            <span className="font-medium text-slate-700 sm:ml-2">{toThaiDate(b.plan_return_date)}</span>
                           </div>
                         </div>
 
                         {/* Driver info row */}
                         <div className="flex flex-col gap-2 text-xs sm:flex-row sm:flex-wrap sm:gap-x-6 sm:gap-y-2">
-                          <div className="flex items-center gap-1.5 rounded-lg bg-emerald-50/60 px-3 py-2">
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700 uppercase">Pickup</span>
-                            <span className="font-medium text-slate-700">{b.driver_name || "—"}</span>
-                            {b.driver_phone && <span className="text-slate-400">{b.driver_phone}</span>}
-                            {b.truck_plate && <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-600">{b.truck_plate}</span>}
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-1.5 rounded-lg bg-emerald-50/60 px-3 py-2.5">
+                            <div className="flex items-center gap-2">
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700 uppercase">Pickup</span>
+                              <span className="font-medium text-slate-700 truncate max-w-[120px]">{b.driver_name || "—"}</span>
+                            </div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {b.driver_phone && <span className="text-slate-400">{b.driver_phone}</span>}
+                              {b.truck_plate && <span className="font-mono bg-white border border-emerald-100 px-1.5 py-0.5 rounded text-slate-600 shadow-sm">{b.truck_plate}</span>}
+                            </div>
                           </div>
-                          <div className="flex items-center gap-1.5 rounded-lg bg-violet-50/60 px-3 py-2">
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-violet-100 text-violet-700 uppercase">Return</span>
-                            <span className="font-medium text-slate-700">{b.return_driver_name || "—"}</span>
-                            {b.return_driver_phone && <span className="text-slate-400">{b.return_driver_phone}</span>}
-                            {b.return_truck_plate && <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-600">{b.return_truck_plate}</span>}
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-1.5 rounded-lg bg-violet-50/60 px-3 py-2.5">
+                            <div className="flex items-center gap-2">
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-violet-100 text-violet-700 uppercase">Return</span>
+                              <span className="font-medium text-slate-700 truncate max-w-[120px]">{b.return_driver_name || "—"}</span>
+                            </div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {b.return_driver_phone && <span className="text-slate-400">{b.return_driver_phone}</span>}
+                              {b.return_truck_plate && <span className="font-mono bg-white border border-violet-100 px-1.5 py-0.5 rounded text-slate-600 shadow-sm">{b.return_truck_plate}</span>}
+                            </div>
                           </div>
                         </div>
 

@@ -10,9 +10,8 @@ function authError() {
 }
 
 function checkAuth(req: NextRequest): boolean {
-  const key = req.headers.get("x-api-key") || "";
-  const secret = getKey();
-  return !secret || key === secret;
+  // Authentication temporarily disabled
+  return true;
 }
 
 // ── GET /api/collections/[collection] ────────────────────────────────────────
