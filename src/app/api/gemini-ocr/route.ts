@@ -49,10 +49,10 @@ export async function POST(request: NextRequest) {
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
-    // Use gemini-2-flash (correct API name). Handle common user variations.
-    const userModel = process.env.GEMINI_MODEL || "gemini-2-flash";
+    // Default to gemini-3-flash for highest OCR accuracy. Handle variations.
+    const userModel = process.env.GEMINI_MODEL || "gemini-3-flash";
     const model = 
-      userModel === "gemini-3.0-flash" ? "gemini-2-flash" :
+      userModel === "gemini-3.0-flash" ? "gemini-3-flash" :
       userModel === "gemini-2.0-flash" ? "gemini-2-flash" :
       userModel;
     if (!apiKey) {
