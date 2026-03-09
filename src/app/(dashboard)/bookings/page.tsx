@@ -50,14 +50,12 @@ const STATUS_COLORS: Record<LoadingStatus, string> = {
 };
 
 // ── Step Progress Bar ────────────────────────────────────────────────────────
-const STEPS = ["Draft", "Pickup", "Container", "Loading", "Return"];
+const STEPS = ["Draft", "Pickup", "Loading", "Return"];
 
 function getStep(b: Booking): number {
-  if (b.return_completed) return 5;
-  if (b.gcl_received || b.return_date) return 4;
-  if (b.loading_status === "loaded") return 3;
-  if (b.loading_status === "loading" || b.truck_plate) return 2;
-  if (b.vendor_code) return 1;
+  if (b.return_completed) return 3;
+  if (b.gcl_received || b.return_date || b.loading_status === "loaded") return 2;
+  if (b.loading_status === "loading" || b.truck_plate) return 1;
   return 0;
 }
 
@@ -65,9 +63,8 @@ function getStepDate(b: Booking, idx: number): string | undefined {
   switch (idx) {
     case 0: return b.booking_date;
     case 1: return b.plan_pickup_date;
-    case 2: return undefined; // Container stage usually fluid
-    case 3: return b.plan_loading_date;
-    case 4: return b.plan_return_date;
+    case 2: return b.plan_loading_date;
+    case 3: return b.plan_return_date;
     default: return undefined;
   }
 }
