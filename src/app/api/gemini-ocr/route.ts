@@ -2,22 +2,23 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
-const PROMPT = `You are a highly accurate OCR system for shipping container documents (EIR / Gate Pass).
+const PROMPT = `You are a highly accurate OCR system for shipping container door photos.
 
-Your task: Extract ONLY the following fields from the image:
-1. container_no — the container number (format: 4 uppercase letters + 7 digits, e.g. TCKU1234567)
-2. seal_no — the seal number (usually 7-10 digits or alphanumeric, e.g. 1234567 or SL987654)
+Your task: Extract ONLY the following fields from the image - these are printed on the container door:
+1. container_size_code — the ISO size code (format: 2 digits + 1 letter + 1 digit, e.g. 45G1, 22G1, 20G1, 42G1)
+2. tare_weight — the tare weight in kg (format: 3-4 digits, e.g. 3700, 3800, 2200)
 
 Rules (STRICTLY FOLLOW):
 - Only return values you are HIGHLY CONFIDENT about (95%+ certainty).
+- Look for the ISO code (usually shows container type like 45G1, 40HC, 22G1) and TARE weight (in kg) printed on the container door.
 - If the image is blurry, unclear, or you are not sure about any digit/letter → return null for that field.
 - Do NOT guess. Do NOT infer. Only return what you can clearly read.
-- Container number MUST match the standard format: 4 uppercase letters + 7 digits (last digit is a check digit).
-- Seal number: return only if clearly visible and unambiguous.
+- ISO code format: 2 digits + 1 letter + 1 digit (e.g., 45G1, 22G1, 20G1, 42G1)
+- Tare weight: 3-4 digit number followed by KG or just the number (e.g., 3700, 3800)
 - Return a valid JSON object only. No explanation, no markdown, no extra text.
 
 Response format (JSON only):
-{"container_no": "ABCD1234567" | null, "seal_no": "1234567" | null}`;
+{"container_size_code": "45G1" | null, "tare_weight": "3700" | null}`;
 
 export async function POST(request: NextRequest) {
   try {
@@ -82,7 +83,7 @@ export async function POST(request: NextRequest) {
     // Strip markdown fences if present
     const cleaned = rawText.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
 
-    let parsed: { container_no: string | null; seal_no: string | null };
+    let parsed: { container_size_code: string | null; tare_weight: string | null };
     try {
       parsed = JSON.parse(cleaned);
     } catch {
@@ -90,15 +91,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Could not parse response", raw: rawText }, { status: 422 });
     }
 
-    // Validate container_no format: 4 letters + 7 digits
-    if (parsed.container_no) {
-      const valid = /^[A-Z]{4}\d{7}$/.test(parsed.container_no);
-      if (!valid) parsed.container_no = null;
+    // Validate container_size_code format: 2 digits + 1 letter + 1 digit (e.g., 45G1, 22G1)
+    if (parsed.container_size_code) {
+      const valid = /^\d{2}[A-Z]\d$/.test(parsed.container_size_code);
+      if (!valid) parsed.container_size_code = null;
+    }
+
+    // Validate tare_weight: 3-4 digit number
+    if (parsed.tare_weight) {
+      const valid = /^\d{3,4}$/.test(parsed.tare_weight);
+      if (!valid) parsed.tare_weight = null;
     }
 
     return NextResponse.json({
-      container_no: parsed.container_no ?? null,
-      seal_no: parsed.seal_no ?? null,
+      container_size_code: parsed.container_size_code ?? null,
+      tare_weight: parsed.tare_weight ?? null,
     });
   } catch (error) {
     console.error("gemini-ocr error:", error);
