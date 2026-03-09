@@ -7,9 +7,14 @@ export async function GET(
 ) {
   try {
     const { filename } = await params;
-    const result = await get(`itl-files/${filename}`, { access: "private" });
+    // Remove .blob extension if present
+    const cleanFilename = filename.replace(/\.blob$/, "");
+    
+    console.log("Image proxy - looking for:", `itl-files/${cleanFilename}`);
+    const result = await get(`itl-files/${cleanFilename}`, { access: "private" });
 
     if (!result || result.statusCode !== 200) {
+      console.log("Image not found:", result);
       return new NextResponse("Not found", { status: 404 });
     }
 
