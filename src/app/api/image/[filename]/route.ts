@@ -3,11 +3,12 @@ import { head } from "@vercel/blob";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { filename: string } }
+  { params }: { params: Promise<{ filename: string }> }
 ) {
   try {
+    const { filename } = await params;
     // Construct the private blob URL
-    const blobUrl = `https://itl-files.vercel.app/${params.filename}`;
+    const blobUrl = `https://itl-files.vercel.app/${filename}`;
     
     // Get signed URL for the private blob
     const blob = await head(blobUrl);
