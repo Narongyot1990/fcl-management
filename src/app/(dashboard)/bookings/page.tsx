@@ -61,27 +61,56 @@ function getStep(b: Booking): number {
   return 0;
 }
 
+function getStepDate(b: Booking, idx: number): string | undefined {
+  switch (idx) {
+    case 0: return b.booking_date;
+    case 1: return b.plan_pickup_date;
+    case 2: return undefined; // Container stage usually fluid
+    case 3: return b.plan_loading_date;
+    case 4: return b.plan_return_date;
+    default: return undefined;
+  }
+}
+
 function StepBar({ booking }: { booking: Booking }) {
   const current = getStep(booking);
   return (
-    <div className="flex items-center gap-0.5">
-      {STEPS.map((label, i) => {
-        const done = i < current;
-        const active = i === current;
-        return (
-          <div key={label} className="flex items-center gap-0.5">
-            <div title={label}
-              className={`w-5 h-5 rounded-full text-[9px] font-bold flex items-center justify-center shrink-0 ${
-                done ? "bg-green-500 text-white" : active ? "bg-blue-600 text-white" : "bg-slate-200 text-slate-400"
-              }`}>
-              {done ? "\u2713" : i + 1}
+    <div className="relative w-full py-1">
+      {/* Background Line */}
+      <div className="absolute top-[14px] left-0 right-0 h-0.5 bg-slate-200" />
+      {/* Active Line Fill */}
+      <div 
+        className="absolute top-[14px] left-0 h-0.5 bg-green-500 transition-all duration-300"
+        style={{ width: current === 0 ? "0%" : `${(Math.min(current, STEPS.length - 1)) * (100 / (STEPS.length - 1))}%` }} 
+      />
+      
+      <div className="relative flex justify-between w-full">
+        {STEPS.map((label, i) => {
+          const done = i < current;
+          const active = i === current;
+          const stepDate = getStepDate(booking, i);
+          return (
+            <div key={label} className="flex flex-col items-center gap-1.5 w-10">
+              <div title={label}
+                className={`w-7 h-7 rounded-full text-[10px] font-bold flex items-center justify-center shrink-0 z-10 ring-4 ring-slate-50 transition-colors ${
+                  done ? "bg-green-500 text-white" : active ? "bg-blue-600 text-white shadow-sm" : "bg-slate-200 text-slate-400"
+                }`}>
+                {done ? "\u2713" : i + 1}
+              </div>
+              <div className="flex flex-col items-center mt-0.5">
+                <span className={`text-[9px] font-bold uppercase tracking-wider ${done || active ? "text-slate-700" : "text-slate-400"}`}>
+                  {label}
+                </span>
+                {stepDate && (
+                  <span className={`text-[9px] font-medium leading-tight mt-0.5 ${done || active ? "text-slate-500" : "text-slate-300"}`}>
+                    {toShortDate(stepDate)}
+                  </span>
+                )}
+              </div>
             </div>
-            {i < STEPS.length - 1 && (
-              <div className={`w-4 h-0.5 ${done ? "bg-green-400" : "bg-slate-200"}`} />
-            )}
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -95,6 +124,14 @@ const toThaiDate = (iso: string | undefined) => {
   const d = new Date(iso);
   if (isNaN(d.getTime())) return iso;
   return d.toLocaleDateString("th-TH", { year: "numeric", month: "short", day: "numeric" });
+};
+
+// ── Short date formatter (dd/MM) ─────────────────────────────────────────────
+const toShortDate = (iso: string | undefined) => {
+  if (!iso) return "\u2014";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  return `${d.getDate().toString().padStart(2, "0")}/${(d.getMonth() + 1).toString().padStart(2, "0")}`;
 };
 
 // ── BookingForm interface ────────────────────────────────────────────────────
@@ -421,24 +458,12 @@ export default function BookingsPage() {
                           </div>
                           
                           {/* Progress bar */}
-                          <div className="rounded-xl bg-slate-50 border border-slate-100 px-3 py-3"><StepBar booking={b} /></div>
+                          <div className="rounded-xl bg-slate-50 border border-slate-100 px-4 py-4 pb-3"><StepBar booking={b} /></div>
 
-                          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-x-6 gap-y-2 text-xs rounded-xl border border-slate-100 bg-white">
-                            <div className="px-3 py-2 sm:py-2.5 flex justify-between sm:block border-b border-slate-50 sm:border-0 last:border-0">
+                          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-x-6 gap-y-2 text-xs rounded-xl bg-white">
+                            <div className="flex justify-between sm:block border-b border-slate-50 sm:border-0 last:border-0 pl-1">
                               <span className="text-slate-400 text-[10px] uppercase font-semibold sm:normal-case sm:font-normal">Vendor:</span>
-                              <span className="font-medium text-slate-700 sm:ml-2">{b.vendor_code || "—"}</span>
-                            </div>
-                            <div className="px-3 py-2 sm:py-2.5 flex justify-between sm:block border-b border-slate-50 sm:border-0 last:border-0">
-                              <span className="text-slate-400 text-[10px] uppercase font-semibold sm:normal-case sm:font-normal">Pickup:</span>
-                              <span className="font-medium text-slate-700 sm:ml-2">{toThaiDate(b.plan_pickup_date)}</span>
-                            </div>
-                            <div className="px-3 py-2 sm:py-2.5 flex justify-between sm:block border-b border-slate-50 sm:border-0 last:border-0">
-                              <span className="text-slate-400 text-[10px] uppercase font-semibold sm:normal-case sm:font-normal">Loading:</span>
-                              <span className="font-medium text-slate-700 sm:ml-2">{toThaiDate(b.plan_loading_date)}</span>
-                            </div>
-                            <div className="px-3 py-2 sm:py-2.5 flex justify-between sm:block border-b border-slate-50 sm:border-0 last:border-0">
-                              <span className="text-slate-400 text-[10px] uppercase font-semibold sm:normal-case sm:font-normal">Return:</span>
-                              <span className="font-medium text-slate-700 sm:ml-2">{toThaiDate(b.plan_return_date)}</span>
+                              <span className="font-bold text-slate-700 sm:ml-2">{b.vendor_code || "—"}</span>
                             </div>
                           </div>
                         </div>
