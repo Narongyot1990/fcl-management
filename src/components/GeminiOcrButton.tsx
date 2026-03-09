@@ -80,7 +80,7 @@ export default function GeminiOcrButton({ containerImageUrl, eirImageUrl, onResu
         onClick={handleScan}
         disabled={!containerImageUrl || !eirImageUrl || status === "loading"}
         className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all border shadow-sm
-          {!containerImageUrl || !eirImageUrl
+          ${!containerImageUrl || !eirImageUrl
             ? "bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed"
             : status === "loading"
             ? "bg-violet-50 text-violet-400 border-violet-100 cursor-wait"

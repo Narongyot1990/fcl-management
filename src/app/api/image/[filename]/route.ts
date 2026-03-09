@@ -11,7 +11,7 @@ export async function GET(
     const cleanFilename = filename.replace(/\.blob$/, "");
     
     console.log("Image proxy - looking for:", `itl-files/${cleanFilename}`);
-    const result = await get(`itl-files/${cleanFilename}`, { access: "private" });
+    const result = await get(`itl-files/${cleanFilename}`, { access: "public" });
 
     if (!result || result.statusCode !== 200) {
       console.log("Image not found:", result);
