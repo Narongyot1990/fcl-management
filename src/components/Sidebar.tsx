@@ -2,10 +2,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { clsx } from "clsx";
-import { Truck, Package, ClipboardList, LayoutDashboard } from "lucide-react";
+import { Truck, Package, ClipboardList, LayoutDashboard, Users } from "lucide-react";
 
 const NAV = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/customers", label: "Customers", icon: Users },
   { href: "/vendors", label: "Vendors", icon: Truck },
   { href: "/containers", label: "Containers", icon: Package },
   { href: "/bookings", label: "Bookings", icon: ClipboardList },

@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Pencil, Trash2, Search, ChevronDown, ChevronUp } from "lucide-react";
 import { listRecords, createRecord, updateRecord, deleteRecord } from "@/lib/api";
-import type { Booking, Vendor, Container, LoadingStatus } from "@/lib/types";
+import type { Booking, Vendor, Container, Customer, LoadingStatus, JobType } from "@/lib/types";
 import PageHeader from "@/components/PageHeader";
 import Modal from "@/components/Modal";
 import ConfirmDialog from "@/components/ConfirmDialog";
@@ -46,10 +46,49 @@ const STATUS_COLORS: Record<LoadingStatus, string> = {
   loaded: "bg-green-100 text-green-800",
 };
 
+// ── Step Progress Bar ────────────────────────────────────────────────────────
+const STEPS = ["Draft", "Truck", "Container", "Loading", "Return"];
+
+function getStep(b: Booking): number {
+  if (b.return_completed) return 5;
+  if (b.gcl_received || b.return_date) return 4;
+  if (b.loading_status === "loaded") return 3;
+  if (b.loading_status === "loading" || b.truck_plate) return 2;
+  if (b.vendor_code) return 1;
+  return 0;
+}
+
+function StepBar({ booking }: { booking: Booking }) {
+  const current = getStep(booking);
+  return (
+    <div className="flex items-center gap-0.5">
+      {STEPS.map((label, i) => {
+        const done = i < current;
+        const active = i === current;
+        return (
+          <div key={label} className="flex items-center gap-0.5">
+            <div title={label}
+              className={`w-5 h-5 rounded-full text-[9px] font-bold flex items-center justify-center shrink-0 ${
+                done ? "bg-green-500 text-white" : active ? "bg-blue-600 text-white" : "bg-slate-200 text-slate-400"
+              }`}>
+              {done ? "✓" : i + 1}
+            </div>
+            {i < STEPS.length - 1 && (
+              <div className={`w-4 h-0.5 ${done ? "bg-green-400" : "bg-slate-200"}`} />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── Empty form ───────────────────────────────────────────────────────────────
 interface BookingForm {
   booking_date: string;
   booking_no: string;
+  job_type: JobType;
+  customer_code: string;
   vendor_code: string;
   truck_plate: string;
   driver_name: string;
@@ -69,7 +108,7 @@ interface BookingForm {
 }
 
 const EMPTY_FORM: BookingForm = {
-  booking_date: "", booking_no: "", vendor_code: "",
+  booking_date: "", booking_no: "", job_type: "Export", customer_code: "", vendor_code: "",
   truck_plate: "", driver_name: "", driver_phone: "",
   container_no: "", container_size: "", container_size_code: "",
   tare_weight: "", seal_no: "",
@@ -81,6 +120,11 @@ const LOADING_OPTIONS: { value: LoadingStatus; label: string }[] = [
   { value: "pending", label: "Pending" },
   { value: "loading", label: "Loading" },
   { value: "loaded", label: "Loaded" },
+];
+
+const JOB_TYPE_OPTIONS: { value: JobType; label: string }[] = [
+  { value: "Export", label: "Export" },
+  { value: "Import", label: "Import" },
 ];
 
 export default function BookingsPage() {
@@ -97,6 +141,7 @@ export default function BookingsPage() {
 
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [containers, setContainers] = useState<Container[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -113,12 +158,14 @@ export default function BookingsPage() {
 
   const loadDropdowns = useCallback(async () => {
     try {
-      const [vRes, cRes] = await Promise.all([
+      const [vRes, cRes, cusRes] = await Promise.all([
         listRecords<Vendor>("vendors"),
         listRecords<Container>("containers"),
+        listRecords<Customer>("customers"),
       ]);
       setVendors(vRes.records);
       setContainers(cRes.records);
+      setCustomers(cusRes.records);
     } catch { /* ignore */ }
   }, []);
 
@@ -160,6 +207,8 @@ export default function BookingsPage() {
     setForm({
       booking_date: b.booking_date ?? "",
       booking_no: b.booking_no ?? "",
+      job_type: b.job_type ?? "Export",
+      customer_code: b.customer_code ?? "",
       vendor_code: b.vendor_code ?? "",
       truck_plate: b.truck_plate ?? "",
       driver_name: b.driver_name ?? "",
@@ -227,44 +276,56 @@ export default function BookingsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[var(--border)] bg-slate-50">
-                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Booking No.</th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Vendor</th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Container</th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Size</th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Status</th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Return</th>
-                <th className="px-5 py-3" />
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">#</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Booking No.</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Date</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Type</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Customer</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Vendor</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Truck</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Container</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Size</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Seal</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Status</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Progress</th>
+                <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={7} className="px-5 py-10 text-center text-[var(--muted)]">Loading…</td></tr>
+                <tr><td colSpan={13} className="px-5 py-10 text-center text-[var(--muted)]">Loading…</td></tr>
               ) : records.length === 0 ? (
-                <tr><td colSpan={7} className="px-5 py-10 text-center text-[var(--muted)]">ยังไม่มี Booking กด Add New เพื่อสร้าง</td></tr>
+                <tr><td colSpan={13} className="px-5 py-10 text-center text-[var(--muted)]">ยังไม่มี Booking กด Add New เพื่อสร้าง</td></tr>
               ) : (
-                records.map((b) => (
+                records.map((b, i) => (
                   <tr key={b._id} className="border-b border-[var(--border)] last:border-0 hover:bg-slate-50 transition-colors">
-                    <td className="px-5 py-3 font-mono font-medium text-violet-700">{b.booking_no}</td>
-                    <td className="px-5 py-3">{b.vendor_code}</td>
-                    <td className="px-5 py-3 font-mono text-xs">{b.container_no || "—"}</td>
-                    <td className="px-5 py-3">
+                    <td className="px-4 py-3 text-xs text-[var(--muted)]">{i + 1}</td>
+                    <td className="px-4 py-3 font-mono font-medium text-violet-700 whitespace-nowrap">{b.booking_no}</td>
+                    <td className="px-4 py-3 text-xs text-[var(--muted)] whitespace-nowrap">{b.booking_date || "—"}</td>
+                    <td className="px-4 py-3">
+                      {b.job_type ? (
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${b.job_type === "Export" ? "bg-blue-100 text-blue-800" : "bg-orange-100 text-orange-800"}`}>
+                          {b.job_type}
+                        </span>
+                      ) : "—"}
+                    </td>
+                    <td className="px-4 py-3 text-xs">{b.customer_code || "—"}</td>
+                    <td className="px-4 py-3 text-xs">{b.vendor_code || "—"}</td>
+                    <td className="px-4 py-3 font-mono text-xs">{b.truck_plate || "—"}</td>
+                    <td className="px-4 py-3 font-mono text-xs whitespace-nowrap">{b.container_no || "—"}</td>
+                    <td className="px-4 py-3">
                       {b.container_size ? (
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">{b.container_size}</span>
                       ) : "—"}
                     </td>
-                    <td className="px-5 py-3">
+                    <td className="px-4 py-3 font-mono text-xs">{b.seal_no || "—"}</td>
+                    <td className="px-4 py-3">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[b.loading_status || "pending"]}`}>
                         {b.loading_status || "pending"}
                       </span>
                     </td>
-                    <td className="px-5 py-3 text-xs">
-                      {b.return_completed ? (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Done</span>
-                      ) : (
-                        <span className="text-[var(--muted)]">—</span>
-                      )}
-                    </td>
-                    <td className="px-5 py-3">
+                    <td className="px-4 py-3"><StepBar booking={b} /></td>
+                    <td className="px-4 py-3">
                       <div className="flex items-center gap-1 justify-end">
                         <button onClick={() => openEdit(b)} className="p-1.5 rounded-lg hover:bg-blue-50 text-[var(--muted)] hover:text-blue-600 transition-colors"><Pencil size={14} /></button>
                         <button onClick={() => setDeleteTarget(b)} className="p-1.5 rounded-lg hover:bg-red-50 text-[var(--muted)] hover:text-red-600 transition-colors"><Trash2 size={14} /></button>
@@ -289,6 +350,14 @@ export default function BookingsPage() {
             </FormField>
             <FormField label="Booking No." required>
               <Input value={form.booking_no} onChange={set("booking_no")} placeholder="e.g. BK-2024-001" required />
+            </FormField>
+            <FormField label="Job Type" required>
+              <Select value={form.job_type} onChange={set("job_type")} options={JOB_TYPE_OPTIONS} />
+            </FormField>
+            <FormField label="Customer">
+              <Select value={form.customer_code} onChange={set("customer_code")}
+                options={customers.map((c) => ({ value: c.code, label: `${c.code} — ${c.name}` }))}
+                placeholder="เลือก Customer…" />
             </FormField>
             <div className="col-span-2">
               <FormField label="Vendor (ผู้ขนส่ง)">

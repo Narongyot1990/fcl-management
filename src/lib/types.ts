@@ -1,3 +1,14 @@
+// ── Customer ────────────────────────────────────────────────────────────────
+export interface Customer {
+  _id: string;
+  code: string;   // รหัสลูกค้า e.g. "CUS001"
+  name: string;   // ชื่อลูกค้า
+  created_at?: string;
+}
+
+// ── Job type ─────────────────────────────────────────────────────────────────
+export type JobType = "Import" | "Export";
+
 // ── Driver sub-document (embedded in Vendor) ────────────────────────────────
 export interface Driver {
   name: string;
@@ -32,6 +43,8 @@ export interface Booking {
   // Part 1 — Draft (ข้อมูลจอง)
   booking_date: string;
   booking_no: string;
+  job_type: JobType;      // Import / Export
+  customer_code: string;  // FK → Customer.code
   vendor_code: string;    // FK → Vendor.code
 
   // Part 2 — Truck Assignment (หลังจองรถ)
@@ -61,7 +74,7 @@ export interface Booking {
 }
 
 // ── Collections ──────────────────────────────────────────────────────────────
-export type Collection = "vendors" | "containers" | "bookings";
+export type Collection = "vendors" | "containers" | "bookings" | "customers";
 
 export interface ApiResponse<T> {
   count: number;
