@@ -7,7 +7,7 @@ export async function GET(
 ) {
   try {
     const { filename } = await params;
-    const result = await get(filename, { access: "private" });
+    const result = await get(`itl-files/${filename}`, { access: "private" });
 
     if (!result || result.statusCode !== 200) {
       return new NextResponse("Not found", { status: 404 });
