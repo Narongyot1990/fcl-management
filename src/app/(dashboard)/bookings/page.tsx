@@ -434,9 +434,16 @@ export default function BookingsPage() {
                             <div><span className="text-slate-400">Return: </span><span className="font-medium">{toThaiDate(b.plan_return_date)}</span></div>
                           </td>
                           <td className="px-3 py-2 align-top">
-                            <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[b.loading_status || "pending"]}`}>
-                              {b.loading_status || "pending"}
-                            </span>
+                            <div className="flex flex-col gap-1">
+                              <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[b.loading_status || "pending"]}`}>
+                                {b.loading_status || "pending"}
+                              </span>
+                              {b.gcl_received && (
+                                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-700">
+                                  ✓ GCL
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="px-3 py-2 align-top"><StepBar booking={b} /></td>
                           <td className="px-3 py-2 align-top" rowSpan={2}>
