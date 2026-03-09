@@ -21,10 +21,10 @@ export default function PageHeader({ title, subtitle, onAdd, addLabel = "Add New
         {onAdd && (
           <button
             onClick={onAdd}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm"
+            className="flex items-center gap-1.5 px-3 md:px-4 py-2 md:py-2.5 min-h-[38px] md:min-h-[42px] rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm shrink-0"
           >
-            <Plus size={15} />
-            {addLabel}
+            <Plus size={16} />
+            <span>{addLabel}</span>
           </button>
         )}
       </div>

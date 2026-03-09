@@ -388,105 +388,112 @@ export default function BookingsPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 p-5 bg-slate-50/50">
                     {bookings.map((b, i) => (
                       <div key={b._id} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-6 hover:shadow-md transition-shadow relative space-y-4">
-                        {/* Top row: Booking No + badges + actions */}
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex flex-col min-w-0 flex-1">
-                             <span className="text-sm font-black text-slate-800 truncate leading-tight">{b.customer_code || "No Customer"}</span>
-                             <div className="flex items-center gap-2 mt-1 flex-wrap">
-                               <span className="font-mono font-bold text-violet-700 text-xs">{b.booking_no}</span>
-                               {b.job_type && (
-                                 <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold ${b.job_type === "Export" ? "bg-blue-100 text-blue-700" : "bg-orange-100 text-orange-700"}`}>
-                                   {b.job_type}
+                        {/* Section 1: Booking Core Info */}
+                        <div className="flex flex-col gap-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex flex-col min-w-0 flex-1">
+                               <span className="text-sm font-black text-slate-800 truncate leading-tight">{b.customer_code || "No Customer"}</span>
+                               <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                 <span className="font-mono font-bold text-violet-700 text-xs">{b.booking_no}</span>
+                                 {b.job_type && (
+                                   <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold ${b.job_type === "Export" ? "bg-blue-100 text-blue-700" : "bg-orange-100 text-orange-700"}`}>
+                                     {b.job_type}
+                                   </span>
+                                 )}
+                                 <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold ${STATUS_COLORS[b.loading_status || "pending"]}`}>
+                                   {b.loading_status || "pending"}
                                  </span>
-                               )}
-                               <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold ${STATUS_COLORS[b.loading_status || "pending"]}`}>
-                                 {b.loading_status || "pending"}
-                               </span>
-                               {b.gcl_received && <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700">GCL ✓</span>}
-                               {b.return_completed && <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700">คืนแล้ว ✓</span>}
+                                 {b.gcl_received && <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700">GCL ✓</span>}
+                                 {b.return_completed && <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700">คืนแล้ว ✓</span>}
+                               </div>
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0 bg-slate-50 rounded-lg p-1 border border-slate-100">
+                              <button onClick={() => copyPickupInfo(b)}
+                                className={`p-1.5 rounded-md hover:bg-white transition-colors ${copiedId === b._id ? "text-green-600 bg-white shadow-sm" : "text-slate-400 hover:text-blue-600 hover:shadow-sm"}`}
+                                title="Copy ข้อมูล">
+                                {copiedId === b._id ? <Check size={14} /> : <Copy size={14} />}
+                              </button>
+                              <button onClick={() => openEdit(b)} className="p-1.5 rounded-md hover:bg-white text-slate-400 hover:text-blue-600 hover:shadow-sm transition-colors" title="แก้ไข"><Pencil size={14} /></button>
+                              <button onClick={() => setDeleteTarget(b)} className="p-1.5 rounded-md hover:bg-white text-slate-400 hover:text-red-600 hover:shadow-sm transition-colors" title="ลบ"><Trash2 size={14} /></button>
+                            </div>
+                          </div>
+                          
+                          {/* Progress bar */}
+                          <div className="rounded-xl bg-slate-50 border border-slate-100 px-3 py-3"><StepBar booking={b} /></div>
+
+                          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-x-6 gap-y-2 text-xs rounded-xl border border-slate-100 bg-white">
+                            <div className="px-3 py-2 sm:py-2.5 flex justify-between sm:block border-b border-slate-50 sm:border-0 last:border-0">
+                              <span className="text-slate-400 text-[10px] uppercase font-semibold sm:normal-case sm:font-normal">Vendor:</span>
+                              <span className="font-medium text-slate-700 sm:ml-2">{b.vendor_code || "—"}</span>
+                            </div>
+                            <div className="px-3 py-2 sm:py-2.5 flex justify-between sm:block border-b border-slate-50 sm:border-0 last:border-0">
+                              <span className="text-slate-400 text-[10px] uppercase font-semibold sm:normal-case sm:font-normal">Pickup:</span>
+                              <span className="font-medium text-slate-700 sm:ml-2">{toThaiDate(b.plan_pickup_date)}</span>
+                            </div>
+                            <div className="px-3 py-2 sm:py-2.5 flex justify-between sm:block border-b border-slate-50 sm:border-0 last:border-0">
+                              <span className="text-slate-400 text-[10px] uppercase font-semibold sm:normal-case sm:font-normal">Loading:</span>
+                              <span className="font-medium text-slate-700 sm:ml-2">{toThaiDate(b.plan_loading_date)}</span>
+                            </div>
+                            <div className="px-3 py-2 sm:py-2.5 flex justify-between sm:block border-b border-slate-50 sm:border-0 last:border-0">
+                              <span className="text-slate-400 text-[10px] uppercase font-semibold sm:normal-case sm:font-normal">Return:</span>
+                              <span className="font-medium text-slate-700 sm:ml-2">{toThaiDate(b.plan_return_date)}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Section 2: Container Info */}
+                        <div className="border border-slate-200 rounded-xl bg-slate-50/50 p-4 relative mt-2">
+                           <span className="absolute -top-2.5 left-4 bg-white px-2 text-[10px] font-bold uppercase tracking-widest text-slate-500 rounded-sm shadow-sm border border-slate-200">Container Details</span>
+                           <div className="flex flex-col gap-4 mt-1">
+                             <div className="flex items-baseline gap-2 flex-wrap">
+                                <span className="font-mono font-black text-xl text-slate-800 tracking-tight">{b.container_no || "No Container"}</span>
+                                {b.seal_no && (
+                                  <>
+                                    <span className="text-slate-300">|</span>
+                                    <span className="font-mono font-bold text-sm text-blue-700">{b.seal_no}</span>
+                                  </>
+                                )}
                              </div>
-                          </div>
-                          <div className="flex items-center gap-1 shrink-0 bg-slate-50 rounded-lg p-1 border border-slate-100">
-                            <button onClick={() => copyPickupInfo(b)}
-                              className={`p-1.5 rounded-md hover:bg-white transition-colors ${copiedId === b._id ? "text-green-600 bg-white shadow-sm" : "text-slate-400 hover:text-blue-600 hover:shadow-sm"}`}
-                              title="Copy ข้อมูล">
-                              {copiedId === b._id ? <Check size={14} /> : <Copy size={14} />}
-                            </button>
-                            <button onClick={() => openEdit(b)} className="p-1.5 rounded-md hover:bg-white text-slate-400 hover:text-blue-600 hover:shadow-sm transition-colors" title="แก้ไข"><Pencil size={14} /></button>
-                            <button onClick={() => setDeleteTarget(b)} className="p-1.5 rounded-md hover:bg-white text-slate-400 hover:text-red-600 hover:shadow-sm transition-colors" title="ลบ"><Trash2 size={14} /></button>
-                          </div>
+                             <div className="grid grid-cols-2 gap-3 text-xs">
+                               <div className="bg-white rounded-lg px-3 py-2 border border-slate-100 shadow-sm">
+                                  <span className="text-slate-400 block text-[9px] uppercase font-bold tracking-wide">Size / Code</span>
+                                  <span className="font-medium text-slate-700 block mt-0.5">
+                                    {b.container_size || "—"}{b.container_size_code && <span className="text-slate-400 ml-1">/ {b.container_size_code}</span>}
+                                  </span>
+                               </div>
+                               <div className="bg-white rounded-lg px-3 py-2 border border-slate-100 shadow-sm">
+                                  <span className="text-slate-400 block text-[9px] uppercase font-bold tracking-wide">Tare (kg)</span>
+                                  <span className="font-medium text-slate-700 block mt-0.5">{b.tare_weight || "—"}</span>
+                               </div>
+                             </div>
+                           </div>
                         </div>
 
-                        {/* Progress bar */}
-                        <div className="rounded-xl bg-slate-50 border border-slate-100 px-3 py-3"><StepBar booking={b} /></div>
-
-                        <div className="grid grid-cols-2 gap-3 sm:gap-4 text-xs">
-                          <div className="col-span-2 rounded-xl bg-slate-50/80 px-4 py-3 border border-slate-100">
-                            <span className="text-slate-400 block text-[10px] uppercase font-semibold mb-0.5">Container & Seal</span>
-                            <div className="flex items-baseline gap-2 flex-wrap">
-                               <span className="font-mono font-black text-lg text-slate-800 tracking-tight">{b.container_no || "—"}</span>
-                               {b.seal_no && (
-                                 <>
-                                   <span className="text-slate-300">|</span>
-                                   <span className="font-mono font-bold text-sm text-blue-700">{b.seal_no}</span>
-                                 </>
-                               )}
-                            </div>
-                          </div>
-                          <div className="rounded-lg bg-slate-50/80 px-3 py-2.5 min-w-0">
-                            <span className="text-slate-400 block text-[10px] uppercase font-semibold">Vendor</span>
-                            <span className="font-medium text-slate-700 truncate block mt-0.5 text-sm">{b.vendor_code || "—"}</span>
-                          </div>
-                          <div className="rounded-lg bg-slate-50/80 px-3 py-2.5 min-w-0">
-                            <span className="text-slate-400 block text-[10px] uppercase font-semibold">Size / Code</span>
-                            <span className="font-medium text-slate-700 truncate block mt-0.5">
-                              {b.container_size || "—"}{b.container_size_code && <span className="text-slate-400 ml-1">/ {b.container_size_code}</span>}
-                            </span>
-                          </div>
-                          <div className="rounded-lg bg-slate-50/80 px-3 py-2.5 min-w-0 col-span-2">
-                            <span className="text-slate-400 block text-[10px] uppercase font-semibold">Tare (kg)</span>
-                            <span className="font-medium text-slate-700 truncate block mt-0.5">{b.tare_weight || "—"}</span>
-                          </div>
-                        </div>
-
-                        {/* Plan dates row */}
-                        <div className="flex flex-col sm:flex-row sm:flex-wrap gap-x-6 gap-y-2 text-xs rounded-xl border border-slate-100 bg-white">
-                          <div className="px-3 py-2 sm:py-2.5 flex justify-between sm:block border-b border-slate-50 sm:border-0 last:border-0">
-                            <span className="text-slate-400 text-[10px] uppercase font-semibold sm:normal-case sm:font-normal">Pickup:</span>
-                            <span className="font-medium text-slate-700 sm:ml-2">{toThaiDate(b.plan_pickup_date)}</span>
-                          </div>
-                          <div className="px-3 py-2 sm:py-2.5 flex justify-between sm:block border-b border-slate-50 sm:border-0 last:border-0">
-                            <span className="text-slate-400 text-[10px] uppercase font-semibold sm:normal-case sm:font-normal">Loading:</span>
-                            <span className="font-medium text-slate-700 sm:ml-2">{toThaiDate(b.plan_loading_date)}</span>
-                          </div>
-                          <div className="px-3 py-2 sm:py-2.5 flex justify-between sm:block border-b border-slate-50 sm:border-0 last:border-0">
-                            <span className="text-slate-400 text-[10px] uppercase font-semibold sm:normal-case sm:font-normal">Return:</span>
-                            <span className="font-medium text-slate-700 sm:ml-2">{toThaiDate(b.plan_return_date)}</span>
-                          </div>
-                        </div>
-
-                        {/* Driver info row */}
-                        <div className="flex flex-col gap-3 text-xs sm:flex-row sm:gap-4">
-                          <div className="flex flex-col gap-1.5 rounded-xl bg-emerald-50/60 border border-emerald-100/50 px-4 py-3 flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-emerald-100 text-emerald-800 uppercase tracking-wide">Pickup</span>
-                            </div>
-                            <span className="font-bold text-slate-800 text-sm">{b.driver_name || "ไม่มีข้อมูลคนขับ"}</span>
-                            <div className="flex flex-col gap-1 mt-0.5">
-                              {b.driver_phone && <span className="text-slate-500 font-medium">{b.driver_phone}</span>}
-                              {b.truck_plate && <span className="font-mono font-bold bg-white border border-emerald-200 px-2 py-1 rounded-md text-slate-700 shadow-sm self-start mt-1">{b.truck_plate}</span>}
-                            </div>
-                          </div>
-                          <div className="flex flex-col gap-1.5 rounded-xl bg-violet-50/60 border border-violet-100/50 px-4 py-3 flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-violet-100 text-violet-800 uppercase tracking-wide">Return</span>
-                            </div>
-                            <span className="font-bold text-slate-800 text-sm">{b.return_driver_name || "ไม่มีข้อมูลคนขับ"}</span>
-                            <div className="flex flex-col gap-1 mt-0.5">
-                              {b.return_driver_phone && <span className="text-slate-500 font-medium">{b.return_driver_phone}</span>}
-                              {b.return_truck_plate && <span className="font-mono font-bold bg-white border border-violet-200 px-2 py-1 rounded-md text-slate-700 shadow-sm self-start mt-1">{b.return_truck_plate}</span>}
-                            </div>
-                          </div>
+                        {/* Section 3: Truck/Logistics Info */}
+                        <div className="border border-slate-200 rounded-xl bg-slate-50/50 p-4 relative mt-2">
+                           <span className="absolute -top-2.5 left-4 bg-white px-2 text-[10px] font-bold uppercase tracking-widest text-slate-500 rounded-sm shadow-sm border border-slate-200">Logistics / Truck</span>
+                           <div className="flex flex-col gap-3 text-xs sm:flex-row sm:gap-4 mt-2">
+                             <div className="flex flex-col gap-1.5 rounded-xl bg-emerald-50/60 border border-emerald-100/80 px-4 py-3 flex-1 shadow-sm">
+                               <div className="flex items-center gap-2 mb-0.5">
+                                 <span className="px-2 py-0.5 rounded text-[9px] font-black bg-emerald-600 text-white uppercase tracking-wider">Pickup</span>
+                               </div>
+                               <span className="font-bold text-slate-800 text-sm mt-0.5">{b.driver_name || "ไม่มีข้อมูลคนขับ"}</span>
+                               <div className="flex flex-col gap-1 mt-0.5">
+                                 {b.driver_phone && <span className="text-slate-500 font-medium">{b.driver_phone}</span>}
+                                 {b.truck_plate && <span className="font-mono font-bold bg-white border border-emerald-200 px-2.5 py-1 rounded-md text-emerald-800 shadow-sm self-start mt-1 tracking-tight">{b.truck_plate}</span>}
+                               </div>
+                             </div>
+                             <div className="flex flex-col gap-1.5 rounded-xl bg-violet-50/60 border border-violet-100/80 px-4 py-3 flex-1 shadow-sm">
+                               <div className="flex items-center gap-2 mb-0.5">
+                                 <span className="px-2 py-0.5 rounded text-[9px] font-black bg-violet-600 text-white uppercase tracking-wider">Return</span>
+                               </div>
+                               <span className="font-bold text-slate-800 text-sm mt-0.5">{b.return_driver_name || "ไม่มีข้อมูลคนขับ"}</span>
+                               <div className="flex flex-col gap-1 mt-0.5">
+                                 {b.return_driver_phone && <span className="text-slate-500 font-medium">{b.return_driver_phone}</span>}
+                                 {b.return_truck_plate && <span className="font-mono font-bold bg-white border border-violet-200 px-2.5 py-1 rounded-md text-violet-800 shadow-sm self-start mt-1 tracking-tight">{b.return_truck_plate}</span>}
+                               </div>
+                             </div>
+                           </div>
                         </div>
 
                         {/* Images row */}

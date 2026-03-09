@@ -72,16 +72,16 @@ export default function ImageUpload({ label, value, type, onChange }: Props) {
             <button
               type="button"
               onClick={() => inputRef.current?.click()}
-              className="px-3 py-1.5 rounded-lg bg-white/90 text-slate-800 text-xs font-semibold hover:bg-white transition-colors flex items-center gap-1"
+              className="px-4 py-2 min-h-[38px] rounded-lg bg-white/95 text-slate-800 text-xs font-semibold hover:bg-white transition-colors flex items-center gap-2 shadow-sm"
             >
-              <UploadCloud size={13} /> เปลี่ยนรูป
+              <UploadCloud size={14} /> เปลี่ยนรูป
             </button>
             <button
               type="button"
               onClick={() => onChange("")}
-              className="p-1.5 rounded-lg bg-red-500/90 text-white hover:bg-red-600 transition-colors"
+              className="p-2 min-h-[38px] min-w-[38px] flex items-center justify-center rounded-lg bg-red-500/95 text-white hover:bg-red-600 transition-colors shadow-sm"
             >
-              <X size={13} />
+              <X size={16} />
             </button>
           </div>
         </div>

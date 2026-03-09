@@ -171,38 +171,64 @@ export default function Home() {
                       const status = b.return_completed ? "returned" : (b.loading_status || "pending");
                       const cfg = STATUS_CFG[status as keyof typeof STATUS_CFG];
                       return (
-                        <div key={b._id} className="p-4 flex flex-col gap-3 hover:bg-slate-50/80 transition-colors">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex flex-col min-w-0">
-                               <span className="text-xs font-bold text-slate-800 truncate">{b.customer_code || "No Customer"}</span>
-                               <span className="font-mono text-violet-700 text-xs mt-0.5 truncate">{b.booking_no}</span>
+                        <div key={b._id} className="p-4 flex flex-col gap-4 hover:bg-slate-50/80 transition-colors">
+                          {/* Section 1: Booking Info */}
+                          <div className="flex flex-col gap-2">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex flex-col min-w-0">
+                                <span className="text-xs font-bold text-slate-800 truncate">{b.customer_code || "No Customer"}</span>
+                                <span className="font-mono text-violet-700 text-xs mt-0.5 truncate">{b.booking_no}</span>
+                              </div>
+                              <span className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide ${cfg.color}`}>
+                                {cfg.label}
+                              </span>
                             </div>
-                            <span className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide ${cfg.color}`}>
-                              {cfg.label}
-                            </span>
+                            <div className="flex items-center gap-2 text-[10px] font-medium text-slate-500">
+                               <span>Vendor: <span className="text-slate-700">{b.vendor_code || "—"}</span></span>
+                            </div>
                           </div>
                           
-                          <div className="bg-slate-50/50 p-3 rounded-lg border border-slate-100 flex flex-col gap-2">
-                            <div>
-                               <p className="text-[10px] text-slate-400 font-semibold uppercase">Container / Seal</p>
-                               <p className="text-base font-black font-mono text-slate-800 truncate mt-0.5 tracking-tight">
-                                  {b.container_no || "—"} <span className="text-slate-400 mx-1 font-normal">|</span> {b.seal_no ? <span className="text-blue-700">{b.seal_no}</span> : "—"}
+                          {/* Section 2: Container Info */}
+                          <div className="bg-slate-50/80 p-3 rounded-xl border border-slate-100 flex flex-col gap-2 relative">
+                            <span className="absolute -top-2 left-3 bg-slate-100 px-1.5 text-[9px] font-bold uppercase tracking-widest text-slate-400 rounded-sm">Container</span>
+                            
+                            <div className="mt-1">
+                               <p className="text-base font-black font-mono text-slate-800 truncate tracking-tight">
+                                  {b.container_no || "—"} <span className="text-slate-300 mx-1 font-normal">|</span> {b.seal_no ? <span className="text-blue-700">{b.seal_no}</span> : "—"}
                                </p>
                             </div>
-                            <div className="grid grid-cols-2 gap-2 mt-1">
-                              <div>
-                                <p className="text-[10px] text-slate-400 font-semibold uppercase">Vendor</p>
-                                <p className="text-xs text-[var(--foreground)] font-medium truncate mt-0.5">{b.vendor_code || "—"}</p>
-                              </div>
+                            <div className="grid grid-cols-2 gap-2 mt-0.5">
                               <div>
                                 <p className="text-[10px] text-slate-400 font-semibold uppercase">Size</p>
                                 <p className="text-xs text-[var(--foreground)] font-medium truncate mt-0.5">{b.container_size || "—"}</p>
                               </div>
+                              <div>
+                                <p className="text-[10px] text-slate-400 font-semibold uppercase">Tare</p>
+                                <p className="text-xs text-[var(--foreground)] font-medium truncate mt-0.5">{b.tare_weight ? `${b.tare_weight} kg` : "—"}</p>
+                              </div>
                             </div>
                           </div>
+
+                          {/* Section 3: Truck/Logistics (simplified for Dashboard) */}
+                          {(b.truck_plate || b.return_truck_plate) && (
+                            <div className="flex items-center gap-3">
+                              {b.truck_plate && (
+                                <div className="flex items-center gap-1.5 bg-emerald-50 px-2 py-1 rounded border border-emerald-100/50">
+                                   <span className="text-[9px] font-bold text-emerald-600 uppercase">Pickup</span>
+                                   <span className="font-mono text-xs font-bold text-slate-700">{b.truck_plate}</span>
+                                </div>
+                              )}
+                              {b.return_truck_plate && (
+                                <div className="flex items-center gap-1.5 bg-violet-50 px-2 py-1 rounded border border-violet-100/50">
+                                   <span className="text-[9px] font-bold text-violet-600 uppercase">Return</span>
+                                   <span className="font-mono text-xs font-bold text-slate-700">{b.return_truck_plate}</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
                           
                           {b.return_completed && (
-                            <div className="flex items-center">
+                            <div className="flex items-center mt-1">
                               <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-green-100 text-green-800">Return Done</span>
                             </div>
                           )}
