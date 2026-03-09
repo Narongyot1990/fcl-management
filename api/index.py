@@ -1,3 +1,4 @@
+import logging
 import os
 import sys
 import json
@@ -8,13 +9,13 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from fastapi import FastAPI, Request, HTTPException, BackgroundTasks, Security, Body
-from fastapi.responses import HTMLResponse
 from fastapi.security import APIKeyHeader
+from mangum import Mangum
 from services import line_client, db
 from handlers import image as image_handler
-from dashboard_html import HTML as _DASHBOARD_HTML
 
 app = FastAPI(title="AI Support LINE Bot")
+handler = Mangum(app)
 
 # ── Auth ──────────────────────────────────────────────────────────────────────
 
@@ -26,13 +27,6 @@ def _require_key(key: str = Security(_api_key_header)) -> str:
     if not _API_SECRET or not key or key.strip() != _API_SECRET:
         raise HTTPException(status_code=401, detail="Invalid or missing X-API-Key")
     return key
-
-
-# ── Dashboard ─────────────────────────────────────────────────────────────────
-
-@app.get("/dashboard", response_class=HTMLResponse)
-def dashboard():
-    return _DASHBOARD_HTML
 
 
 # ── Records API ───────────────────────────────────────────────────────────────
@@ -86,6 +80,72 @@ def delete_record(
     return {"deleted": True}
 
 
+# ── Generic CRUD API ──────────────────────────────────────────────────────────
+
+@app.get("/api/collections/{collection}")
+def get_collection_records(
+    collection: str,
+    request: Request,
+    key: str = Security(_api_key_header),
+):
+    _require_key(key)
+    if collection not in db.COLLECTIONS:
+        raise HTTPException(status_code=404, detail="Collection not found")
+    
+    filters = dict(request.query_params)
+    filters.pop("key", None)
+    
+    records = db.query(collection, filters)
+    return {"count": len(records), "records": records}
+
+
+@app.post("/api/collections/{collection}")
+def create_collection_record(
+    collection: str,
+    data: dict = Body(...),
+    key: str = Security(_api_key_header),
+):
+    _require_key(key)
+    if collection not in db.COLLECTIONS:
+        raise HTTPException(status_code=404, detail="Collection not found")
+        
+    saved, doc = db.save(collection, data)
+    if not saved:
+        raise HTTPException(status_code=409, detail="Record might already exist (deduplication)")
+    return {"created": True, "record": doc}
+
+
+@app.put("/api/collections/{collection}/{record_id}")
+def update_collection_record(
+    collection: str,
+    record_id: str,
+    data: dict = Body(...),
+    key: str = Security(_api_key_header),
+):
+    _require_key(key)
+    if collection not in db.COLLECTIONS:
+        raise HTTPException(status_code=404, detail="Collection not found")
+        
+    if not db.update(collection, record_id, data):
+        raise HTTPException(status_code=404, detail="Record not found")
+    return {"updated": True}
+
+
+@app.delete("/api/collections/{collection}/{record_id}")
+def delete_collection_record(
+    collection: str,
+    record_id: str,
+    key: str = Security(_api_key_header),
+):
+    _require_key(key)
+    if collection not in db.COLLECTIONS:
+        raise HTTPException(status_code=404, detail="Collection not found")
+        
+    if not db.delete(collection, record_id):
+        raise HTTPException(status_code=404, detail="Record not found")
+    return {"deleted": True}
+
+
 # ── LINE Webhook ──────────────────────────────────────────────────────────────
 
 @app.get("/")
@@ -107,6 +167,10 @@ async def webhook(request: Request, background: BackgroundTasks):
         if event.get("type") == "message" and event.get("message", {}).get("type") == "image":
             message_id  = event["message"]["id"]
             reply_token = event.get("replyToken", "")
-            background.add_task(image_handler.handle, message_id, reply_token, is_res=False)
+            group_id = event.get("source", {}).get("groupId", "")
+            print(f"Received image message: {message_id, reply_token, group_id}") 
+           #background.add_task(image_handler.handle, message_id, reply_token, is_res=False)
+        logging.info(f"Received event: {event}")
+        
 
     return "OK"

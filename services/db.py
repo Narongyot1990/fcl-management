@@ -17,12 +17,18 @@ load_dotenv()
 
 COLLECTIONS: dict[str, str] = {
     "eir": "eir_records",
+    "vendors": "vendors",
+    "containers": "containers",
+    "bookings": "bookings",
 }
 
 # Fields used for duplicate detection per prompt.
 # All listed fields must be non-null to perform a dedup check.
 DEDUP_KEYS: dict[str, list[str]] = {
     "eir": ["container_no", "booking_no"],
+    "vendors": ["code"],
+    "containers": ["code"],
+    "bookings": ["booking_no"],
 }
 
 # ── Connection (reused across warm Vercel invocations) ────────────────────────
@@ -101,7 +107,7 @@ def query(prompt_key: str, filters: dict | None = None, limit: int = 500) -> lis
     return docs
 
 
-_UPDATABLE_FIELDS = {
+_UPDATABLE_FIELDS_EIR = {
     "shipper", "booking_no", "container_size", "container_no",
     "seal_no", "tare_weight", "truck_plate", "date_time",
 }
@@ -118,16 +124,24 @@ def delete(prompt_key: str, record_id: str) -> bool:
 
 
 def update(prompt_key: str, record_id: str, data: dict) -> bool:
-    """Patch allowed fields of a record. Returns True if matched."""
+    """Patch fields of a record. Returns True if matched."""
     try:
         oid = ObjectId(record_id)
     except (InvalidId, Exception):
         return False
-    patch = {
-        k: (v.strip() if isinstance(v, str) and v.strip() else None)
-        for k, v in data.items()
-        if k in _UPDATABLE_FIELDS
-    }
+
+    patch = {}
+    for k, v in data.items():
+        if k == "_id":
+            continue
+        if prompt_key == "eir" and k not in _UPDATABLE_FIELDS_EIR:
+            continue
+        
+        if isinstance(v, str):
+            patch[k] = v.strip() if v.strip() else None
+        else:
+            patch[k] = v
+
     if not patch:
         return False
     result = _get_collection(prompt_key).update_one({"_id": oid}, {"$set": patch})
@@ -137,14 +151,20 @@ def update(prompt_key: str, record_id: str, data: dict) -> bool:
 def _build_search_filter(filters: dict) -> dict:
     f: dict = {}
 
-    for field in ("shipper", "booking_no", "container_no"):
-        val = filters.get(field, "").strip()
-        if val:
-            f[field] = {"$regex": val, "$options": "i"}
-
-    size = filters.get("container_size", "").strip()
-    if size:
-        f["container_size"] = size
+    # For generic searches across different collections
+    for key, val in filters.items():
+        if not val:
+            continue
+        if key in ("date_from", "date_to"):
+            continue # handled below
+        
+        if isinstance(val, str) and key in ("shipper", "booking_no", "container_no", "code", "name", "truck_plate", "driver_name"):
+            f[key] = {"$regex": val.strip(), "$options": "i"}
+        else:
+            if isinstance(val, str):
+                f[key] = val.strip()
+            else:
+                f[key] = val
 
     date_from = filters.get("date_from", "")
     date_to   = filters.get("date_to", "")
