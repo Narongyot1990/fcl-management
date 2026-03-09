@@ -478,6 +478,24 @@ export default function BookingsPage() {
                              <div className="flex flex-col gap-1.5 rounded-xl bg-emerald-50/60 border border-emerald-100/80 px-4 py-3 flex-1 shadow-sm">
                                <div className="flex items-center gap-2 mb-0.5">
                                  <span className="px-2 py-0.5 rounded text-[9px] font-black bg-emerald-600 text-white uppercase tracking-wider">Pickup</span>
+                                  {(b.eir_image_url || b.container_image_url) && (
+                                    <div className="flex gap-1 ml-auto">
+                                      {b.eir_image_url && (
+                                        <button type="button" onClick={() => openImageModal(b.eir_image_url!, "EIR — " + b.booking_no)}
+                                          className="w-6 h-6 rounded-md bg-blue-100 hover:bg-blue-200 border border-blue-200 flex items-center justify-center transition-colors"
+                                          title="ดูรูป EIR">
+                                          <span className="text-[10px]">📄</span>
+                                        </button>
+                                      )}
+                                      {b.container_image_url && (
+                                        <button type="button" onClick={() => openImageModal(b.container_image_url!, "Container — " + b.booking_no)}
+                                          className="w-6 h-6 rounded-md bg-emerald-100 hover:bg-emerald-200 border border-emerald-200 flex items-center justify-center transition-colors"
+                                          title="ดูรูป Container">
+                                          <span className="text-[10px]">📦</span>
+                                        </button>
+                                      )}
+                                    </div>
+                                  )}
                                </div>
                                <span className="font-bold text-slate-800 text-sm mt-0.5">{b.driver_name || "ไม่มีข้อมูลคนขับ"}</span>
                                <div className="flex flex-col gap-1 mt-0.5">
@@ -498,25 +516,7 @@ export default function BookingsPage() {
                            </div>
                         </div>
 
-                        {/* Images row - compact icons */}
-                        {(b.eir_image_url || b.container_image_url) && (
-                          <div className="flex gap-2 pt-1">
-                            {b.eir_image_url && (
-                              <button type="button" onClick={() => openImageModal(b.eir_image_url, "EIR — " + b.booking_no)}
-                                className="relative group w-8 h-8 rounded-lg bg-blue-100 hover:bg-blue-200 border border-blue-200 flex items-center justify-center transition-colors"
-                                title="ดูรูป EIR">
-                                <span className="text-xs">📄</span>
-                              </button>
-                            )}
-                            {b.container_image_url && (
-                              <button type="button" onClick={() => openImageModal(b.container_image_url, "Container — " + b.booking_no)}
-                                className="relative group w-8 h-8 rounded-lg bg-emerald-100 hover:bg-emerald-200 border border-emerald-200 flex items-center justify-center transition-colors"
-                                title="ดูรูป Container">
-                                <span className="text-xs">📦</span>
-                              </button>
-                            )}
-                          </div>
-                        )}
+
                       </div>
                     ))}
                   </div>
