@@ -44,10 +44,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "GEMINI_API_KEY not configured" }, { status: 500 });
     }
 
+    // Get the base URL for proxy requests
+    const baseUrl = request.nextUrl.origin;
+
+    // Convert relative URLs to absolute URLs for proxy
+    const containerUrl = containerImageUrl.startsWith("/api/image/") 
+      ? `${baseUrl}${containerImageUrl}` 
+      : containerImageUrl;
+    const eirUrl = eirImageUrl.startsWith("/api/image/")
+      ? `${baseUrl}${eirImageUrl}`
+      : eirImageUrl;
+
     // Fetch both images and convert to base64
     const [containerImgRes, eirImgRes] = await Promise.all([
-      fetch(containerImageUrl),
-      fetch(eirImageUrl),
+      fetch(containerUrl),
+      fetch(eirUrl),
     ]);
 
     if (!containerImgRes.ok || !eirImgRes.ok) {
