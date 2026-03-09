@@ -22,10 +22,10 @@ export async function POST(request: NextRequest) {
     const extension = file.name.split(".").pop() || "jpg";
     const filename = `${type || "file"}_${timestamp}.${extension}`;
 
-    const blob = await put(`itl-files/${filename}`, file, { access: "private" });
+    const blob = await put(`itl-files/${filename}`, file, { access: "public" });
 
-    // Return proxy URL — /api/image/[filename] streams from private blob
-    return NextResponse.json({ url: `/api/image/${filename}`, filename });
+    // Return the blob URL directly - can be used by both client and server
+    return NextResponse.json({ url: blob.url, filename });
   } catch (error) {
     console.error("Upload error:", error);
     return NextResponse.json(
