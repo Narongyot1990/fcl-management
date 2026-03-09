@@ -119,8 +119,21 @@ function StepBar({ booking }: { booking: Booking }) {
   );
 }
 
+// ── Convert any image URL to our proxy URL (handles old direct blob URLs) ────
+function toProxyUrl(url: string | undefined): string {
+  if (!url) return "";
+  // Already a proxy URL
+  if (url.startsWith("/api/image/")) return url;
+  // Direct blob URL (e.g. https://xxx.public.blob.vercel-storage.com/itl-files/eir_123-xxx.jpg)
+  // Extract the base filename from the path
+  const match = url.match(/itl-files\/([^-]+[-_]\d+)\.[^.]+/);
+  if (match) return `/api/image/${encodeURIComponent(match[1] + ".jpg")}`;
+  // Other external URLs — return as-is
+  return url;
+}
+
 // ── Small helper to render "—" when empty ────────────────────────────────────
-const D = ({ v }: { v: string | undefined }) => <>{v || "\u2014"}</>;
+const D = ({ v }: { v: string | undefined }) => <>{v || "\u2014"};</>;
 
 // ── Thai date formatter ────────────────────────────────────────────────────────
 const toThaiDate = (iso: string | undefined) => {
@@ -331,8 +344,8 @@ export default function BookingsPage() {
       container_size_code: b.container_size_code ?? "",
       tare_weight: b.tare_weight ?? "",
       seal_no: b.seal_no ?? "",
-      eir_image_url: b.eir_image_url ?? "",
-      container_image_url: b.container_image_url ?? "",
+      eir_image_url: toProxyUrl(b.eir_image_url),
+      container_image_url: toProxyUrl(b.container_image_url),
       loading_status: b.loading_status ?? "pending",
       plan_loading_date: b.plan_loading_date ?? "",
       pending_at: b.pending_at ?? "",
@@ -508,11 +521,11 @@ export default function BookingsPage() {
                                   {(b.eir_image_url || b.container_image_url) && (
                                     <div className="flex gap-1 ml-auto">
                                       {b.eir_image_url && (
-                                        <button type="button" onClick={() => openImageModal(b.eir_image_url!, "EIR — " + b.booking_no, b)}
+                                        <button type="button" onClick={() => openImageModal(toProxyUrl(b.eir_image_url), "EIR — " + b.booking_no, b)}
                                           className="w-5 h-5 rounded bg-blue-100 hover:bg-blue-200 border border-blue-200 flex items-center justify-center text-[9px]" title="ดูรูป EIR">📄</button>
                                       )}
                                       {b.container_image_url && (
-                                        <button type="button" onClick={() => openImageModal(b.container_image_url!, "Container — " + b.booking_no, b)}
+                                        <button type="button" onClick={() => openImageModal(toProxyUrl(b.container_image_url), "Container — " + b.booking_no, b)}
                                           className="w-5 h-5 rounded bg-emerald-100 hover:bg-emerald-200 border border-emerald-200 flex items-center justify-center text-[9px]" title="ดูรูป Container">📦</button>
                                       )}
                                     </div>
