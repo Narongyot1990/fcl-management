@@ -470,11 +470,11 @@ export default function BookingsPage() {
                            <span className="absolute -top-2.5 left-4 bg-white px-2 text-[10px] font-bold uppercase tracking-widest text-slate-500 rounded-sm shadow-sm border border-slate-200">Container Details</span>
                            <div className="flex flex-col gap-4 mt-1">
                              <div className="flex items-baseline gap-2 flex-wrap">
-                                <span className="font-mono font-black text-xl text-slate-800 tracking-tight">{b.container_no || "No Container"}</span>
+                                <span className="font-mono font-black text-base sm:text-lg text-slate-800 tracking-tight">{b.container_no || "No Container"}</span>
                                 {b.seal_no && (
                                   <>
                                     <span className="text-slate-300">|</span>
-                                    <span className="font-mono font-bold text-sm text-blue-700">{b.seal_no}</span>
+                                    <span className="font-mono font-bold text-xs sm:text-sm text-blue-700">{b.seal_no}</span>
                                   </>
                                 )}
                              </div>
@@ -768,14 +768,20 @@ export default function BookingsPage() {
                <div className="hidden md:block w-px bg-white/20 self-stretch" />
                <div className="md:hidden h-px w-full bg-white/10" />
 
-               {/* 2. Container Info */}
+               {/* 2. Container Info & Seal */}
                <div className="flex flex-col">
-                 <span className="text-white/50 text-[10px] uppercase font-bold tracking-widest mb-1">Container Details</span>
-                 <div className="flex items-baseline gap-2">
-                   <span className="text-amber-300 font-mono font-black text-lg md:text-xl tracking-tight leading-none">{imageModalBooking.container_no || "N/A"}</span>
-                   <span className="text-white/80 font-medium text-sm">
-                     ({imageModalBooking.container_size || "—"} {imageModalBooking.container_size_code ? `/ ${imageModalBooking.container_size_code}` : ""})
-                   </span>
+                 <span className="text-white/50 text-[10px] uppercase font-bold tracking-widest mb-1">Container & Seal</span>
+                 <div className="flex flex-col gap-1">
+                   <div className="flex items-baseline gap-2">
+                     <span className="text-amber-300 font-mono font-black text-lg md:text-xl tracking-tight leading-none">{imageModalBooking.container_no || "N/A"}</span>
+                     <span className="text-white/80 font-medium text-sm">
+                       ({imageModalBooking.container_size || "—"} {imageModalBooking.container_size_code ? `/ ${imageModalBooking.container_size_code}` : ""})
+                     </span>
+                   </div>
+                   <div className="flex items-center gap-2">
+                     <span className="text-white/50 text-[10px] uppercase font-bold tracking-widest">Seal No:</span>
+                     <span className="text-emerald-400 font-mono font-bold text-sm leading-none">{imageModalBooking.seal_no || "N/A"}</span>
+                   </div>
                  </div>
                </div>
 
