@@ -59,6 +59,8 @@ export interface Booking {
   container_size_code: string; // e.g. "45G1" — dropdown จาก containers
   tare_weight: string;
   seal_no: string;
+  eir_image_url: string;      // URL รูปภาพ EIR
+  container_image_url: string; // URL รูปภาพ Container
 
   // Part 4 — Loading status
   loading_status: LoadingStatus;

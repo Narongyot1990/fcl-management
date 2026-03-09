@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { Pencil, Trash2, Search, ChevronDown, ChevronUp, CalendarDays, Copy, Check } from "lucide-react";
+import { Pencil, Trash2, Search, ChevronDown, ChevronUp, CalendarDays, Copy, Check, ZoomIn, X } from "lucide-react";
+import ImageUpload from "@/components/ImageUpload";
 import { listRecords, createRecord, updateRecord, deleteRecord } from "@/lib/api";
 import type { Booking, Vendor, Container, Customer, LoadingStatus, JobType } from "@/lib/types";
 import PageHeader from "@/components/PageHeader";
@@ -110,6 +111,8 @@ interface BookingForm {
   container_size_code: string;
   tare_weight: string;
   seal_no: string;
+  eir_image_url: string;
+  container_image_url: string;
   loading_status: LoadingStatus;
   plan_loading_date: string;
   pending_at: string;
@@ -128,7 +131,7 @@ const EMPTY_FORM: BookingForm = {
   booking_date: "", booking_no: "", job_type: "Export", customer_code: "", vendor_code: "",
   truck_plate: "", driver_name: "", driver_phone: "", plan_pickup_date: "",
   container_no: "", container_size: "", container_size_code: "",
-  tare_weight: "", seal_no: "",
+  tare_weight: "", seal_no: "", eir_image_url: "", container_image_url: "",
   loading_status: "pending", plan_loading_date: "", pending_at: "", loading_at: "", loaded_at: "",
   plan_return_date: "", return_truck_plate: "", return_driver_name: "", return_driver_phone: "",
   gcl_received: false, return_date: "", return_completed: false,
@@ -161,6 +164,15 @@ export default function BookingsPage() {
   const [deleting, setDeleting] = useState(false);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [imageModalOpen, setImageModalOpen] = useState(false);
+  const [imageModalUrl, setImageModalUrl] = useState("");
+  const [imageModalTitle, setImageModalTitle] = useState("");
+
+  function openImageModal(url: string, title: string) {
+    setImageModalUrl(url);
+    setImageModalTitle(title);
+    setImageModalOpen(true);
+  }
 
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [containers, setContainers] = useState<Container[]>([]);
@@ -271,6 +283,8 @@ export default function BookingsPage() {
       container_size_code: b.container_size_code ?? "",
       tare_weight: b.tare_weight ?? "",
       seal_no: b.seal_no ?? "",
+      eir_image_url: b.eir_image_url ?? "",
+      container_image_url: b.container_image_url ?? "",
       loading_status: b.loading_status ?? "pending",
       plan_loading_date: b.plan_loading_date ?? "",
       pending_at: b.pending_at ?? "",
@@ -419,7 +433,43 @@ export default function BookingsPage() {
                               : <span className="text-slate-300">—</span>}
                           </td>
                           <td className="px-3 py-2 text-xs align-top">{b.customer_code || <span className="text-slate-300">—</span>}</td>
-                          <td className="px-3 py-2 font-mono text-xs align-top whitespace-nowrap">{b.container_no || <span className="text-slate-300">—</span>}</td>
+                          <td className="px-3 py-2 font-mono text-xs align-top whitespace-nowrap">
+                            <div className="flex flex-col gap-1">
+                              <span className="font-mono">{b.container_no || <span className="text-slate-300">—</span>}</span>
+                              {(b.eir_image_url || b.container_image_url) && (
+                                <div className="flex gap-1.5 mt-0.5">
+                                  {b.eir_image_url && (
+                                    <button
+                                      type="button"
+                                      onClick={() => openImageModal(b.eir_image_url, "EIR — " + b.booking_no)}
+                                      className="relative group w-10 h-10 rounded overflow-hidden border border-blue-200 hover:border-blue-400 transition-colors shrink-0"
+                                      title="ดูรูป EIR"
+                                    >
+                                      <img src={b.eir_image_url} alt="EIR" className="w-full h-full object-cover" />
+                                      <div className="absolute inset-0 bg-blue-600/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                        <ZoomIn size={12} className="text-white" />
+                                      </div>
+                                      <span className="absolute bottom-0 left-0 right-0 bg-blue-600/80 text-white text-[8px] font-bold text-center leading-tight py-0.5">EIR</span>
+                                    </button>
+                                  )}
+                                  {b.container_image_url && (
+                                    <button
+                                      type="button"
+                                      onClick={() => openImageModal(b.container_image_url, "Container — " + b.booking_no)}
+                                      className="relative group w-10 h-10 rounded overflow-hidden border border-emerald-200 hover:border-emerald-400 transition-colors shrink-0"
+                                      title="ดูรูป Container"
+                                    >
+                                      <img src={b.container_image_url} alt="Container" className="w-full h-full object-cover" />
+                                      <div className="absolute inset-0 bg-emerald-600/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                        <ZoomIn size={12} className="text-white" />
+                                      </div>
+                                      <span className="absolute bottom-0 left-0 right-0 bg-emerald-600/80 text-white text-[8px] font-bold text-center leading-tight py-0.5">CTR</span>
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </td>
                           <td className="px-3 py-2 text-xs align-top whitespace-nowrap">
                             {b.container_size
                               ? <span className="inline-flex px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-medium">{b.container_size}</span>
@@ -562,6 +612,20 @@ export default function BookingsPage() {
                 <Input value={form.seal_no} onChange={set("seal_no")} placeholder="หมายเลขซีล" />
               </FormField>
             </div>
+            <div className="col-span-2 grid grid-cols-2 gap-4">
+              <ImageUpload
+                label="รูป EIR"
+                value={form.eir_image_url}
+                type="eir"
+                onChange={(url) => setForm((f) => ({ ...f, eir_image_url: url }))}
+              />
+              <ImageUpload
+                label="รูป Container"
+                value={form.container_image_url}
+                type="container"
+                onChange={(url) => setForm((f) => ({ ...f, container_image_url: url }))}
+              />
+            </div>
           </Section>
 
           {/* Part 4 — Loading Status */}
@@ -629,6 +693,50 @@ export default function BookingsPage() {
         onCancel={() => setDeleteTarget(null)}
         loading={deleting}
       />
+
+      {/* ── Image fullscreen overlay ── */}
+      {imageModalOpen && imageModalUrl && (
+        <div
+          className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm"
+          onClick={() => setImageModalOpen(false)}
+        >
+          {/* Header bar */}
+          <div
+            className="absolute top-0 left-0 right-0 flex items-center justify-between px-6 py-4 bg-gradient-to-b from-black/60 to-transparent"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span className="text-white font-semibold text-sm">{imageModalTitle}</span>
+            <div className="flex items-center gap-3">
+              <a
+                href={imageModalUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-1.5 rounded-lg bg-white/20 hover:bg-white/30 text-white text-xs font-medium transition-colors"
+                onClick={(e) => e.stopPropagation()}
+              >
+                เปิดในแท็บใหม่
+              </a>
+              <button
+                onClick={() => setImageModalOpen(false)}
+                className="p-1.5 rounded-lg bg-white/20 hover:bg-white/30 text-white transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+          </div>
+
+          {/* Image */}
+          <img
+            src={imageModalUrl}
+            alt={imageModalTitle}
+            className="max-w-[90vw] max-h-[85vh] object-contain rounded-xl shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+
+          {/* Footer hint */}
+          <p className="absolute bottom-5 text-white/50 text-xs">คลิกพื้นหลังเพื่อปิด</p>
+        </div>
+      )}
     </div>
   );
 }
