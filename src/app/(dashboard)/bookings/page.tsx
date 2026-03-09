@@ -498,27 +498,21 @@ export default function BookingsPage() {
                            </div>
                         </div>
 
-                        {/* Images row */}
+                        {/* Images row - compact icons */}
                         {(b.eir_image_url || b.container_image_url) && (
-                          <div className="flex flex-wrap gap-3 pt-1">
+                          <div className="flex gap-2 pt-1">
                             {b.eir_image_url && (
                               <button type="button" onClick={() => openImageModal(b.eir_image_url, "EIR — " + b.booking_no)}
-                                className="relative group w-24 h-16 rounded-xl overflow-hidden border border-blue-200 hover:border-blue-400 transition-colors shrink-0 shadow-sm">
-                                <img src={b.eir_image_url} alt="EIR" className="w-full h-full object-cover" />
-                                <div className="absolute inset-0 bg-blue-600/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                  <ZoomIn size={16} className="text-white" />
-                                </div>
-                                <span className="absolute bottom-0 left-0 right-0 bg-blue-600/80 text-white text-[9px] font-bold text-center py-0.5">EIR</span>
+                                className="relative group w-8 h-8 rounded-lg bg-blue-100 hover:bg-blue-200 border border-blue-200 flex items-center justify-center transition-colors"
+                                title="ดูรูป EIR">
+                                <span className="text-xs">📄</span>
                               </button>
                             )}
                             {b.container_image_url && (
                               <button type="button" onClick={() => openImageModal(b.container_image_url, "Container — " + b.booking_no)}
-                                className="relative group w-24 h-16 rounded-xl overflow-hidden border border-emerald-200 hover:border-emerald-400 transition-colors shrink-0 shadow-sm">
-                                <img src={b.container_image_url} alt="Container" className="w-full h-full object-cover" />
-                                <div className="absolute inset-0 bg-emerald-600/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                  <ZoomIn size={16} className="text-white" />
-                                </div>
-                                <span className="absolute bottom-0 left-0 right-0 bg-emerald-600/80 text-white text-[9px] font-bold text-center py-0.5">Container</span>
+                                className="relative group w-8 h-8 rounded-lg bg-emerald-100 hover:bg-emerald-200 border border-emerald-200 flex items-center justify-center transition-colors"
+                                title="ดูรูป Container">
+                                <span className="text-xs">📦</span>
                               </button>
                             )}
                           </div>
