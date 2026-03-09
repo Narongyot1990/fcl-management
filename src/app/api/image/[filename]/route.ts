@@ -1,13 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { list } from "@vercel/blob";
+import { list, get } from "@vercel/blob";
 
 export const runtime = "nodejs";
-
-// Content-type map for common image extensions
-const MIME: Record<string, string> = {
-  jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png",
-  gif: "image/gif", webp: "image/webp", svg: "image/svg+xml",
-};
 
 export async function GET(
   _request: NextRequest,
@@ -36,26 +30,20 @@ export async function GET(
       return new NextResponse("Not found", { status: 404 });
     }
 
-    // For private stores: fetch the blob content server-side using the token
-    // The BLOB_READ_WRITE_TOKEN is automatically used by @vercel/blob for list()
-    // but for downloading we need to fetch the downloadUrl with the token
-    const token = process.env.BLOB_READ_WRITE_TOKEN;
-    const fetchUrl = token ? `${blobUrl}?token=${token}` : blobUrl;
+    // Use official SDK get() for private store — handles auth automatically
+    const result = await get(blobUrl, { access: "private" });
 
-    const blobRes = await fetch(fetchUrl);
-    if (!blobRes.ok) {
-      console.error("Image proxy fetch failed:", blobRes.status, blobUrl);
+    if (result?.statusCode !== 200) {
+      console.error("Image proxy get failed:", result?.statusCode, blobUrl);
       return new NextResponse("Not found", { status: 404 });
     }
 
-    const ext = cleanFilename.split(".").pop()?.toLowerCase() || "jpg";
-    const contentType = blobRes.headers.get("content-type") || MIME[ext] || "image/jpeg";
-
-    return new NextResponse(blobRes.body, {
+    return new NextResponse(result.stream, {
       status: 200,
       headers: {
-        "Content-Type": contentType,
-        "Cache-Control": "public, max-age=86400, s-maxage=604800",
+        "Content-Type": result.blob.contentType,
+        "X-Content-Type-Options": "nosniff",
+        "Cache-Control": "private, no-cache",
         "Access-Control-Allow-Origin": "*",
       },
     });
