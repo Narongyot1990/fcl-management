@@ -407,7 +407,7 @@ export default function BookingsPage() {
                           </tr>
                           {/* Row 2: driver details */}
                           <tr key={b._id + "-2"} className="border-b border-[var(--border)] bg-slate-50/40">
-                            <td colSpan={1} className="px-4 py-2 text-xs">
+                            <td colSpan={10} className="px-4 py-2 text-xs">
                               <div className="flex flex-wrap gap-x-8 gap-y-1">
                                 <div className="flex items-center gap-1.5">
                                   <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700 uppercase tracking-wider">Pickup</span>
