@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { Pencil, Trash2, Search, ChevronDown, ChevronUp, ChevronRight, CalendarDays, Copy, Check, ZoomIn, X, MapPin } from "lucide-react";
+import { Pencil, Trash2, Search, ChevronDown, ChevronUp, ChevronRight, CalendarDays, Copy, Check, ZoomIn, X, MapPin, Loader2 } from "lucide-react";
 import ImageUpload from "@/components/ImageUpload";
 import GeminiOcrButton from "@/components/GeminiOcrButton";
 import { containerNoMessage } from "@/lib/containerValidation";
@@ -575,23 +575,6 @@ export default function BookingsPage() {
                           </div>
                           {/* Action buttons always visible */}
                           <div className="flex items-center gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
-                            {b.truck_plate && (() => {
-                              // Check if the assigned truck has a GPS ID in the vendors list
-                              const assignedVendor = vendors.find(v => v.code === b.vendor_code);
-                              const hasGps = assignedVendor?.trucks?.some(t => t.plate === b.truck_plate && t.gps_id);
-                              
-                              if (hasGps) {
-                                return (
-                                  <button onClick={() => openLocationInGoogleMaps(b.vendor_code, b.truck_plate)}
-                                    disabled={openingGps === b.truck_plate}
-                                    className={`p-1 flex items-center justify-center rounded transition-colors ${openingGps === b.truck_plate ? "text-blue-400 bg-blue-50" : "text-slate-400 hover:text-blue-600 hover:bg-slate-100"}`}
-                                    title="ดูพิกัด GPS ปัจจุบันบนแผนที่">
-                                    <MapPin size={13} className={openingGps === b.truck_plate ? "animate-pulse" : ""} />
-                                  </button>
-                                );
-                              }
-                              return null;
-                            })()}
                             <button onClick={() => copyPickupInfo(b)}
                               className={`p-1 rounded hover:bg-slate-100 transition-colors ${copiedId === b._id ? "text-green-600" : "text-slate-400 hover:text-blue-600"}`}
                               title="Copy ข้อมูล">
@@ -636,24 +619,48 @@ export default function BookingsPage() {
                               <div className="flex flex-col gap-1 rounded-lg bg-emerald-50/60 border border-emerald-100/80 px-3 py-2">
                                 <div className="flex items-center gap-2">
                                   <span className="px-1.5 py-0.5 rounded text-[8px] font-black bg-emerald-600 text-white uppercase">Pickup</span>
-                                  {(b.eir_image_url || b.container_image_url) && (
-                                    <div className="flex gap-1 ml-auto">
-                                      {b.eir_image_url && (
-                                        <button type="button" onClick={() => openImageModal(toProxyUrl(b.eir_image_url), "EIR — " + b.booking_no, b)}
-                                          className="w-5 h-5 rounded bg-blue-100 hover:bg-blue-200 border border-blue-200 flex items-center justify-center text-[9px]" title="ดูรูป EIR">📄</button>
-                                      )}
-                                      {b.container_image_url && (
-                                        <button type="button" onClick={() => openImageModal(toProxyUrl(b.container_image_url), "Container — " + b.booking_no, b)}
-                                          className="w-5 h-5 rounded bg-emerald-100 hover:bg-emerald-200 border border-emerald-200 flex items-center justify-center text-[9px]" title="ดูรูป Container">📦</button>
-                                      )}
-                                    </div>
-                                  )}
+                                  <div className="flex gap-1 ml-auto">
+                                    {b.truck_plate && (() => {
+                                      const hasGps = vendors.find(v => v.code === b.vendor_code)?.trucks?.some(t => t.plate === b.truck_plate && t.gps_id);
+                                      if (hasGps) return (
+                                        <button type="button" onClick={() => openLocationInGoogleMaps(b.vendor_code, b.truck_plate)}
+                                          disabled={openingGps === b.truck_plate}
+                                          className="w-5 h-5 rounded bg-blue-100 hover:bg-blue-200 border border-blue-200 flex items-center justify-center text-blue-700" title="ดูพิกัด GPS ปัจจุบัน (รถรับตู้)">
+                                          {openingGps === b.truck_plate ? <Loader2 size={11} className="animate-spin" /> : <MapPin size={11} />}
+                                        </button>
+                                      );
+                                      return null;
+                                    })()}
+                                    {b.eir_image_url && (
+                                      <button type="button" onClick={() => openImageModal(toProxyUrl(b.eir_image_url), "EIR — " + b.booking_no, b)}
+                                        className="w-5 h-5 rounded bg-emerald-100 hover:bg-emerald-200 border border-emerald-200 flex items-center justify-center text-[9px]" title="ดูรูป EIR">📄</button>
+                                    )}
+                                    {b.container_image_url && (
+                                      <button type="button" onClick={() => openImageModal(toProxyUrl(b.container_image_url), "Container — " + b.booking_no, b)}
+                                        className="w-5 h-5 rounded bg-emerald-100 hover:bg-emerald-200 border border-emerald-200 flex items-center justify-center text-[9px]" title="ดูรูป Container">📦</button>
+                                    )}
+                                  </div>
                                 </div>
                                 <span className="font-bold text-slate-700 text-xs">{b.driver_name || "—"}</span>
                                 {b.truck_plate && <span className="font-mono font-bold text-emerald-800 text-[11px]">{b.truck_plate}</span>}
                               </div>
                               <div className="flex flex-col gap-1 rounded-lg bg-violet-50/60 border border-violet-100/80 px-3 py-2">
-                                <span className="px-1.5 py-0.5 rounded text-[8px] font-black bg-violet-600 text-white uppercase self-start">Return</span>
+                                <div className="flex items-center gap-2">
+                                  <span className="px-1.5 py-0.5 rounded text-[8px] font-black bg-violet-600 text-white uppercase">Return</span>
+                                  <div className="flex gap-1 ml-auto">
+                                    {b.return_truck_plate && (() => {
+                                      const hasGps = vendors.find(v => v.code === b.vendor_code)?.trucks?.some(t => t.plate === b.return_truck_plate && t.gps_id);
+                                      if (hasGps) return (
+                                        <button type="button" onClick={() => openLocationInGoogleMaps(b.vendor_code, b.return_truck_plate)}
+                                          disabled={openingGps === b.return_truck_plate}
+                                          className="w-5 h-5 rounded bg-blue-100 hover:bg-blue-200 border border-blue-200 flex items-center justify-center text-blue-700" title="ดูพิกัด GPS ปัจจุบัน (รถคืนตู้)">
+                                          {openingGps === b.return_truck_plate ? <Loader2 size={11} className="animate-spin" /> : <MapPin size={11} />}
+                                        </button>
+                                      );
+                                      return null;
+                                    })()}
+                                  </div>
+                                </div>
                                 <span className="font-bold text-slate-700 text-xs">{b.return_driver_name || "—"}</span>
                                 {b.return_truck_plate && <span className="font-mono font-bold text-violet-800 text-[11px]">{b.return_truck_plate}</span>}
                               </div>
