@@ -91,9 +91,18 @@ async function handleEvent(event: any) {
 // Main webhook handler
 export async function POST(req: NextRequest) {
   try {
+    // DEBUG: Log all requests
+    console.log('=== LINE Webhook Debug ===');
+    console.log('Method:', req.method);
+    console.log('Headers:', Object.fromEntries(req.headers.entries()));
+    
     // Get request body
     const body = await req.text();
     const signature = req.headers.get('x-line-signature');
+    
+    console.log('Body length:', body.length);
+    console.log('Signature:', signature ? 'present' : 'missing');
+    console.log('Body preview:', body.substring(0, 200) + '...');
     
     // Verify signature (important for security)
     if (!verifySignature(body, signature)) {
