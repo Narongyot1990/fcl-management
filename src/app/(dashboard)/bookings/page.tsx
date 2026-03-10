@@ -47,10 +47,10 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: 
 // ── Step Progress Bar (5 steps) ──────────────────────────────────────────────
 const STEPS = ["Booking", "Assign", "Pickup", "Loading", "Return"];
 
-const LOADING_SUB: Record<string, { label: string; dot: string; badge: string }> = {
-  pending:  { label: "รอโหลด",       dot: "bg-amber-400",   badge: "bg-amber-50 text-amber-700 border-amber-200" },
-  loading:  { label: "กำลังโหลด",    dot: "bg-blue-500",    badge: "bg-blue-50 text-blue-700 border-blue-200" },
-  loaded:   { label: "โหลดเสร็จแล้ว", dot: "bg-emerald-500", badge: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+const LOADING_SUB: Record<string, { label: string; dot: string; badge: string; color: string }> = {
+  pending:  { label: "รอโหลด",       dot: "border-2 border-amber-400 bg-white", badge: "bg-slate-50 text-slate-600 border-slate-200", color: "text-amber-600" },
+  loading:  { label: "กำลังโหลด",    dot: "bg-blue-500",    badge: "bg-blue-50 text-blue-700 border-blue-200", color: "text-blue-600" },
+  loaded:   { label: "โหลดเสร็จแล้ว", dot: "bg-emerald-500", badge: "bg-emerald-50 text-emerald-700 border-emerald-200", color: "text-emerald-700" },
 };
 
 function getStepStatuses(b: Booking): boolean[] {
@@ -65,10 +65,10 @@ function getStepStatuses(b: Booking): boolean[] {
 function getStepDate(b: Booking, idx: number): string | undefined {
   switch (idx) {
     case 0: return b.booking_date;
-    case 1: return b.plan_pickup_date;
-    case 2: return undefined;
-    case 3: return b.plan_loading_date;
-    case 4: return b.plan_return_date;
+    case 1: return undefined;
+    case 2: return b.plan_pickup_date;
+    case 3: return b.loaded_at || b.plan_loading_date;
+    case 4: return b.return_date || b.plan_return_date;
     default: return undefined;
   }
 }
@@ -106,11 +106,16 @@ function StepBar({ booking }: { booking: Booking }) {
             const isCurrent = i === activeIdx;
             // Special: Loading step shows sub-state color when active
             const isLoadingStep = i === 3;
-            let dotClass = "bg-slate-200 text-slate-400";
-            if (done) dotClass = "bg-emerald-500 text-white";
-            else if (isCurrent) dotClass = "bg-slate-400 text-white animate-pulse";
+            let dotClass = "bg-slate-100 text-slate-400 border border-slate-200";
+            if (done) dotClass = "bg-emerald-500 text-white shadow-sm";
+            else if (isCurrent) dotClass = "bg-white text-blue-600 border-2 border-blue-500 shadow-md ring-[4px] ring-blue-50";
+            
             if (isLoadingStep && !done && loadingSub) {
-              dotClass = `${loadingSub.dot} text-white`;
+              if (loadingStatus === "pending") {
+                dotClass = "bg-white text-amber-500 border-2 border-amber-400 ring-[4px] ring-amber-50";
+              } else if (loadingStatus === "loading") {
+                dotClass = "bg-blue-600 text-white animate-pulse shadow-lg ring-[4px] ring-blue-100";
+              }
             }
 
             const stepDate = getStepDate(booking, i);
@@ -118,12 +123,16 @@ function StepBar({ booking }: { booking: Booking }) {
               <div key={label} className="flex flex-col items-center gap-1 flex-1 z-10 w-0">
                 <div
                   title={label}
-                  className={`w-[22px] h-[22px] rounded-full text-[9px] font-black flex items-center justify-center shrink-0 z-10 ring-[3px] ring-white transition-all ${dotClass}`}
+                  className={`w-[24px] h-[24px] rounded-full text-[10px] font-black flex items-center justify-center shrink-0 z-10 transition-all duration-300 ${dotClass}`}
                 >
                   {done ? "\u2713" : i + 1}
                 </div>
-                <span className={`text-[8px] sm:text-[9px] font-bold uppercase tracking-wider truncate w-full text-center leading-tight ${done ? "text-slate-700" : isCurrent ? "text-slate-600" : "text-slate-400"}`}>
-                  {label}
+                <span className={`text-[8px] sm:text-[9px] font-bold uppercase tracking-wider truncate w-full text-center leading-tight ${
+                  done ? "text-slate-700" : 
+                  isCurrent ? (isLoadingStep && loadingSub ? loadingSub.color : "text-blue-600") : 
+                  "text-slate-400"
+                }`}>
+                  {isLoadingStep && !done && loadingSub ? loadingSub.label : label}
                 </span>
                 {stepDate && (
                   <span className={`text-[8px] font-medium leading-none whitespace-nowrap ${done ? "text-slate-500" : "text-slate-300"}`}>
@@ -136,11 +145,11 @@ function StepBar({ booking }: { booking: Booking }) {
         </div>
       </div>
 
-      {/* Loading sub-state badge — prominent and clear */}
-      {loadingSub && (
-        <div className="flex justify-center">
-          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-bold ${loadingSub.badge}`}>
-            <span className={`w-2 h-2 rounded-full ${loadingSub.dot} ${loadingStatus === "loading" ? "animate-pulse" : ""}`} />
+      {/* Loading sub-state badge de-emphasized if pending */}
+      {loadingSub && loadingStatus !== "pending" && (
+        <div className="flex justify-center -mt-1">
+          <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[9px] font-bold ${loadingSub.badge}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${loadingStatus === "loading" ? "bg-blue-500 animate-pulse" : "bg-emerald-500"}`} />
             {loadingSub.label}
           </span>
         </div>
@@ -506,12 +515,12 @@ export default function BookingsPage() {
                             {currentStepIdx === -1 ? (
                               <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-700">Done</span>
                             ) : loadBadge ? (
-                              <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold border ${loadBadge.badge}`}>
-                                <span className={`w-1.5 h-1.5 rounded-full ${loadBadge.dot} ${loadSt === "loading" ? "animate-pulse" : ""}`} />
+                              <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold border ${loadSt === "pending" ? "bg-slate-50 text-slate-500 border-slate-200" : loadBadge.badge}`}>
+                                <span className={`w-1.5 h-1.5 rounded-full ${loadSt === "pending" ? "bg-amber-400" : loadBadge.dot} ${loadSt === "loading" ? "animate-pulse" : ""}`} />
                                 {loadBadge.label}
                               </span>
                             ) : (
-                              <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${currentStepIdx >= 3 ? "bg-emerald-100 text-emerald-700" : currentStepIdx >= 2 ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-500"}`}>{currentStepName}</span>
+                              <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${currentStepIdx >= 3 ? "bg-blue-50 text-blue-600 border border-blue-100" : currentStepIdx >= 2 ? "bg-blue-100 text-blue-700 shadow-sm" : "bg-slate-100 text-slate-500"}`}>{currentStepName}</span>
                             )}
                           </div>
                           {/* Action buttons always visible */}
