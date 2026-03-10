@@ -34,7 +34,7 @@ export default function VendorsPage() {
 
   // ── GPS states ──
   const [gpsTruck, setGpsTruck] = useState<{ plate: string; gps_id: string } | null>(null);
-  const [gpsLoading, setGpsLoading] = useState(false);
+  const [gpsLoading, setGpsLoading] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyDateMode, setHistoryDateMode] = useState<"today" | "custom">("today");
   const [historyDate, setHistoryDate] = useState(getTodayDate());
@@ -44,7 +44,7 @@ export default function VendorsPage() {
 
   // ── GPS handlers ──
   async function handleGpsCurrentLocation(truck: { plate: string; gps_id: string }) {
-    setGpsLoading(true);
+    setGpsLoading(truck.plate);
     try {
       const data = await fetchGpsRealtime(truck.gps_id);
       const mapsUrl = `https://maps.google.com/?q=${data.lat},${data.lon}`;
@@ -52,7 +52,7 @@ export default function VendorsPage() {
     } catch (err: any) {
       alert(err.message || "เกิดข้อผิดพลาดในการดึงข้อมูลพิกัด GPS");
     } finally {
-      setGpsLoading(false);
+      setGpsLoading(null);
     }
   }
 
@@ -241,9 +241,9 @@ export default function VendorsPage() {
                         <span className="flex-1 truncate">{t.plate}</span>
                         {t.gps_id && (
                           <div className="flex items-center gap-1 shrink-0">
-                            <button type="button" onClick={() => handleGpsCurrentLocation({ plate: t.plate, gps_id: t.gps_id! })} disabled={gpsLoading}
+                            <button type="button" onClick={() => handleGpsCurrentLocation({ plate: t.plate, gps_id: t.gps_id! })} disabled={gpsLoading === t.plate}
                               className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-blue-500 hover:bg-blue-600 text-white text-[9px] font-bold transition-colors" title="ตำแหน่งปัจจุบัน">
-                              {gpsLoading ? <Loader2 size={10} className="animate-spin" /> : <MapPin size={10} />} ตำแหน่ง
+                              {gpsLoading === t.plate ? <Loader2 size={10} className="animate-spin" /> : <MapPin size={10} />} ตำแหน่ง
                             </button>
                             <button type="button" onClick={() => handleGpsHistory({ plate: t.plate, gps_id: t.gps_id! })}
                               className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-violet-500 hover:bg-violet-600 text-white text-[9px] font-bold transition-colors" title="ประวัติเส้นทาง">
@@ -306,9 +306,9 @@ export default function VendorsPage() {
                             <span className="truncate">{t.plate}</span>
                             {t.gps_id && (
                               <div className="flex items-center gap-1 shrink-0 ml-auto">
-                                <button type="button" onClick={() => handleGpsCurrentLocation({ plate: t.plate, gps_id: t.gps_id! })} disabled={gpsLoading}
+                                <button type="button" onClick={() => handleGpsCurrentLocation({ plate: t.plate, gps_id: t.gps_id! })} disabled={gpsLoading === t.plate}
                                   className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-blue-500 hover:bg-blue-600 text-white text-[9px] font-bold transition-colors" title="ตำแหน่งปัจจุบัน">
-                                  {gpsLoading ? <Loader2 size={10} className="animate-spin" /> : <MapPin size={10} />} ตำแหน่ง
+                                  {gpsLoading === t.plate ? <Loader2 size={10} className="animate-spin" /> : <MapPin size={10} />} ตำแหน่ง
                                 </button>
                                 <button type="button" onClick={() => handleGpsHistory({ plate: t.plate, gps_id: t.gps_id! })}
                                   className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-violet-500 hover:bg-violet-600 text-white text-[9px] font-bold transition-colors" title="ประวัติเส้นทาง">
@@ -459,25 +459,30 @@ export default function VendorsPage() {
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200">
                     <th className="text-left px-3 py-2 font-semibold text-slate-500 uppercase tracking-wide">#</th>
-                    <th className="text-left px-3 py-2 font-semibold text-slate-500 uppercase tracking-wide">สถานี / ตำแหน่ง</th>
+                    <th className="text-left px-3 py-2 font-semibold text-slate-500 uppercase tracking-wide">ออกจาก</th>
+                    <th className="text-left px-3 py-2 font-semibold text-slate-500 uppercase tracking-wide">เวลาออก</th>
                     <th className="text-left px-3 py-2 font-semibold text-slate-500 uppercase tracking-wide">ถึง</th>
-                    <th className="text-left px-3 py-2 font-semibold text-slate-500 uppercase tracking-wide">ออก</th>
-                    <th className="text-left px-3 py-2 font-semibold text-slate-500 uppercase tracking-wide">ระยะเวลา</th>
+                    <th className="text-left px-3 py-2 font-semibold text-slate-500 uppercase tracking-wide">เวลาถึง</th>
+                    <th className="text-left px-3 py-2 font-semibold text-slate-500 uppercase tracking-wide">ระยะทาง (km)</th>
                   </tr>
                 </thead>
                 <tbody>
                   {historyData.map((s, i) => (
                     <tr key={i} className="border-b border-slate-100 last:border-0 hover:bg-blue-50/40 transition-colors">
                       <td className="px-3 py-2 text-slate-400 font-mono">{i + 1}</td>
-                      <td className="px-3 py-2 font-medium text-slate-700 max-w-[200px] sm:max-w-none">
-                        <span className="block truncate">{s.station_name || s.sub_district_th || s.district_th || s.province_th || "ไม่ทราบตำแหน่ง"}</span>
-                        {s.province_th && s.station_name && (
-                          <span className="text-[10px] text-slate-400">{[s.sub_district_th, s.district_th, s.province_th].filter(Boolean).join(", ")}</span>
-                        )}
+                      <td className="px-3 py-2 font-medium text-slate-700 max-w-[150px]">
+                        <span className="block truncate">{s.startion_f || "—"}</span>
                       </td>
-                      <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{s.arrive_time || "—"}</td>
-                      <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{s.depart_time || "—"}</td>
-                      <td className="px-3 py-2 text-slate-500 whitespace-nowrap">{s.duration || "—"}</td>
+                      <td className="px-3 py-2 text-slate-600 whitespace-nowrap">
+                        {s.start_date && s.start_time ? `${s.start_date} ${s.start_time}` : s.start_date || s.start_time || "—"}
+                      </td>
+                      <td className="px-3 py-2 font-medium text-slate-700 max-w-[150px]">
+                        <span className="block truncate">{s.startion_n || "—"}</span>
+                      </td>
+                      <td className="px-3 py-2 text-slate-600 whitespace-nowrap">
+                        {s.end_date && s.end_time ? `${s.end_date} ${s.end_time}` : s.end_date || s.end_time || "—"}
+                      </td>
+                      <td className="px-3 py-2 text-slate-500 whitespace-nowrap">{s.distance || "—"}</td>
                     </tr>
                   ))}
                 </tbody>

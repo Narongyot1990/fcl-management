@@ -9,15 +9,15 @@ export interface GpsRealtimeResult {
 }
 
 export interface GpsStation {
-  station_name?: string;
-  arrive_time?: string;
-  depart_time?: string;
-  duration?: string;
-  lat?: string;
-  lon?: string;
-  sub_district_th?: string;
-  district_th?: string;
-  province_th?: string;
+  // /getStationToStationReport response fields (doc section 3.9)
+  truck_name?: string;
+  startion_f?: string;   // departure station (typo in DTC doc)
+  start_date?: string;
+  start_time?: string;
+  startion_n?: string;   // arrival station (typo in DTC doc)
+  end_date?: string;
+  end_time?: string;
+  distance?: string;
   [key: string]: unknown;
 }
 
