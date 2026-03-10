@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { clsx } from "clsx";
 import { useState } from "react";
-import { Truck, Package, ClipboardList, LayoutDashboard, Users, Menu, X } from "lucide-react";
+import { Truck, Package, ClipboardList, LayoutDashboard, Users, Menu, X, MessageSquare } from "lucide-react";
 
 const NAV = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -11,6 +11,7 @@ const NAV = [
   { href: "/vendors", label: "Vendors", icon: Truck },
   { href: "/containers", label: "Containers", icon: Package },
   { href: "/bookings", label: "Bookings", icon: ClipboardList },
+  { href: "/line", label: "LINE Bot", icon: MessageSquare },
 ];
 
 export default function Sidebar() {
