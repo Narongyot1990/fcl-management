@@ -1,9 +1,12 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { Pencil, Trash2, Search, Plus, X, MapPin, Loader2, History, CalendarDays } from "lucide-react";
+import { Pencil, Trash2, Search, Plus, X, MapPin, Loader2, History, CalendarDays, MoreVertical, Route } from "lucide-react";
+import dynamic from "next/dynamic";
+const GpsMap = dynamic(() => import("@/components/GpsMap"), { ssr: false });
 import { listRecords, createRecord, updateRecord, deleteRecord } from "@/lib/api";
 import type { Vendor, Driver } from "@/lib/types";
-import { fetchGpsRealtime, fetchGpsHistory, getTodayDate, type GpsStation } from "@/lib/gpsUtils";
+import { fetchGpsRealtime, getTodayDate } from "@/lib/gpsUtils";
+import type { GpsPoint } from "@/components/GpsMap";
 import PageHeader from "@/components/PageHeader";
 import Modal from "@/components/Modal";
 import ConfirmDialog from "@/components/ConfirmDialog";
@@ -35,15 +38,25 @@ export default function VendorsPage() {
   // ── GPS states ──
   const [gpsTruck, setGpsTruck] = useState<{ plate: string; gps_id: string } | null>(null);
   const [gpsLoading, setGpsLoading] = useState<string | null>(null);
+  const [gpsMenuOpen, setGpsMenuOpen] = useState<string | null>(null); // plate of open ... menu
+  // Station-to-station modal
+  const [stationOpen, setStationOpen] = useState(false);
+  const [stationDateMode, setStationDateMode] = useState<"today" | "custom">("today");
+  const [stationDate, setStationDate] = useState(getTodayDate());
+  const [stationData, setStationData] = useState<any[]>([]);
+  const [stationLoading, setStationLoading] = useState(false);
+  const [stationError, setStationError] = useState("");
+  // History (raw) modal
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyDateMode, setHistoryDateMode] = useState<"today" | "custom">("today");
   const [historyDate, setHistoryDate] = useState(getTodayDate());
-  const [historyData, setHistoryData] = useState<GpsStation[]>([]);
+  const [historyPoints, setHistoryPoints] = useState<GpsPoint[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState("");
 
   // ── GPS handlers ──
   async function handleGpsCurrentLocation(truck: { plate: string; gps_id: string }) {
+    setGpsMenuOpen(null);
     setGpsLoading(truck.plate);
     try {
       const data = await fetchGpsRealtime(truck.gps_id);
@@ -56,34 +69,66 @@ export default function VendorsPage() {
     }
   }
 
-  async function handleGpsHistory(truck: { plate: string; gps_id: string }) {
+  async function handleOpenStation(truck: { plate: string; gps_id: string }) {
+    setGpsMenuOpen(null);
+    setGpsTruck(truck);
+    setStationOpen(true);
+    setStationDateMode("today");
+    setStationDate(getTodayDate());
+    setStationData([]);
+    setStationError("");
+    fetchStation(truck.gps_id, getTodayDate());
+  }
+
+  async function fetchStation(gpsId: string, date: string) {
+    setStationLoading(true);
+    setStationError("");
+    setStationData([]);
+    try {
+      const res = await fetch("/api/gps/history", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ gps_id: gpsId, date }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "ไม่สามารถดึงข้อมูลได้");
+      setStationData(json.stations || []);
+    } catch (err: any) {
+      setStationError(err.message || "ไม่สามารถดึงข้อมูลประวัติได้");
+    } finally {
+      setStationLoading(false);
+    }
+  }
+
+  async function handleOpenHistory(truck: { plate: string; gps_id: string }) {
+    setGpsMenuOpen(null);
     setGpsTruck(truck);
     setHistoryOpen(true);
     setHistoryDateMode("today");
     setHistoryDate(getTodayDate());
-    setHistoryData([]);
+    setHistoryPoints([]);
     setHistoryError("");
-    // Auto-fetch today
-    fetchHistory(truck.gps_id, getTodayDate());
+    fetchHistoryRaw(truck.gps_id, getTodayDate());
   }
 
-  async function fetchHistory(gpsId: string, date: string) {
+  async function fetchHistoryRaw(gpsId: string, date: string) {
     setHistoryLoading(true);
     setHistoryError("");
-    setHistoryData([]);
+    setHistoryPoints([]);
     try {
-      const result = await fetchGpsHistory(gpsId, date);
-      setHistoryData(result.stations);
+      const res = await fetch("/api/gps/history-raw", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ gps_id: gpsId, date }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "ไม่สามารถดึงข้อมูลได้");
+      setHistoryPoints(json.points || []);
     } catch (err: any) {
       setHistoryError(err.message || "ไม่สามารถดึงข้อมูลประวัติได้");
     } finally {
       setHistoryLoading(false);
     }
-  }
-
-  function handleHistoryDateChange(date: string) {
-    setHistoryDate(date);
-    if (gpsTruck) fetchHistory(gpsTruck.gps_id, date);
   }
 
   const load = useCallback(async () => {
@@ -240,15 +285,28 @@ export default function VendorsPage() {
                       <div key={i} className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-mono ${t.gps_id ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-slate-100 text-[var(--foreground)]'}`}>
                         <span className="flex-1 truncate">{t.plate}</span>
                         {t.gps_id && (
-                          <div className="flex items-center gap-1 shrink-0">
-                            <button type="button" onClick={() => handleGpsCurrentLocation({ plate: t.plate, gps_id: t.gps_id! })} disabled={gpsLoading === t.plate}
-                              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-blue-500 hover:bg-blue-600 text-white text-[9px] font-bold transition-colors" title="ตำแหน่งปัจจุบัน">
-                              {gpsLoading === t.plate ? <Loader2 size={10} className="animate-spin" /> : <MapPin size={10} />} ตำแหน่ง
+                          <div className="relative shrink-0">
+                            <button type="button"
+                              onClick={() => setGpsMenuOpen(gpsMenuOpen === t.plate ? null : t.plate)}
+                              className="p-1 rounded hover:bg-blue-100 text-blue-600 transition-colors">
+                              {gpsLoading === t.plate ? <Loader2 size={12} className="animate-spin" /> : <MoreVertical size={12} />}
                             </button>
-                            <button type="button" onClick={() => handleGpsHistory({ plate: t.plate, gps_id: t.gps_id! })}
-                              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-violet-500 hover:bg-violet-600 text-white text-[9px] font-bold transition-colors" title="ประวัติเส้นทาง">
-                              <History size={10} /> ประวัติ
-                            </button>
+                            {gpsMenuOpen === t.plate && (
+                              <div className="absolute right-0 top-6 z-50 bg-white rounded-xl shadow-lg border border-slate-200 py-1 min-w-[160px]" onClick={(e) => e.stopPropagation()}>
+                                <button type="button" onClick={() => handleGpsCurrentLocation({ plate: t.plate, gps_id: t.gps_id! })}
+                                  className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-blue-50 text-slate-700 hover:text-blue-700 transition-colors">
+                                  <MapPin size={12} className="text-blue-500" /> ตำแหน่ง Realtime
+                                </button>
+                                <button type="button" onClick={() => handleOpenStation({ plate: t.plate, gps_id: t.gps_id! })}
+                                  className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-violet-50 text-slate-700 hover:text-violet-700 transition-colors">
+                                  <Route size={12} className="text-violet-500" /> Station to Station
+                                </button>
+                                <button type="button" onClick={() => handleOpenHistory({ plate: t.plate, gps_id: t.gps_id! })}
+                                  className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 transition-colors">
+                                  <History size={12} className="text-emerald-500" /> ประวัติ GPS
+                                </button>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
@@ -305,15 +363,28 @@ export default function VendorsPage() {
                           <div key={i} className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-mono ${t.gps_id ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-slate-100 text-[var(--foreground)]'}`}>
                             <span className="truncate">{t.plate}</span>
                             {t.gps_id && (
-                              <div className="flex items-center gap-1 shrink-0 ml-auto">
-                                <button type="button" onClick={() => handleGpsCurrentLocation({ plate: t.plate, gps_id: t.gps_id! })} disabled={gpsLoading === t.plate}
-                                  className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-blue-500 hover:bg-blue-600 text-white text-[9px] font-bold transition-colors" title="ตำแหน่งปัจจุบัน">
-                                  {gpsLoading === t.plate ? <Loader2 size={10} className="animate-spin" /> : <MapPin size={10} />} ตำแหน่ง
+                              <div className="relative shrink-0 ml-auto">
+                                <button type="button"
+                                  onClick={() => setGpsMenuOpen(gpsMenuOpen === t.plate ? null : t.plate)}
+                                  className="p-1 rounded hover:bg-blue-100 text-blue-600 transition-colors">
+                                  {gpsLoading === t.plate ? <Loader2 size={12} className="animate-spin" /> : <MoreVertical size={12} />}
                                 </button>
-                                <button type="button" onClick={() => handleGpsHistory({ plate: t.plate, gps_id: t.gps_id! })}
-                                  className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-violet-500 hover:bg-violet-600 text-white text-[9px] font-bold transition-colors" title="ประวัติเส้นทาง">
-                                  <History size={10} /> ประวัติ
-                                </button>
+                                {gpsMenuOpen === t.plate && (
+                                  <div className="absolute right-0 top-6 z-50 bg-white rounded-xl shadow-lg border border-slate-200 py-1 min-w-[160px]" onClick={(e) => e.stopPropagation()}>
+                                    <button type="button" onClick={() => handleGpsCurrentLocation({ plate: t.plate, gps_id: t.gps_id! })}
+                                      className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-blue-50 text-slate-700 hover:text-blue-700 transition-colors">
+                                      <MapPin size={12} className="text-blue-500" /> ตำแหน่ง Realtime
+                                    </button>
+                                    <button type="button" onClick={() => handleOpenStation({ plate: t.plate, gps_id: t.gps_id! })}
+                                      className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-violet-50 text-slate-700 hover:text-violet-700 transition-colors">
+                                      <Route size={12} className="text-violet-500" /> Station to Station
+                                    </button>
+                                    <button type="button" onClick={() => handleOpenHistory({ plate: t.plate, gps_id: t.gps_id! })}
+                                      className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 transition-colors">
+                                      <History size={12} className="text-emerald-500" /> ประวัติ GPS
+                                    </button>
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>
@@ -422,145 +493,97 @@ export default function VendorsPage() {
         loading={deleting}
       />
 
-      {/* ── GPS History Modal ── */}
-      <Modal open={historyOpen} onClose={() => setHistoryOpen(false)} title={`ประวัติเส้นทาง — ${gpsTruck?.plate || ""}`} size="xl">
-        <div className="flex flex-col gap-4">
-          {/* Date mode selector */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-            <div className="flex items-center gap-2">
-              <button type="button" onClick={() => { setHistoryDateMode("today"); handleHistoryDateChange(getTodayDate()); }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${historyDateMode === "today" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
-                <CalendarDays size={12} className="inline mr-1" />วันนี้
-              </button>
-              <button type="button" onClick={() => setHistoryDateMode("custom")}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${historyDateMode === "custom" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
-                <CalendarDays size={12} className="inline mr-1" />เลือกวันที่
-              </button>
-            </div>
-            {historyDateMode === "custom" && (
-              <input type="date" value={historyDate} onChange={(e) => handleHistoryDateChange(e.target.value)}
-                className="px-2.5 py-1.5 text-xs border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+      {/* ── Station-to-Station Modal ── */}
+      <Modal open={stationOpen} onClose={() => setStationOpen(false)} title={`Station to Station — ${gpsTruck?.plate || ""}`} size="lg">
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            <button type="button" onClick={() => { setStationDateMode("today"); fetchStation(gpsTruck!.gps_id, getTodayDate()); setStationDate(getTodayDate()); }}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors ${stationDateMode === "today" ? "bg-violet-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
+              <CalendarDays size={11} className="inline mr-1" />วันนี้
+            </button>
+            <button type="button" onClick={() => setStationDateMode("custom")}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors ${stationDateMode === "custom" ? "bg-violet-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
+              <CalendarDays size={11} className="inline mr-1" />เลือกวันที่
+            </button>
+            {stationDateMode === "custom" && (
+              <input type="date" value={stationDate} onChange={(e) => { setStationDate(e.target.value); fetchStation(gpsTruck!.gps_id, e.target.value); }}
+                className="px-2 py-1 text-xs border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500" />
             )}
-            <span className="text-[10px] text-slate-400 ml-auto">เวลา 0:00 – 23:59</span>
+            <span className="text-[10px] text-slate-400 ml-auto">0:00 – 23:59</span>
           </div>
 
-          {/* Results */}
-          {historyLoading ? (
-            <div className="flex items-center justify-center py-10 text-sm text-[var(--muted)]">
-              <Loader2 size={16} className="animate-spin mr-2" /> กำลังโหลดข้อมูล…
+          {stationLoading ? (
+            <div className="flex items-center justify-center py-8"><Loader2 size={16} className="animate-spin mr-2 text-violet-500" /><span className="text-sm text-slate-500">กำลังโหลด…</span></div>
+          ) : stationError ? (
+            <div className="py-4 text-sm text-red-500 text-center bg-red-50 rounded-lg">{stationError}</div>
+          ) : stationData.length === 0 ? (
+            <div className="py-6 text-sm text-slate-400 text-center bg-slate-50 rounded-lg">ไม่พบข้อมูลสำหรับวันที่นี้</div>
+          ) : (
+            <div className="overflow-hidden rounded-xl border border-slate-200 shadow-sm">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="bg-gradient-to-r from-violet-50 to-blue-50 border-b border-slate-200">
+                    <th className="text-left px-3 py-2.5 font-semibold text-slate-500">#</th>
+                    <th className="text-left px-3 py-2.5 font-semibold text-slate-500">ต้นทาง</th>
+                    <th className="text-left px-3 py-2.5 font-semibold text-slate-500 whitespace-nowrap">เวลาออก</th>
+                    <th className="text-left px-3 py-2.5 font-semibold text-slate-500">ปลายทาง</th>
+                    <th className="text-left px-3 py-2.5 font-semibold text-slate-500 whitespace-nowrap">เวลาถึง</th>
+                    <th className="text-right px-3 py-2.5 font-semibold text-slate-500">km</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stationData.map((s: any, i: number) => (
+                    <tr key={i} className="border-b border-slate-100 last:border-0 hover:bg-violet-50/30 transition-colors">
+                      <td className="px-3 py-2 text-slate-400">{i + 1}</td>
+                      <td className="px-3 py-2"><div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" /><span className="font-medium text-slate-700">{s.station_f || "—"}</span></div></td>
+                      <td className="px-3 py-2 text-slate-500 whitespace-nowrap">{s.start_date} {s.start_time}</td>
+                      <td className="px-3 py-2"><div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" /><span className="font-medium text-slate-700">{s.station_n || "—"}</span></div></td>
+                      <td className="px-3 py-2 text-slate-500 whitespace-nowrap">{s.end_date} {s.end_time}</td>
+                      <td className="px-3 py-2 text-right font-bold text-emerald-600">{s.distance || "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
+          )}
+        </div>
+      </Modal>
+
+      {/* ── GPS History Modal (with map) ── */}
+      <Modal open={historyOpen} onClose={() => setHistoryOpen(false)} title={`ประวัติ GPS — ${gpsTruck?.plate || ""}`} size="lg">
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            <button type="button" onClick={() => { setHistoryDateMode("today"); fetchHistoryRaw(gpsTruck!.gps_id, getTodayDate()); setHistoryDate(getTodayDate()); }}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors ${historyDateMode === "today" ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
+              <CalendarDays size={11} className="inline mr-1" />วันนี้
+            </button>
+            <button type="button" onClick={() => setHistoryDateMode("custom")}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors ${historyDateMode === "custom" ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
+              <CalendarDays size={11} className="inline mr-1" />เลือกวันที่
+            </button>
+            {historyDateMode === "custom" && (
+              <input type="date" value={historyDate} onChange={(e) => { setHistoryDate(e.target.value); fetchHistoryRaw(gpsTruck!.gps_id, e.target.value); }}
+                className="px-2 py-1 text-xs border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+            )}
+            {historyPoints.length > 0 && <span className="text-[10px] text-slate-400 ml-auto">{historyPoints.length} จุด</span>}
+          </div>
+
+          {historyLoading ? (
+            <div className="flex items-center justify-center py-8"><Loader2 size={16} className="animate-spin mr-2 text-emerald-500" /><span className="text-sm text-slate-500">กำลังโหลด…</span></div>
           ) : historyError ? (
-            <div className="px-4 py-6 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 text-center">{historyError}</div>
-          ) : historyData.length === 0 ? (
-            <div className="px-4 py-6 bg-slate-50 border border-slate-200 rounded-lg text-sm text-[var(--muted)] text-center">ไม่พบข้อมูลเส้นทางสำหรับวันที่นี้</div>
+            <div className="py-4 text-sm text-red-500 text-center bg-red-50 rounded-lg">{historyError}</div>
+          ) : historyPoints.length === 0 ? (
+            <div className="py-6 text-sm text-slate-400 text-center bg-slate-50 rounded-lg">ไม่พบข้อมูลสำหรับวันที่นี้</div>
           ) : (
             <>
-              <p className="text-[10px] text-slate-400">{historyData.length} รายการ</p>
-
-              {/* Mobile cards */}
-              <div className="flex flex-col gap-3 sm:hidden">
-                {historyData.map((s, i) => {
-                  const fromStation = (s.station_f || "") as string;
-                  const toStation   = (s.station_n || "") as string;
-                  const startDt = [s.start_date, s.start_time].filter(Boolean).join(" ");
-                  const endDt   = [s.end_date,   s.end_time  ].filter(Boolean).join(" ");
-                  return (
-                    <div key={i} className="rounded-xl border border-slate-100 bg-gradient-to-br from-white to-blue-50/30 p-4 shadow-sm">
-                      {/* Header with number and distance */}
-                      <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-100">
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
-                            <span className="text-[10px] font-bold text-blue-600">{i + 1}</span>
-                          </div>
-                          <span className="text-[10px] text-slate-400 font-medium">เที่ยวที่ {i + 1}</span>
-                        </div>
-                        <div className="flex items-center gap-1 bg-emerald-50 px-2 py-1 rounded-full">
-                          <span className="font-bold text-emerald-600 text-xs">{s.distance || "—"}</span>
-                          <span className="text-[10px] text-emerald-500 font-medium">km</span>
-                        </div>
-                      </div>
-
-                      {/* Route info */}
-                      <div className="space-y-3">
-                        {/* From */}
-                        <div className="flex items-start gap-3">
-                          <div className="w-2 h-2 rounded-full bg-blue-500 mt-1.5 shrink-0"></div>
-                          <div className="flex-1">
-                            <p className="font-semibold text-slate-800 text-sm mb-1">{fromStation || <span className="text-slate-400 italic">ไม่ระบุสถานี</span>}</p>
-                            <p className="text-[11px] text-slate-500 font-medium">{startDt || "—"}</p>
-                          </div>
-                        </div>
-
-                        {/* Arrow */}
-                        <div className="flex items-center justify-center py-1">
-                          <div className="w-8 h-0.5 bg-gradient-to-r from-blue-200 to-emerald-200 rounded-full"></div>
-                        </div>
-
-                        {/* To */}
-                        <div className="flex items-start gap-3">
-                          <div className="w-2 h-2 rounded-full bg-emerald-500 mt-1.5 shrink-0"></div>
-                          <div className="flex-1">
-                            <p className="font-semibold text-slate-800 text-sm mb-1">{toStation || <span className="text-slate-400 italic">ไม่ระบุสถานี</span>}</p>
-                            <p className="text-[11px] text-slate-500 font-medium">{endDt || "—"}</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Desktop table */}
-              <div className="hidden sm:block overflow-hidden rounded-xl border border-slate-200 shadow-sm">
-                <table className="w-full">
-                  <thead>
-                    <tr className="bg-gradient-to-r from-blue-50 to-emerald-50 border-b border-slate-200">
-                      <th className="text-left px-4 py-3 font-semibold text-slate-600 text-sm">#</th>
-                      <th className="text-left px-4 py-3 font-semibold text-slate-600 text-sm">สถานีต้นทาง</th>
-                      <th className="text-left px-4 py-3 font-semibold text-slate-600 text-sm whitespace-nowrap">วันที่/เวลาออก</th>
-                      <th className="text-left px-4 py-3 font-semibold text-slate-600 text-sm">สถานีปลายทาง</th>
-                      <th className="text-left px-4 py-3 font-semibold text-slate-600 text-sm whitespace-nowrap">วันที่/เวลาถึง</th>
-                      <th className="text-right px-4 py-3 font-semibold text-slate-600 text-sm whitespace-nowrap">ระยะทาง</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {historyData.map((s, i) => {
-                      const fromStation = (s.station_f || "") as string;
-                      const toStation   = (s.station_n || "") as string;
-                      const startDt = [s.start_date, s.start_time].filter(Boolean).join(" ");
-                      const endDt   = [s.end_date,   s.end_time  ].filter(Boolean).join(" ");
-                      return (
-                        <tr key={i} className="border-b border-slate-100 last:border-0 hover:bg-gradient-to-r hover:from-blue-50/40 hover:to-emerald-50/40 transition-all">
-                          <td className="px-4 py-3">
-                            <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
-                              <span className="text-[10px] font-bold text-blue-600">{i + 1}</span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 rounded-full bg-blue-500 shrink-0"></div>
-                              <span className="font-medium text-slate-800 text-sm" title={fromStation}>{fromStation || <span className="text-slate-400 italic">—</span>}</span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 text-slate-600 text-sm font-medium">{startDt || "—"}</td>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></div>
-                              <span className="font-medium text-slate-800 text-sm" title={toStation}>{toStation || <span className="text-slate-400 italic">—</span>}</span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 text-slate-600 text-sm font-medium">{endDt || "—"}</td>
-                          <td className="px-4 py-3 text-right">
-                            <div className="inline-flex items-center gap-1 bg-emerald-50 px-2 py-1 rounded-full">
-                              <span className="font-bold text-emerald-600 text-sm">{s.distance || "—"}</span>
-                              <span className="text-[10px] text-emerald-500 font-medium">km</span>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+              {/* Map */}
+              <GpsMap points={historyPoints} />
+              {/* Legend */}
+              <div className="flex items-center gap-4 text-[10px] text-slate-500 px-1">
+                <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-full bg-green-500 border border-white shadow-sm" />เริ่มต้น</div>
+                <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-full bg-red-500 border border-white shadow-sm" />สิ้นสุด</div>
+                <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-full bg-slate-800 border border-white shadow-sm" />📍 สถานี</div>
+                <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-full bg-blue-500 border border-white shadow-sm" />จุด GPS</div>
               </div>
             </>
           )}
