@@ -24,7 +24,7 @@ function Section({ title, icon, children, cols = 2, defaultOpen = true }: { titl
         </span>
         {open ? <ChevronUp size={12} className="text-slate-400" /> : <ChevronDown size={12} className="text-slate-400" />}
       </button>
-      {open && <div className={`px-3.5 py-3 grid gap-3 ${cols === 3 ? "grid-cols-3" : cols === 4 ? "grid-cols-4" : "grid-cols-2"}`}>{children}</div>}
+      {open && <div className={`px-3.5 py-3 grid gap-3 grid-cols-1 ${cols === 3 ? "sm:grid-cols-2 lg:grid-cols-3" : cols === 4 ? "sm:grid-cols-2 lg:grid-cols-4" : "sm:grid-cols-2"}`}>{children}</div>}
     </div>
   );
 }
@@ -69,11 +69,11 @@ function StepBar({ booking }: { booking: Booking }) {
   return (
     <div className="relative w-full py-1">
       {/* Background Line */}
-      <div className="absolute top-[14px] left-0 right-0 h-0.5 bg-slate-200" />
+      <div className="absolute top-[14px] left-[12.5%] right-[12.5%] h-0.5 bg-slate-200" />
       {/* Active Line Fill */}
       <div 
-        className="absolute top-[14px] left-0 h-0.5 bg-green-500 transition-all duration-300"
-        style={{ width: `${(current / (STEPS.length - 1)) * 100}%` }} 
+        className="absolute top-[14px] left-[12.5%] h-0.5 bg-green-500 transition-all duration-300"
+        style={{ width: `${(current / (STEPS.length - 1)) * 75}%` }} 
       />
       
       <div className="relative flex justify-between w-full">
@@ -94,19 +94,19 @@ function StepBar({ booking }: { booking: Booking }) {
 
           const stepDate = getStepDate(booking, i);
           return (
-            <div key={baseLabel} className="flex flex-col items-center gap-1.5 w-10">
+            <div key={baseLabel} className="flex flex-col items-center gap-1.5 flex-1 z-10 w-0">
               <div title={label}
                 className={`w-7 h-7 rounded-full text-[10px] font-bold flex items-center justify-center shrink-0 z-10 ring-4 ring-slate-50 transition-colors ${
                   done ? "bg-green-500 text-white" : "bg-slate-200 text-slate-400"
                 }`}>
                 {done ? "\u2713" : i + 1}
               </div>
-              <div className="flex flex-col items-center mt-0.5">
-                <span className={`text-[9px] font-bold uppercase tracking-wider ${done ? "text-slate-700" : "text-slate-400"}`}>
+              <div className="flex flex-col items-center mt-0.5 w-full">
+                <span className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-wider truncate w-full text-center ${done ? "text-slate-700" : "text-slate-400"}`}>
                   {label}
                 </span>
                 {stepDate && (
-                  <span className={`text-[9px] font-medium leading-tight mt-0.5 ${done ? "text-slate-500" : "text-slate-300"}`}>
+                  <span className={`text-[9px] font-medium leading-tight mt-0.5 whitespace-nowrap ${done ? "text-slate-500" : "text-slate-300"}`}>
                     {toShortDate(stepDate)}
                   </span>
                 )}
@@ -416,7 +416,7 @@ export default function BookingsPage() {
         <div className="relative">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="ค้นหา Booking No…"
-            className="pl-8 pr-3 py-1.5 text-xs border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-44" />
+            className="pl-8 pr-3 py-1.5 text-xs border border-[var(--border)] rounded-lg shadow-sm hover:shadow-md transition-shadow focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64" />
         </div>
       </PageHeader>
 
@@ -455,17 +455,17 @@ export default function BookingsPage() {
                         {/* ── Always-visible compact header ── */}
                         <div className="flex items-center gap-2.5 px-3.5 py-2.5 cursor-pointer" onClick={() => toggleCard(b._id)}>
                           <ChevronRight size={14} className={`text-slate-400 shrink-0 transition-transform ${isExpanded ? "rotate-90" : ""}`} />
-                          <div className="flex items-center gap-2 min-w-0 flex-1">
-                            <span className="font-mono font-bold text-violet-700 text-xs truncate">{b.booking_no}</span>
+                          <div className="flex items-center gap-1.5 flex-wrap min-w-0 flex-1">
+                            <span className="font-mono font-bold text-violet-700 text-xs shrink-0">{b.booking_no}</span>
                             {b.job_type && (
                               <span className={`shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold ${b.job_type === "Export" ? "bg-blue-50 text-blue-700" : "bg-orange-50 text-orange-700"}`}>
                                 {b.job_type}
                               </span>
                             )}
-                            <span className="text-slate-300 text-[10px] hidden sm:inline">|</span>
-                            <span className="text-xs text-slate-500 truncate hidden sm:inline">{b.container_no || "—"}</span>
-                            <span className="text-slate-300 text-[10px] hidden sm:inline">|</span>
-                            <span className="text-xs text-slate-500 truncate hidden sm:inline">{b.customer_code || "—"}</span>
+                            <span className="text-slate-300 text-[10px] font-bold shrink-0 hidden sm:inline">|</span>
+                            <span className="text-xs text-slate-500 shrink-0 truncate max-w-[120px] sm:max-w-none">{b.container_no || "—"}</span>
+                            <span className="text-slate-300 text-[10px] font-bold shrink-0 hidden sm:inline">|</span>
+                            <span className="text-xs text-slate-500 shrink-0 truncate max-w-[100px] sm:max-w-none">{b.customer_code || "—"}</span>
                           </div>
                           {/* Status badges */}
                           <div className="flex items-center gap-1 shrink-0">
@@ -759,7 +759,7 @@ export default function BookingsPage() {
           {/* Bottom Dock: Container Info */}
           {imageModalBooking && (
             <div 
-              className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[90%] md:w-auto max-w-4xl bg-black/70 backdrop-blur-xl border border-white/10 rounded-2xl p-4 md:px-8 md:py-5 flex flex-col md:flex-row gap-4 md:gap-8 shadow-2xl pointer-events-auto"
+              className="absolute bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-4xl bg-black/70 backdrop-blur-xl border border-white/10 rounded-2xl p-4 md:px-8 md:py-5 flex flex-col md:flex-row gap-4 md:gap-8 shadow-2xl pointer-events-auto"
               onClick={(e) => e.stopPropagation()}
             >
                {/* 1. Booking */}
