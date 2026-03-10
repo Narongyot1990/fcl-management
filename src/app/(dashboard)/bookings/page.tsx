@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { Pencil, Trash2, Search, ChevronDown, ChevronUp, ChevronRight, CalendarDays, Copy, Check, ZoomIn, X } from "lucide-react";
+import { Pencil, Trash2, Search, ChevronDown, ChevronUp, ChevronRight, CalendarDays, Copy, Check, ZoomIn, X, MapPin } from "lucide-react";
 import ImageUpload from "@/components/ImageUpload";
 import GeminiOcrButton from "@/components/GeminiOcrButton";
 import { containerNoMessage } from "@/lib/containerValidation";
@@ -258,12 +258,62 @@ export default function BookingsPage() {
   const [imageModalUrl, setImageModalUrl] = useState("");
   const [imageModalTitle, setImageModalTitle] = useState("");
   const [imageModalBooking, setImageModalBooking] = useState<Booking | null>(null);
+  const [openingGps, setOpeningGps] = useState<string | null>(null);
 
   function openImageModal(url: string, title: string, booking: Booking) {
     setImageModalUrl(url);
     setImageModalTitle(title);
     setImageModalBooking(booking);
     setImageModalOpen(true);
+  }
+
+  async function openLocationInGoogleMaps(vendorCode: string, truckPlate: string) {
+    if (openingGps) return; // Prevent multiple clicks
+
+    // Find the vendor
+    const vendor = vendors.find(v => v.code === vendorCode);
+    if (!vendor) {
+      alert("ไม่พบข้อมูล Vendor สำหรับรายการนี้");
+      return;
+    }
+
+    // Find the truck to get GPS ID
+    // Check in both the new 'trucks' array and fallback safely, though old ones won't have it
+    const truck = vendor.trucks?.find(t => t.plate === truckPlate);
+    const gpsId = truck?.gps_id;
+
+    if (!gpsId) {
+      alert("รถคันนี้ยังไม่ได้ตั้งค่า GPS ID ในระบบ Vendor");
+      return;
+    }
+
+    setOpeningGps(truckPlate);
+    try {
+      const response = await fetch("/api/gps", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ gps_id: gpsId })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to fetch GPS data from DTC API");
+      }
+
+      if (data.lat && data.lon) {
+        // Open Google Maps in a new tab
+        const mapsUrl = `https://maps.google.com/?q=${data.lat},${data.lon}`;
+        window.open(mapsUrl, "_blank", "noopener,noreferrer");
+      } else {
+        throw new Error("No coordinate data found");
+      }
+
+    } catch (err: any) {
+      alert(err.message || "เกิดข้อผิดพลาดในการดึงข้อมูลพิกัด GPS");
+    } finally {
+      setOpeningGps(null);
+    }
   }
 
   const [vendors, setVendors] = useState<Vendor[]>([]);
@@ -525,6 +575,23 @@ export default function BookingsPage() {
                           </div>
                           {/* Action buttons always visible */}
                           <div className="flex items-center gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                            {b.truck_plate && (() => {
+                              // Check if the assigned truck has a GPS ID in the vendors list
+                              const assignedVendor = vendors.find(v => v.code === b.vendor_code);
+                              const hasGps = assignedVendor?.trucks?.some(t => t.plate === b.truck_plate && t.gps_id);
+                              
+                              if (hasGps) {
+                                return (
+                                  <button onClick={() => openLocationInGoogleMaps(b.vendor_code, b.truck_plate)}
+                                    disabled={openingGps === b.truck_plate}
+                                    className={`p-1 flex items-center justify-center rounded transition-colors ${openingGps === b.truck_plate ? "text-blue-400 bg-blue-50" : "text-slate-400 hover:text-blue-600 hover:bg-slate-100"}`}
+                                    title="ดูพิกัด GPS ปัจจุบันบนแผนที่">
+                                    <MapPin size={13} className={openingGps === b.truck_plate ? "animate-pulse" : ""} />
+                                  </button>
+                                );
+                              }
+                              return null;
+                            })()}
                             <button onClick={() => copyPickupInfo(b)}
                               className={`p-1 rounded hover:bg-slate-100 transition-colors ${copiedId === b._id ? "text-green-600" : "text-slate-400 hover:text-blue-600"}`}
                               title="Copy ข้อมูล">

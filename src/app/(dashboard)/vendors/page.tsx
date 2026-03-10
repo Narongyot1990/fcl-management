@@ -11,12 +11,12 @@ import { FormField, Input } from "@/components/FormField";
 interface VendorForm {
   code: string;
   name: string;
-  truck_plates: string[];
+  trucks: { plate: string; gps_id: string }[];
   drivers: Driver[];
 }
 
 const EMPTY: VendorForm = {
-  code: "", name: "", truck_plates: [""], drivers: [{ name: "", phone: "" }],
+  code: "", name: "", trucks: [{ plate: "", gps_id: "" }], drivers: [{ name: "", phone: "" }],
 };
 
 export default function VendorsPage() {
@@ -48,34 +48,41 @@ export default function VendorsPage() {
 
   function openCreate() {
     setEditing(null);
-    setForm({ ...EMPTY, truck_plates: [""], drivers: [{ name: "", phone: "" }] });
+    setForm({ ...EMPTY, trucks: [{ plate: "", gps_id: "" }], drivers: [{ name: "", phone: "" }] });
     setModalOpen(true);
   }
 
   function openEdit(v: Vendor) {
     setEditing(v);
+    // Migrate legacy `truck_plates` to the new `trucks` structure if needed
+    const mappedTrucks = v.trucks?.length
+      ? v.trucks.map((t) => ({ plate: t.plate || "", gps_id: t.gps_id || "" }))
+      : v.truck_plates?.length
+      ? v.truck_plates.map((plate) => ({ plate, gps_id: "" }))
+      : [{ plate: "", gps_id: "" }];
+
     setForm({
       code: v.code,
       name: v.name,
-      truck_plates: v.truck_plates?.length ? [...v.truck_plates] : [""],
+      trucks: mappedTrucks,
       drivers: v.drivers?.length ? v.drivers.map((d) => ({ ...d })) : [{ name: "", phone: "" }],
     });
     setModalOpen(true);
   }
 
-  // ── Truck plates array helpers ──
-  function setPlate(i: number, val: string) {
+  // ── Trucks array helpers (plate & gps_id) ──
+  function setTruck(i: number, field: "plate" | "gps_id", val: string) {
     setForm((f) => {
-      const plates = [...f.truck_plates];
-      plates[i] = val;
-      return { ...f, truck_plates: plates };
+      const trucks = [...f.trucks];
+      trucks[i] = { ...trucks[i], [field]: val };
+      return { ...f, trucks };
     });
   }
-  function addPlate() {
-    setForm((f) => ({ ...f, truck_plates: [...f.truck_plates, ""] }));
+  function addTruck() {
+    setForm((f) => ({ ...f, trucks: [...f.trucks, { plate: "", gps_id: "" }] }));
   }
-  function removePlate(i: number) {
-    setForm((f) => ({ ...f, truck_plates: f.truck_plates.filter((_, idx) => idx !== i) }));
+  function removeTruck(i: number) {
+    setForm((f) => ({ ...f, trucks: f.trucks.filter((_, idx) => idx !== i) }));
   }
 
   // ── Drivers array helpers ──
@@ -98,7 +105,9 @@ export default function VendorsPage() {
     const payload = {
       code: form.code,
       name: form.name,
-      truck_plates: form.truck_plates.filter((p) => p.trim()),
+      // Maintain backward compatibility with truck_plates just in case, while sending new trucks format
+      truck_plates: form.trucks.filter((t) => t.plate.trim()).map((t) => t.plate.trim()),
+      trucks: form.trucks.filter((t) => t.plate.trim()),
       drivers: form.drivers.filter((d) => d.name.trim()),
     };
     try {
@@ -171,9 +180,17 @@ export default function VendorsPage() {
                   <td className="px-5 py-3 text-[var(--foreground)]">{v.name}</td>
                   <td className="px-5 py-3">
                     <div className="flex flex-wrap gap-1">
-                      {(v.truck_plates || []).map((p, i) => (
-                        <span key={i} className="inline-block px-2 py-0.5 rounded bg-slate-100 text-xs font-mono">{p}</span>
-                      ))}
+                      {v.trucks?.length ? (
+                        v.trucks.map((t, i) => (
+                          <span key={i} className={`inline-block px-2 py-0.5 rounded text-xs font-mono flex items-center gap-1 ${t.gps_id ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-slate-100 text-[var(--foreground)]'}`}>
+                            {t.plate} {t.gps_id && <span className="text-[9px] font-bold bg-blue-500 text-white px-1 py-0.5 rounded ml-0.5" title={`GPS ID: ${t.gps_id}`}>GPS</span>}
+                          </span>
+                        ))
+                      ) : (
+                        (v.truck_plates || []).map((p, i) => (
+                          <span key={i} className="inline-block px-2 py-0.5 rounded bg-slate-100 text-[var(--foreground)] text-xs font-mono">{p}</span>
+                        ))
+                      )}
                     </div>
                   </td>
                   <td className="px-5 py-3">
@@ -209,20 +226,21 @@ export default function VendorsPage() {
             </FormField>
           </div>
 
-          {/* Truck plates */}
+          {/* Trucks */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-medium text-slate-600 uppercase tracking-wide">ทะเบียนรถ</label>
-              <button type="button" onClick={addPlate} className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700">
+              <label className="text-xs font-medium text-slate-600 uppercase tracking-wide">ทะเบียนรถ & GPS</label>
+              <button type="button" onClick={addTruck} className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700">
                 <Plus size={12} /> เพิ่มทะเบียน
               </button>
             </div>
             <div className="flex flex-col gap-2">
-              {form.truck_plates.map((plate, i) => (
+              {form.trucks.map((truck, i) => (
                 <div key={i} className="flex items-center gap-2">
-                  <Input value={plate} onChange={(e) => setPlate(i, e.target.value)} placeholder="e.g. กข 1234" />
-                  {form.truck_plates.length > 1 && (
-                    <button type="button" onClick={() => removePlate(i)} className="p-1.5 rounded-lg hover:bg-red-50 text-[var(--muted)] hover:text-red-600 transition-colors shrink-0">
+                  <Input value={truck.plate} onChange={(e) => setTruck(i, "plate", e.target.value)} placeholder="ทะเบียนรถ e.g. กข 1234" className="flex-1" />
+                  <Input value={truck.gps_id} onChange={(e) => setTruck(i, "gps_id", e.target.value)} placeholder="GPS ID (ไม่บังคับ)" className="flex-1" />
+                  {form.trucks.length > 1 && (
+                    <button type="button" onClick={() => removeTruck(i)} className="p-1.5 rounded-lg hover:bg-red-50 text-[var(--muted)] hover:text-red-600 transition-colors shrink-0">
                       <X size={14} />
                     </button>
                   )}

@@ -20,7 +20,8 @@ export interface Vendor {
   _id: string;
   code: string;           // รหัสย่อ e.g. "ABC"
   name: string;           // ชื่อเต็ม (บริษัท)
-  truck_plates: string[]; // ทะเบียนรถ (หลายคัน)
+  truck_plates?: string[]; // ทะเบียนรถ (legacy)
+  trucks?: { plate: string; gps_id?: string }[]; // ทะเบียนรถ + gps_id (new)
   drivers: Driver[];      // คนขับ (หลายคน) แต่ละคนมี name + phone
   created_at?: string;
 }
