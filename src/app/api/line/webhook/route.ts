@@ -92,46 +92,36 @@ async function handleEvent(event: any) {
   }
 }
 
-// Main webhook handler
+// Main webhook handler - SIMPLE LOGGING ONLY
 export async function POST(req: NextRequest) {
   try {
-    // DEBUG: Log all requests
-    console.log('=== LINE Webhook Debug ===');
-    console.log('Method:', req.method);
-    console.log('Headers:', Object.fromEntries(req.headers.entries()));
+    // Just log everything - no processing
+    console.log('=== LINE WEBHOOK RECEIVED ===');
+    console.log('Timestamp:', new Date().toISOString());
     
-    // Get request body
+    const headers = Object.fromEntries(req.headers.entries());
+    console.log('Headers:', headers);
+    
     const body = await req.text();
-    const signature = req.headers.get('x-line-signature');
-    
     console.log('Body length:', body.length);
-    console.log('Signature:', signature ? 'present' : 'missing');
-    console.log('Body preview:', body.substring(0, 200) + '...');
+    console.log('Signature present:', !!req.headers.get('x-line-signature'));
+    console.log('Full body:', body);
+    console.log('=== END WEBHOOK ===');
     
-    // Verify signature (important for security)
-    if (!verifySignature(body, signature)) {
-      console.error('Invalid LINE signature');
-      return NextResponse.json(
-        { error: 'Invalid signature' },
-        { status: 400 }
-      );
-    }
-    
-    // Parse webhook data
-    const data = JSON.parse(body);
-    const events = data.events || [];
-    
-    // Process each event
-    for (const event of events) {
-      await handleEvent(event);
-    }
-    
-    return NextResponse.json({ status: 'ok' });
+    // Just return success - no signature verification, no processing
+    return NextResponse.json({ 
+      status: 'logged',
+      timestamp: new Date().toISOString(),
+      body_length: body.length
+    });
     
   } catch (error) {
-    console.error('LINE Webhook Error:', error);
+    console.error('=== WEBHOOK LOGGING ERROR ===');
+    console.error(error);
+    console.error('=== END ERROR ===');
+    
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Logging failed' },
       { status: 500 }
     );
   }
