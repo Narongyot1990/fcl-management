@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { Pencil, Trash2, Search, ChevronDown, ChevronUp, ChevronRight, CalendarDays, Copy, Check, ZoomIn, X, MapPin, Loader2 } from "lucide-react";
+import { Pencil, Trash2, Search, ChevronDown, ChevronUp, ChevronRight, CalendarDays, Copy, Check, ZoomIn, X, MapPin, Loader2, Phone } from "lucide-react";
 import ImageUpload from "@/components/ImageUpload";
 import GeminiOcrButton from "@/components/GeminiOcrButton";
 import { containerNoMessage } from "@/lib/containerValidation";
@@ -641,7 +641,15 @@ export default function BookingsPage() {
                                     )}
                                   </div>
                                 </div>
-                                <span className="font-bold text-slate-700 text-xs">{b.driver_name || "—"}</span>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                  <span className="font-bold text-slate-700 text-xs">{b.driver_name || "—"}</span>
+                                  {b.driver_phone && (
+                                    <a href={`tel:${b.driver_phone.replace(/\D/g, "")}`} onClick={e => e.stopPropagation()} 
+                                      className="p-1 rounded-full bg-emerald-100 hover:bg-emerald-200 text-emerald-700 transition-colors border border-emerald-200" title={`โทร ${b.driver_phone}`}>
+                                      <Phone size={10} />
+                                    </a>
+                                  )}
+                                </div>
                                 {b.truck_plate && <span className="font-mono font-bold text-emerald-800 text-[11px]">{b.truck_plate}</span>}
                               </div>
                               <div className="flex flex-col gap-1 rounded-lg bg-violet-50/60 border border-violet-100/80 px-3 py-2">
@@ -661,7 +669,15 @@ export default function BookingsPage() {
                                     })()}
                                   </div>
                                 </div>
-                                <span className="font-bold text-slate-700 text-xs">{b.return_driver_name || "—"}</span>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                  <span className="font-bold text-slate-700 text-xs">{b.return_driver_name || "—"}</span>
+                                  {b.return_driver_phone && (
+                                    <a href={`tel:${b.return_driver_phone.replace(/\D/g, "")}`} onClick={e => e.stopPropagation()} 
+                                      className="p-1 rounded-full bg-violet-100 hover:bg-violet-200 text-violet-700 transition-colors border border-violet-200" title={`โทร ${b.return_driver_phone}`}>
+                                      <Phone size={10} />
+                                    </a>
+                                  )}
+                                </div>
                                 {b.return_truck_plate && <span className="font-mono font-bold text-violet-800 text-[11px]">{b.return_truck_plate}</span>}
                               </div>
                             </div>
