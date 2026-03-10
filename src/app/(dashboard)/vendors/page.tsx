@@ -458,28 +458,51 @@ export default function VendorsPage() {
               <p className="text-[10px] text-slate-400">{historyData.length} รายการ</p>
 
               {/* Mobile cards */}
-              <div className="flex flex-col gap-2 sm:hidden">
+              <div className="flex flex-col gap-3 sm:hidden">
                 {historyData.map((s, i) => {
                   const fromStation = (s.station_f || "") as string;
                   const toStation   = (s.station_n || "") as string;
                   const startDt = [s.start_date, s.start_time].filter(Boolean).join(" ");
                   const endDt   = [s.end_date,   s.end_time  ].filter(Boolean).join(" ");
                   return (
-                    <div key={i} className="rounded-lg border border-slate-200 bg-white p-3 text-xs">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-mono text-[10px] text-slate-400">#{i + 1}</span>
-                        <span className="font-bold text-blue-600">{s.distance || "—"} km</span>
-                      </div>
-                      <div className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-1.5">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase mt-0.5">ออกจาก</span>
-                        <div>
-                          <p className="font-medium text-slate-700 leading-tight">{fromStation || <span className="text-slate-300 italic">ไม่ระบุสถานี</span>}</p>
-                          <p className="text-[10px] text-slate-400 mt-0.5">{startDt || "—"}</p>
+                    <div key={i} className="rounded-xl border border-slate-100 bg-gradient-to-br from-white to-blue-50/30 p-4 shadow-sm">
+                      {/* Header with number and distance */}
+                      <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-100">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
+                            <span className="text-[10px] font-bold text-blue-600">{i + 1}</span>
+                          </div>
+                          <span className="text-[10px] text-slate-400 font-medium">เที่ยวที่ {i + 1}</span>
                         </div>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase mt-0.5">ถึง</span>
-                        <div>
-                          <p className="font-medium text-slate-700 leading-tight">{toStation || <span className="text-slate-300 italic">ไม่ระบุสถานี</span>}</p>
-                          <p className="text-[10px] text-slate-400 mt-0.5">{endDt || "—"}</p>
+                        <div className="flex items-center gap-1 bg-emerald-50 px-2 py-1 rounded-full">
+                          <span className="font-bold text-emerald-600 text-xs">{s.distance || "—"}</span>
+                          <span className="text-[10px] text-emerald-500 font-medium">km</span>
+                        </div>
+                      </div>
+
+                      {/* Route info */}
+                      <div className="space-y-3">
+                        {/* From */}
+                        <div className="flex items-start gap-3">
+                          <div className="w-2 h-2 rounded-full bg-blue-500 mt-1.5 shrink-0"></div>
+                          <div className="flex-1">
+                            <p className="font-semibold text-slate-800 text-sm mb-1">{fromStation || <span className="text-slate-400 italic">ไม่ระบุสถานี</span>}</p>
+                            <p className="text-[11px] text-slate-500 font-medium">{startDt || "—"}</p>
+                          </div>
+                        </div>
+
+                        {/* Arrow */}
+                        <div className="flex items-center justify-center py-1">
+                          <div className="w-8 h-0.5 bg-gradient-to-r from-blue-200 to-emerald-200 rounded-full"></div>
+                        </div>
+
+                        {/* To */}
+                        <div className="flex items-start gap-3">
+                          <div className="w-2 h-2 rounded-full bg-emerald-500 mt-1.5 shrink-0"></div>
+                          <div className="flex-1">
+                            <p className="font-semibold text-slate-800 text-sm mb-1">{toStation || <span className="text-slate-400 italic">ไม่ระบุสถานี</span>}</p>
+                            <p className="text-[11px] text-slate-500 font-medium">{endDt || "—"}</p>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -488,16 +511,16 @@ export default function VendorsPage() {
               </div>
 
               {/* Desktop table */}
-              <div className="hidden sm:block overflow-x-auto rounded-lg border border-slate-200">
-                <table className="w-full text-xs">
+              <div className="hidden sm:block overflow-hidden rounded-xl border border-slate-200 shadow-sm">
+                <table className="w-full">
                   <thead>
-                    <tr className="bg-slate-50 border-b border-slate-200">
-                      <th className="text-left px-3 py-2 font-semibold text-slate-500 uppercase tracking-wide w-8">#</th>
-                      <th className="text-left px-3 py-2 font-semibold text-slate-500 uppercase tracking-wide">ออกจาก</th>
-                      <th className="text-left px-3 py-2 font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">เวลาออก</th>
-                      <th className="text-left px-3 py-2 font-semibold text-slate-500 uppercase tracking-wide">ถึง</th>
-                      <th className="text-left px-3 py-2 font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">เวลาถึง</th>
-                      <th className="text-right px-3 py-2 font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">km</th>
+                    <tr className="bg-gradient-to-r from-blue-50 to-emerald-50 border-b border-slate-200">
+                      <th className="text-left px-4 py-3 font-semibold text-slate-600 text-sm">#</th>
+                      <th className="text-left px-4 py-3 font-semibold text-slate-600 text-sm">สถานีต้นทาง</th>
+                      <th className="text-left px-4 py-3 font-semibold text-slate-600 text-sm whitespace-nowrap">วันที่/เวลาออก</th>
+                      <th className="text-left px-4 py-3 font-semibold text-slate-600 text-sm">สถานีปลายทาง</th>
+                      <th className="text-left px-4 py-3 font-semibold text-slate-600 text-sm whitespace-nowrap">วันที่/เวลาถึง</th>
+                      <th className="text-right px-4 py-3 font-semibold text-slate-600 text-sm whitespace-nowrap">ระยะทาง</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -507,17 +530,32 @@ export default function VendorsPage() {
                       const startDt = [s.start_date, s.start_time].filter(Boolean).join(" ");
                       const endDt   = [s.end_date,   s.end_time  ].filter(Boolean).join(" ");
                       return (
-                        <tr key={i} className="border-b border-slate-100 last:border-0 hover:bg-blue-50/40 transition-colors">
-                          <td className="px-3 py-2 text-slate-400 font-mono">{i + 1}</td>
-                          <td className="px-3 py-2 font-medium text-slate-700 max-w-[180px]">
-                            <span className="block truncate" title={fromStation}>{fromStation || <span className="text-slate-300 italic">—</span>}</span>
+                        <tr key={i} className="border-b border-slate-100 last:border-0 hover:bg-gradient-to-r hover:from-blue-50/40 hover:to-emerald-50/40 transition-all">
+                          <td className="px-4 py-3">
+                            <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
+                              <span className="text-[10px] font-bold text-blue-600">{i + 1}</span>
+                            </div>
                           </td>
-                          <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{startDt || "—"}</td>
-                          <td className="px-3 py-2 font-medium text-slate-700 max-w-[180px]">
-                            <span className="block truncate" title={toStation}>{toStation || <span className="text-slate-300 italic">—</span>}</span>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-blue-500 shrink-0"></div>
+                              <span className="font-medium text-slate-800 text-sm" title={fromStation}>{fromStation || <span className="text-slate-400 italic">—</span>}</span>
+                            </div>
                           </td>
-                          <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{endDt || "—"}</td>
-                          <td className="px-3 py-2 text-right font-mono text-blue-600 font-bold whitespace-nowrap">{s.distance || "—"}</td>
+                          <td className="px-4 py-3 text-slate-600 text-sm font-medium">{startDt || "—"}</td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></div>
+                              <span className="font-medium text-slate-800 text-sm" title={toStation}>{toStation || <span className="text-slate-400 italic">—</span>}</span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-slate-600 text-sm font-medium">{endDt || "—"}</td>
+                          <td className="px-4 py-3 text-right">
+                            <div className="inline-flex items-center gap-1 bg-emerald-50 px-2 py-1 rounded-full">
+                              <span className="font-bold text-emerald-600 text-sm">{s.distance || "—"}</span>
+                              <span className="text-[10px] text-emerald-500 font-medium">km</span>
+                            </div>
+                          </td>
                         </tr>
                       );
                     })}
