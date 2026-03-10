@@ -44,77 +44,107 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: 
 
 
 
-// ── Step Progress Bar ────────────────────────────────────────────────────────
-const STEPS = ["Booking", "Pickup", "Loading", "Return"];
+// ── Step Progress Bar (5 steps) ──────────────────────────────────────────────
+const STEPS = ["Booking", "Assign", "Pickup", "Loading", "Return"];
 
-function getStep(b: Booking): number {
-  if (b.return_completed || b.return_date) return 3;
-  if (b.loaded_at) return 2;
-  if (b.loading_at || b.pending_at || b.truck_plate) return 1;
-  return 0;
+const LOADING_SUB: Record<string, { label: string; dot: string; badge: string }> = {
+  pending:  { label: "รอโหลด",       dot: "bg-amber-400",   badge: "bg-amber-50 text-amber-700 border-amber-200" },
+  loading:  { label: "กำลังโหลด",    dot: "bg-blue-500",    badge: "bg-blue-50 text-blue-700 border-blue-200" },
+  loaded:   { label: "โหลดเสร็จแล้ว", dot: "bg-emerald-500", badge: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+};
+
+function getStepStatuses(b: Booking): boolean[] {
+  const booking = true; // always done once created
+  const assign = !!(b.truck_plate && b.driver_name);
+  const pickup = !!(b.container_no && b.seal_no && b.container_size && b.tare_weight);
+  const loading = !!b.loaded_at;
+  const returned = !!b.return_completed || !!b.return_date;
+  return [booking, assign, pickup, loading, returned];
 }
 
 function getStepDate(b: Booking, idx: number): string | undefined {
   switch (idx) {
     case 0: return b.booking_date;
     case 1: return b.plan_pickup_date;
-    case 2: return b.plan_loading_date;
-    case 3: return b.plan_return_date;
+    case 2: return undefined;
+    case 3: return b.plan_loading_date;
+    case 4: return b.plan_return_date;
     default: return undefined;
   }
 }
 
 function StepBar({ booking }: { booking: Booking }) {
-  const current = getStep(booking);
-  return (
-    <div className="relative w-full py-1">
-      {/* Background Line */}
-      <div className="absolute top-[14px] left-[12.5%] right-[12.5%] h-0.5 bg-slate-200" />
-      {/* Active Line Fill */}
-      <div 
-        className="absolute top-[14px] left-[12.5%] h-0.5 bg-green-500 transition-all duration-300"
-        style={{ width: `${(current / (STEPS.length - 1)) * 75}%` }} 
-      />
-      
-      <div className="relative flex justify-between w-full">
-        {STEPS.map((baseLabel, i) => {
-          let done = i <= current;
-          
-          // Step 3 (index 2): Special dynamic label logic
-          let label = baseLabel;
-          if (i === 2) {
-            if (booking.loaded_at) { label = "Loaded"; done = true; }
-            else if (booking.loading_at) { label = "Loading"; done = false; }
-            else if (booking.pending_at) { label = "Pending"; done = false; }
-            else { done = false; }
-          }
-          
-          // Step 4 (index 3): Determine by Return Completed switch or Return Date
-          if (i === 3) { done = !!booking.return_completed || !!booking.return_date; }
+  const statuses = getStepStatuses(booking);
+  // Find highest completed step index for active line
+  let lastDone = -1;
+  for (let i = statuses.length - 1; i >= 0; i--) { if (statuses[i]) { lastDone = i; break; } }
 
-          const stepDate = getStepDate(booking, i);
-          return (
-            <div key={baseLabel} className="flex flex-col items-center gap-1.5 flex-1 z-10 w-0">
-              <div title={label}
-                className={`w-7 h-7 rounded-full text-[10px] font-bold flex items-center justify-center shrink-0 z-10 ring-4 ring-slate-50 transition-colors ${
-                  done ? "bg-green-500 text-white" : "bg-slate-200 text-slate-400"
-                }`}>
-                {done ? "\u2713" : i + 1}
-              </div>
-              <div className="flex flex-col items-center mt-0.5 w-full">
-                <span className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-wider truncate w-full text-center ${done ? "text-slate-700" : "text-slate-400"}`}>
+  // Loading sub-state
+  const loadingStatus = booking.loaded_at ? "loaded" : booking.loading_at ? "loading" : (booking.pending_at ? "pending" : null);
+  const loadingSub = loadingStatus ? LOADING_SUB[loadingStatus] : null;
+
+  // Active step = first incomplete step (for "current" highlight)
+  const activeIdx = statuses.findIndex((s) => !s);
+
+  return (
+    <div className="flex flex-col gap-1.5 w-full">
+      {/* Progress dots + line */}
+      <div className="relative w-full py-0.5">
+        {/* Background Line */}
+        <div className="absolute top-[11px] left-[10%] right-[10%] h-[3px] bg-slate-100 rounded-full" />
+        {/* Active Line Fill */}
+        {lastDone > 0 && (
+          <div
+            className="absolute top-[11px] left-[10%] h-[3px] bg-emerald-400 rounded-full transition-all duration-500"
+            style={{ width: `${(lastDone / (STEPS.length - 1)) * 80}%` }}
+          />
+        )}
+
+        <div className="relative flex justify-between w-full">
+          {STEPS.map((label, i) => {
+            const done = statuses[i];
+            const isCurrent = i === activeIdx;
+            // Special: Loading step shows sub-state color when active
+            const isLoadingStep = i === 3;
+            let dotClass = "bg-slate-200 text-slate-400";
+            if (done) dotClass = "bg-emerald-500 text-white";
+            else if (isCurrent) dotClass = "bg-slate-400 text-white animate-pulse";
+            if (isLoadingStep && !done && loadingSub) {
+              dotClass = `${loadingSub.dot} text-white`;
+            }
+
+            const stepDate = getStepDate(booking, i);
+            return (
+              <div key={label} className="flex flex-col items-center gap-1 flex-1 z-10 w-0">
+                <div
+                  title={label}
+                  className={`w-[22px] h-[22px] rounded-full text-[9px] font-black flex items-center justify-center shrink-0 z-10 ring-[3px] ring-white transition-all ${dotClass}`}
+                >
+                  {done ? "\u2713" : i + 1}
+                </div>
+                <span className={`text-[8px] sm:text-[9px] font-bold uppercase tracking-wider truncate w-full text-center leading-tight ${done ? "text-slate-700" : isCurrent ? "text-slate-600" : "text-slate-400"}`}>
                   {label}
                 </span>
                 {stepDate && (
-                  <span className={`text-[9px] font-medium leading-tight mt-0.5 whitespace-nowrap ${done ? "text-slate-500" : "text-slate-300"}`}>
+                  <span className={`text-[8px] font-medium leading-none whitespace-nowrap ${done ? "text-slate-500" : "text-slate-300"}`}>
                     {toShortDate(stepDate)}
                   </span>
                 )}
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
+
+      {/* Loading sub-state badge — prominent and clear */}
+      {loadingSub && (
+        <div className="flex justify-center">
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-bold ${loadingSub.badge}`}>
+            <span className={`w-2 h-2 rounded-full ${loadingSub.dot} ${loadingStatus === "loading" ? "animate-pulse" : ""}`} />
+            {loadingSub.label}
+          </span>
+        </div>
+      )}
     </div>
   );
 }
@@ -449,7 +479,11 @@ export default function BookingsPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 p-3 bg-slate-50/50">
                     {bookings.map((b) => {
                       const isExpanded = expandedCards.has(b._id);
-                      const step = getStep(b);
+                      const stepStatuses = getStepStatuses(b);
+                      const currentStepIdx = stepStatuses.findIndex((s) => !s);
+                      const currentStepName = currentStepIdx === -1 ? "Done" : STEPS[currentStepIdx];
+                      const loadSt = b.loaded_at ? "loaded" : b.loading_at ? "loading" : b.pending_at ? "pending" : null;
+                      const loadBadge = currentStepIdx === 3 && loadSt ? LOADING_SUB[loadSt] : null;
                       return (
                       <div key={b._id} className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
                         {/* ── Always-visible compact header ── */}
@@ -467,10 +501,18 @@ export default function BookingsPage() {
                             <span className="text-slate-300 text-[10px] font-bold shrink-0 hidden sm:inline">|</span>
                             <span className="text-xs text-slate-500 shrink-0 truncate max-w-[100px] sm:max-w-none">{b.customer_code || "—"}</span>
                           </div>
-                          {/* Status badges */}
+                          {/* Status badge */}
                           <div className="flex items-center gap-1 shrink-0">
-                            {b.return_completed && <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-green-100 text-green-700">Done</span>}
-                            {!b.return_completed && <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${step >= 2 ? "bg-green-100 text-green-700" : step >= 1 ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-500"}`}>{STEPS[step]}</span>}
+                            {currentStepIdx === -1 ? (
+                              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-700">Done</span>
+                            ) : loadBadge ? (
+                              <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold border ${loadBadge.badge}`}>
+                                <span className={`w-1.5 h-1.5 rounded-full ${loadBadge.dot} ${loadSt === "loading" ? "animate-pulse" : ""}`} />
+                                {loadBadge.label}
+                              </span>
+                            ) : (
+                              <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${currentStepIdx >= 3 ? "bg-emerald-100 text-emerald-700" : currentStepIdx >= 2 ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-500"}`}>{currentStepName}</span>
+                            )}
                           </div>
                           {/* Action buttons always visible */}
                           <div className="flex items-center gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
