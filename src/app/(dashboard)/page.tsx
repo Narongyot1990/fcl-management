@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Truck, Package, ClipboardList, ArrowRight, Clock, Loader2, CheckCircle2, RotateCcw, Users, ArrowUpRight, ArrowDownLeft } from "lucide-react";
+import { Truck, Package, ClipboardList, ArrowRight, Clock, Loader2, CheckCircle2, RotateCcw, Users, ArrowUpRight, ArrowDownLeft, ChevronRight } from "lucide-react";
 import { listRecords } from "@/lib/api";
 import type { Booking, Vendor, Container, Customer, LoadingStatus } from "@/lib/types";
 
@@ -119,6 +119,37 @@ export default function Home() {
               );
             })}
           </div>
+
+          {/* Bookings per status breakdown */}
+          {!loading && (
+            <div className="mt-3 pt-3 border-t border-slate-100 flex flex-col gap-2">
+              {(Object.entries(STATUS_CFG) as [string, typeof STATUS_CFG["pending"]][]).map(([key, cfg]) => {
+                const items = key === "returned"
+                  ? bookings.filter((b) => b.return_completed)
+                  : bookings.filter((b) => !b.return_completed && (b.loading_status || "pending") === key);
+                if (items.length === 0) return null;
+                return (
+                  <div key={key}>
+                    <p className={`text-[10px] font-bold uppercase tracking-wide mb-1 ${cfg.text}`}>{cfg.label} ({items.length})</p>
+                    <div className="flex flex-col gap-0.5">
+                      {items.slice(0, 5).map((b) => (
+                        <Link key={b._id} href="/bookings" className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-slate-50 transition-colors group">
+                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${cfg.bg}`} />
+                          <span className="font-mono font-bold text-violet-700 text-[11px] w-24 truncate shrink-0">{b.booking_no}</span>
+                          <span className="text-[11px] text-slate-500 truncate flex-1">{b.container_no || "—"}</span>
+                          <span className="text-[10px] text-slate-400 shrink-0">{b.vendor_code || ""}</span>
+                          <ChevronRight size={10} className="text-slate-300 group-hover:text-blue-500 shrink-0" />
+                        </Link>
+                      ))}
+                      {items.length > 5 && (
+                        <span className="text-[10px] text-slate-400 pl-2">+{items.length - 5} รายการ</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Export / Import */}
@@ -162,6 +193,7 @@ export default function Home() {
                   <div className={`w-2 h-2 rounded-full shrink-0 ${cfg.bg}`} />
                   <span className="font-mono font-bold text-violet-700 text-xs w-28 truncate shrink-0">{b.booking_no}</span>
                   <span className="text-xs text-slate-500 w-20 truncate shrink-0 hidden sm:block">{b.customer_code || "—"}</span>
+                  <span className="text-[10px] text-slate-400 w-16 truncate shrink-0 hidden sm:block">{b.vendor_code || "—"}</span>
                   <span className="font-mono text-xs text-slate-600 flex-1 truncate">{b.container_no || "—"}</span>
                   {b.job_type && (
                     <span className={`shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold hidden md:inline ${b.job_type === "Export" ? "bg-orange-50 text-orange-600" : "bg-blue-50 text-blue-600"}`}>

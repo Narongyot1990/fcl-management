@@ -1,8 +1,9 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { Pencil, Trash2, Search, Plus, X } from "lucide-react";
+import { Pencil, Trash2, Search, Plus, X, MapPin, Loader2, History, CalendarDays } from "lucide-react";
 import { listRecords, createRecord, updateRecord, deleteRecord } from "@/lib/api";
 import type { Vendor, Driver } from "@/lib/types";
+import { fetchGpsRealtime, fetchGpsHistory, getTodayDate, type GpsStation } from "@/lib/gpsUtils";
 import PageHeader from "@/components/PageHeader";
 import Modal from "@/components/Modal";
 import ConfirmDialog from "@/components/ConfirmDialog";
@@ -30,6 +31,60 @@ export default function VendorsPage() {
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Vendor | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // ── GPS states ──
+  const [gpsTruck, setGpsTruck] = useState<{ plate: string; gps_id: string } | null>(null);
+  const [gpsLoading, setGpsLoading] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyDateMode, setHistoryDateMode] = useState<"today" | "custom">("today");
+  const [historyDate, setHistoryDate] = useState(getTodayDate());
+  const [historyData, setHistoryData] = useState<GpsStation[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState("");
+
+  // ── GPS handlers ──
+  async function handleGpsCurrentLocation(truck: { plate: string; gps_id: string }) {
+    setGpsLoading(true);
+    try {
+      const data = await fetchGpsRealtime(truck.gps_id);
+      const mapsUrl = `https://maps.google.com/?q=${data.lat},${data.lon}`;
+      window.open(mapsUrl, "_blank", "noopener,noreferrer");
+    } catch (err: any) {
+      alert(err.message || "เกิดข้อผิดพลาดในการดึงข้อมูลพิกัด GPS");
+    } finally {
+      setGpsLoading(false);
+    }
+  }
+
+  async function handleGpsHistory(truck: { plate: string; gps_id: string }) {
+    setGpsTruck(truck);
+    setHistoryOpen(true);
+    setHistoryDateMode("today");
+    setHistoryDate(getTodayDate());
+    setHistoryData([]);
+    setHistoryError("");
+    // Auto-fetch today
+    fetchHistory(truck.gps_id, getTodayDate());
+  }
+
+  async function fetchHistory(gpsId: string, date: string) {
+    setHistoryLoading(true);
+    setHistoryError("");
+    setHistoryData([]);
+    try {
+      const result = await fetchGpsHistory(gpsId, date);
+      setHistoryData(result.stations);
+    } catch (err: any) {
+      setHistoryError(err.message || "ไม่สามารถดึงข้อมูลประวัติได้");
+    } finally {
+      setHistoryLoading(false);
+    }
+  }
+
+  function handleHistoryDateChange(date: string) {
+    setHistoryDate(date);
+    if (gpsTruck) fetchHistory(gpsTruck.gps_id, date);
+  }
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -148,7 +203,7 @@ export default function VendorsPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="ค้นหาด้วยรหัส…"
-            className="pl-9 pr-4 py-2 text-sm border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-52"
+            className="pl-9 pr-4 py-2 text-sm border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-52"
           />
         </div>
       </PageHeader>
@@ -157,7 +212,72 @@ export default function VendorsPage() {
         <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">{error}</div>
       )}
 
-      <div className="bg-white rounded-2xl border border-[var(--border)] shadow-sm overflow-hidden">
+      {/* ── Mobile cards ── */}
+      <div className="md:hidden flex flex-col gap-3">
+        {loading ? (
+          <div className="bg-white rounded-xl border border-[var(--border)] shadow-sm px-4 py-10 text-center text-[var(--muted)] text-sm">Loading…</div>
+        ) : records.length === 0 ? (
+          <div className="bg-white rounded-xl border border-[var(--border)] shadow-sm px-4 py-10 text-center text-[var(--muted)] text-sm">ยังไม่มีข้อมูล Vendor กด Add New เพื่อเพิ่ม</div>
+        ) : (
+          records.map((v) => (
+            <div key={v._id} className="bg-white rounded-xl border border-[var(--border)] shadow-sm p-3.5">
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <div className="min-w-0">
+                  <span className="font-mono font-bold text-blue-700 text-sm">{v.code}</span>
+                  <p className="text-xs text-[var(--foreground)] truncate mt-0.5">{v.name}</p>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button onClick={() => openEdit(v)} className="p-1.5 rounded-lg hover:bg-blue-50 text-[var(--muted)] hover:text-blue-600 transition-colors"><Pencil size={14} /></button>
+                  <button onClick={() => setDeleteTarget(v)} className="p-1.5 rounded-lg hover:bg-red-50 text-[var(--muted)] hover:text-red-600 transition-colors"><Trash2 size={14} /></button>
+                </div>
+              </div>
+              {/* Trucks */}
+              <div className="mb-2">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">ทะเบียนรถ</span>
+                <div className="flex flex-col gap-1.5 mt-1">
+                  {v.trucks?.length ? (
+                    v.trucks.map((t, i) => (
+                      <div key={i} className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-mono ${t.gps_id ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-slate-100 text-[var(--foreground)]'}`}>
+                        <span className="flex-1 truncate">{t.plate}</span>
+                        {t.gps_id && (
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button type="button" onClick={() => handleGpsCurrentLocation({ plate: t.plate, gps_id: t.gps_id! })} disabled={gpsLoading}
+                              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-blue-500 hover:bg-blue-600 text-white text-[9px] font-bold transition-colors" title="ตำแหน่งปัจจุบัน">
+                              {gpsLoading ? <Loader2 size={10} className="animate-spin" /> : <MapPin size={10} />} ตำแหน่ง
+                            </button>
+                            <button type="button" onClick={() => handleGpsHistory({ plate: t.plate, gps_id: t.gps_id! })}
+                              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-violet-500 hover:bg-violet-600 text-white text-[9px] font-bold transition-colors" title="ประวัติเส้นทาง">
+                              <History size={10} /> ประวัติ
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    (v.truck_plates || []).map((p, i) => (
+                      <span key={i} className="inline-block px-2 py-0.5 rounded bg-slate-100 text-[var(--foreground)] text-xs font-mono">{p}</span>
+                    ))
+                  )}
+                </div>
+              </div>
+              {/* Drivers */}
+              {(v.drivers || []).length > 0 && (
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">คนขับ</span>
+                  <div className="flex flex-col gap-0.5 mt-1">
+                    {v.drivers.map((d, i) => (
+                      <span key={i} className="text-xs">{d.name} <span className="text-[var(--muted)]">({d.phone})</span></span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* ── Desktop table ── */}
+      <div className="hidden md:block bg-white rounded-2xl border border-[var(--border)] shadow-sm overflow-hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-[var(--border)] bg-slate-50">
@@ -179,12 +299,24 @@ export default function VendorsPage() {
                   <td className="px-5 py-3 font-mono font-medium text-blue-700">{v.code}</td>
                   <td className="px-5 py-3 text-[var(--foreground)]">{v.name}</td>
                   <td className="px-5 py-3">
-                    <div className="flex flex-wrap gap-1">
+                    <div className="flex flex-col gap-1">
                       {v.trucks?.length ? (
                         v.trucks.map((t, i) => (
-                          <span key={i} className={`inline-block px-2 py-0.5 rounded text-xs font-mono flex items-center gap-1 ${t.gps_id ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-slate-100 text-[var(--foreground)]'}`}>
-                            {t.plate} {t.gps_id && <span className="text-[9px] font-bold bg-blue-500 text-white px-1 py-0.5 rounded ml-0.5" title={`GPS ID: ${t.gps_id}`}>GPS</span>}
-                          </span>
+                          <div key={i} className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-mono ${t.gps_id ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-slate-100 text-[var(--foreground)]'}`}>
+                            <span className="truncate">{t.plate}</span>
+                            {t.gps_id && (
+                              <div className="flex items-center gap-1 shrink-0 ml-auto">
+                                <button type="button" onClick={() => handleGpsCurrentLocation({ plate: t.plate, gps_id: t.gps_id! })} disabled={gpsLoading}
+                                  className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-blue-500 hover:bg-blue-600 text-white text-[9px] font-bold transition-colors" title="ตำแหน่งปัจจุบัน">
+                                  {gpsLoading ? <Loader2 size={10} className="animate-spin" /> : <MapPin size={10} />} ตำแหน่ง
+                                </button>
+                                <button type="button" onClick={() => handleGpsHistory({ plate: t.plate, gps_id: t.gps_id! })}
+                                  className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-violet-500 hover:bg-violet-600 text-white text-[9px] font-bold transition-colors" title="ประวัติเส้นทาง">
+                                  <History size={10} /> ประวัติ
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         ))
                       ) : (
                         (v.truck_plates || []).map((p, i) => (
@@ -217,7 +349,7 @@ export default function VendorsPage() {
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? "แก้ไข Vendor" : "เพิ่ม Vendor"} size="lg">
         <form onSubmit={handleSave} className="flex flex-col gap-5">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField label="รหัสย่อ" required>
               <Input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} placeholder="e.g. ABC" required />
             </FormField>
@@ -289,6 +421,71 @@ export default function VendorsPage() {
         onCancel={() => setDeleteTarget(null)}
         loading={deleting}
       />
+
+      {/* ── GPS History Modal ── */}
+      <Modal open={historyOpen} onClose={() => setHistoryOpen(false)} title={`ประวัติเส้นทาง — ${gpsTruck?.plate || ""}`} size="xl">
+        <div className="flex flex-col gap-4">
+          {/* Date mode selector */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={() => { setHistoryDateMode("today"); handleHistoryDateChange(getTodayDate()); }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${historyDateMode === "today" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
+                <CalendarDays size={12} className="inline mr-1" />วันนี้
+              </button>
+              <button type="button" onClick={() => setHistoryDateMode("custom")}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${historyDateMode === "custom" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
+                <CalendarDays size={12} className="inline mr-1" />เลือกวันที่
+              </button>
+            </div>
+            {historyDateMode === "custom" && (
+              <input type="date" value={historyDate} onChange={(e) => handleHistoryDateChange(e.target.value)}
+                className="px-2.5 py-1.5 text-xs border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            )}
+            <span className="text-[10px] text-slate-400 ml-auto">เวลา 0:00 – 23:59</span>
+          </div>
+
+          {/* Results */}
+          {historyLoading ? (
+            <div className="flex items-center justify-center py-10 text-sm text-[var(--muted)]">
+              <Loader2 size={16} className="animate-spin mr-2" /> กำลังโหลดข้อมูล…
+            </div>
+          ) : historyError ? (
+            <div className="px-4 py-6 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 text-center">{historyError}</div>
+          ) : historyData.length === 0 ? (
+            <div className="px-4 py-6 bg-slate-50 border border-slate-200 rounded-lg text-sm text-[var(--muted)] text-center">ไม่พบข้อมูลเส้นทางสำหรับวันที่นี้</div>
+          ) : (
+            <div className="overflow-x-auto rounded-lg border border-slate-200">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200">
+                    <th className="text-left px-3 py-2 font-semibold text-slate-500 uppercase tracking-wide">#</th>
+                    <th className="text-left px-3 py-2 font-semibold text-slate-500 uppercase tracking-wide">สถานี / ตำแหน่ง</th>
+                    <th className="text-left px-3 py-2 font-semibold text-slate-500 uppercase tracking-wide">ถึง</th>
+                    <th className="text-left px-3 py-2 font-semibold text-slate-500 uppercase tracking-wide">ออก</th>
+                    <th className="text-left px-3 py-2 font-semibold text-slate-500 uppercase tracking-wide">ระยะเวลา</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {historyData.map((s, i) => (
+                    <tr key={i} className="border-b border-slate-100 last:border-0 hover:bg-blue-50/40 transition-colors">
+                      <td className="px-3 py-2 text-slate-400 font-mono">{i + 1}</td>
+                      <td className="px-3 py-2 font-medium text-slate-700 max-w-[200px] sm:max-w-none">
+                        <span className="block truncate">{s.station_name || s.sub_district_th || s.district_th || s.province_th || "ไม่ทราบตำแหน่ง"}</span>
+                        {s.province_th && s.station_name && (
+                          <span className="text-[10px] text-slate-400">{[s.sub_district_th, s.district_th, s.province_th].filter(Boolean).join(", ")}</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{s.arrive_time || "—"}</td>
+                      <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{s.depart_time || "—"}</td>
+                      <td className="px-3 py-2 text-slate-500 whitespace-nowrap">{s.duration || "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </Modal>
     </div>
   );
 }

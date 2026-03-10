@@ -699,7 +699,7 @@ export default function BookingsPage() {
         <form onSubmit={handleSave} className="flex flex-col gap-3">
 
           {/* ── Booking Info ── */}
-          <Section title="Booking" icon="📋">
+          <Section title="Booking" icon="📋" defaultOpen={!editing}>
             <FormField label="วันที่จอง">
               <Input type="date" value={form.booking_date} onChange={set("booking_date")} required />
             </FormField>
@@ -723,7 +723,7 @@ export default function BookingsPage() {
           </Section>
 
           {/* ── Container ── */}
-          <Section title="Container" icon="📦">
+          <Section title="Container" icon="📦" defaultOpen={!editing}>
             <FormField
               label="Container No."
               hint={containerNoMessage(form.container_no) ?? (form.container_no.length === 11 ? "✓ ISO 6346 valid" : undefined)}
