@@ -55,7 +55,12 @@ export async function POST(req: Request) {
       );
     }
 
-    // DTC /getHistory returns: { status:"200", gps_id, truck_name, count, data:[{time, lat, lon, station_name, ...}] }
+    // Log first item to inspect actual field names from DTC API
+    if (data.data?.length > 0) {
+      console.log("DTC StationToStation first item keys:", Object.keys(data.data[0]));
+      console.log("DTC StationToStation first item:", JSON.stringify(data.data[0]));
+    }
+
     return NextResponse.json({
       stations: data.data || [],
       date,

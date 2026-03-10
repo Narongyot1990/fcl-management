@@ -454,40 +454,77 @@ export default function VendorsPage() {
           ) : historyData.length === 0 ? (
             <div className="px-4 py-6 bg-slate-50 border border-slate-200 rounded-lg text-sm text-[var(--muted)] text-center">ไม่พบข้อมูลเส้นทางสำหรับวันที่นี้</div>
           ) : (
-            <div className="overflow-x-auto rounded-lg border border-slate-200">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200">
-                    <th className="text-left px-3 py-2 font-semibold text-slate-500 uppercase tracking-wide">#</th>
-                    <th className="text-left px-3 py-2 font-semibold text-slate-500 uppercase tracking-wide">ออกจาก</th>
-                    <th className="text-left px-3 py-2 font-semibold text-slate-500 uppercase tracking-wide">เวลาออก</th>
-                    <th className="text-left px-3 py-2 font-semibold text-slate-500 uppercase tracking-wide">ถึง</th>
-                    <th className="text-left px-3 py-2 font-semibold text-slate-500 uppercase tracking-wide">เวลาถึง</th>
-                    <th className="text-left px-3 py-2 font-semibold text-slate-500 uppercase tracking-wide">ระยะทาง (km)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {historyData.map((s, i) => (
-                    <tr key={i} className="border-b border-slate-100 last:border-0 hover:bg-blue-50/40 transition-colors">
-                      <td className="px-3 py-2 text-slate-400 font-mono">{i + 1}</td>
-                      <td className="px-3 py-2 font-medium text-slate-700 max-w-[150px]">
-                        <span className="block truncate">{s.startion_f || "—"}</span>
-                      </td>
-                      <td className="px-3 py-2 text-slate-600 whitespace-nowrap">
-                        {s.start_date && s.start_time ? `${s.start_date} ${s.start_time}` : s.start_date || s.start_time || "—"}
-                      </td>
-                      <td className="px-3 py-2 font-medium text-slate-700 max-w-[150px]">
-                        <span className="block truncate">{s.startion_n || "—"}</span>
-                      </td>
-                      <td className="px-3 py-2 text-slate-600 whitespace-nowrap">
-                        {s.end_date && s.end_time ? `${s.end_date} ${s.end_time}` : s.end_date || s.end_time || "—"}
-                      </td>
-                      <td className="px-3 py-2 text-slate-500 whitespace-nowrap">{s.distance || "—"}</td>
+            <>
+              <p className="text-[10px] text-slate-400">{historyData.length} รายการ</p>
+
+              {/* Mobile cards */}
+              <div className="flex flex-col gap-2 sm:hidden">
+                {historyData.map((s, i) => {
+                  const fromStation = (s.station_f || s.startion_f || s.from_station || s.departure_station || "") as string;
+                  const toStation   = (s.station_n || s.startion_n || s.to_station   || s.arrival_station   || "") as string;
+                  const startDt = [s.start_date, s.start_time].filter(Boolean).join(" ");
+                  const endDt   = [s.end_date,   s.end_time  ].filter(Boolean).join(" ");
+                  return (
+                    <div key={i} className="rounded-lg border border-slate-200 bg-white p-3 text-xs">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-mono text-[10px] text-slate-400">#{i + 1}</span>
+                        <span className="font-bold text-blue-600">{(s.distance as string) || "—"} km</span>
+                      </div>
+                      <div className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-1.5">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase mt-0.5">ออกจาก</span>
+                        <div>
+                          <p className="font-medium text-slate-700 leading-tight">{fromStation || <span className="text-slate-300 italic">ไม่ระบุสถานี</span>}</p>
+                          <p className="text-[10px] text-slate-400 mt-0.5">{startDt || "—"}</p>
+                        </div>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase mt-0.5">ถึง</span>
+                        <div>
+                          <p className="font-medium text-slate-700 leading-tight">{toStation || <span className="text-slate-300 italic">ไม่ระบุสถานี</span>}</p>
+                          <p className="text-[10px] text-slate-400 mt-0.5">{endDt || "—"}</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Desktop table */}
+              <div className="hidden sm:block overflow-x-auto rounded-lg border border-slate-200">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-200">
+                      <th className="text-left px-3 py-2 font-semibold text-slate-500 uppercase tracking-wide w-8">#</th>
+                      <th className="text-left px-3 py-2 font-semibold text-slate-500 uppercase tracking-wide">ออกจาก</th>
+                      <th className="text-left px-3 py-2 font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">เวลาออก</th>
+                      <th className="text-left px-3 py-2 font-semibold text-slate-500 uppercase tracking-wide">ถึง</th>
+                      <th className="text-left px-3 py-2 font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">เวลาถึง</th>
+                      <th className="text-right px-3 py-2 font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">km</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {historyData.map((s, i) => {
+                      const fromStation = (s.station_f || s.startion_f || s.from_station || s.departure_station || "") as string;
+                      const toStation   = (s.station_n || s.startion_n || s.to_station   || s.arrival_station   || "") as string;
+                      const startDt = [s.start_date, s.start_time].filter(Boolean).join(" ");
+                      const endDt   = [s.end_date,   s.end_time  ].filter(Boolean).join(" ");
+                      return (
+                        <tr key={i} className="border-b border-slate-100 last:border-0 hover:bg-blue-50/40 transition-colors">
+                          <td className="px-3 py-2 text-slate-400 font-mono">{i + 1}</td>
+                          <td className="px-3 py-2 font-medium text-slate-700 max-w-[180px]">
+                            <span className="block truncate" title={fromStation}>{fromStation || <span className="text-slate-300 italic">—</span>}</span>
+                          </td>
+                          <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{startDt || "—"}</td>
+                          <td className="px-3 py-2 font-medium text-slate-700 max-w-[180px]">
+                            <span className="block truncate" title={toStation}>{toStation || <span className="text-slate-300 italic">—</span>}</span>
+                          </td>
+                          <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{endDt || "—"}</td>
+                          <td className="px-3 py-2 text-right font-mono text-blue-600 font-bold whitespace-nowrap">{(s.distance as string) || "—"}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       </Modal>
