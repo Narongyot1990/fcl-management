@@ -9,15 +9,15 @@ export interface GpsRealtimeResult {
 }
 
 export interface GpsStation {
-  // /getStationToStationReport response fields (doc section 3.9)
+  // Actual /getStationToStationReport response fields
   truck_name?: string;
-  startion_f?: string;   // departure station (typo in DTC doc)
+  startion_f?: string;   // departure station (typo in DTC doc but actual field)
   start_date?: string;
   start_time?: string;
-  startion_n?: string;   // arrival station (typo in DTC doc)
+  startion_n?: string;   // arrival station (typo in DTC doc but actual field)
   end_date?: string;
   end_time?: string;
-  distance?: string;
+  // Note: DTC API returns "distance " with trailing space, accessed via s["distance "]
   [key: string]: unknown;
 }
 

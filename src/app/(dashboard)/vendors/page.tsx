@@ -460,15 +460,15 @@ export default function VendorsPage() {
               {/* Mobile cards */}
               <div className="flex flex-col gap-2 sm:hidden">
                 {historyData.map((s, i) => {
-                  const fromStation = (s.station_f || s.startion_f || s.from_station || s.departure_station || "") as string;
-                  const toStation   = (s.station_n || s.startion_n || s.to_station   || s.arrival_station   || "") as string;
+                  const fromStation = (s.startion_f || "") as string;
+                  const toStation   = (s.startion_n || "") as string;
                   const startDt = [s.start_date, s.start_time].filter(Boolean).join(" ");
                   const endDt   = [s.end_date,   s.end_time  ].filter(Boolean).join(" ");
                   return (
                     <div key={i} className="rounded-lg border border-slate-200 bg-white p-3 text-xs">
                       <div className="flex items-center justify-between mb-2">
                         <span className="font-mono text-[10px] text-slate-400">#{i + 1}</span>
-                        <span className="font-bold text-blue-600">{(s.distance as string) || "—"} km</span>
+                        <span className="font-bold text-blue-600">{(s["distance "] as string) || "—"} km</span>
                       </div>
                       <div className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-1.5">
                         <span className="text-[10px] font-bold text-slate-400 uppercase mt-0.5">ออกจาก</span>
@@ -502,8 +502,8 @@ export default function VendorsPage() {
                   </thead>
                   <tbody>
                     {historyData.map((s, i) => {
-                      const fromStation = (s.station_f || s.startion_f || s.from_station || s.departure_station || "") as string;
-                      const toStation   = (s.station_n || s.startion_n || s.to_station   || s.arrival_station   || "") as string;
+                      const fromStation = (s.startion_f || "") as string;
+                      const toStation   = (s.startion_n || "") as string;
                       const startDt = [s.start_date, s.start_time].filter(Boolean).join(" ");
                       const endDt   = [s.end_date,   s.end_time  ].filter(Boolean).join(" ");
                       return (
@@ -517,7 +517,7 @@ export default function VendorsPage() {
                             <span className="block truncate" title={toStation}>{toStation || <span className="text-slate-300 italic">—</span>}</span>
                           </td>
                           <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{endDt || "—"}</td>
-                          <td className="px-3 py-2 text-right font-mono text-blue-600 font-bold whitespace-nowrap">{(s.distance as string) || "—"}</td>
+                          <td className="px-3 py-2 text-right font-mono text-blue-600 font-bold whitespace-nowrap">{(s["distance "] as string) || "—"}</td>
                         </tr>
                       );
                     })}
