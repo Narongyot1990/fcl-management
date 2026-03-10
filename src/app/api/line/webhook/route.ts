@@ -59,6 +59,10 @@ async function handleTextMessage(event: any) {
 
 // Handle different message types
 async function handleEvent(event: any) {
+  // 🔴 BOT DISABLED - No responses
+  console.log('Bot disabled - ignoring event:', event.type);
+  return;
+  
   switch (event.type) {
     case 'message':
       if (event.message.type === 'text') {
