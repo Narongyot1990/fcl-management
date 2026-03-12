@@ -11,6 +11,23 @@ POST /api/bookings/container
 ## Authentication
 Required header: `X-API-Key: <your_api_key>`
 
+**Production API Key**: `yG0CC6FH0j30IdY3hQmJXSOqqJiJSVPnUOOsPzUyues`
+
+### Vercel Environment Setup
+To use this endpoint in production, ensure `OCR_API_SECRET` is set in Vercel:
+
+```bash
+# Set via Vercel CLI
+vercel env add OCR_API_SECRET production
+# Enter value: yG0CC6FH0j30IdY3hQmJXSOqqJiJSVPnUOOsPzUyues
+
+# Or via Vercel Dashboard:
+# Project Settings → Environment Variables → Add New
+# Name: OCR_API_SECRET
+# Value: yG0CC6FH0j30IdY3hQmJXSOqqJiJSVPnUOOsPzUyues
+# Environment: Production
+```
+
 ## Request Body
 ```json
 {
