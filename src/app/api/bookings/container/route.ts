@@ -148,20 +148,57 @@ export async function POST(req: NextRequest) {
 
     const updated = await bookings.findOne({ _id: booking._id });
     const createdAt = updated?.created_at;
-    const result = {
-      ...updated,
-      _id: updated?._id?.toString(),
-      created_at: createdAt instanceof Date
-        ? createdAt.toISOString()
-        : typeof createdAt === "string"
-          ? createdAt
-          : createdAt?.toString() ?? null,
+    
+    // Organize response data
+    const response = {
+      updated: true,
+      booking: {
+        _id: updated?._id?.toString(),
+        booking_no: updated?.booking_no,
+        booking_date: updated?.booking_date,
+        job_type: updated?.job_type,
+        customer_code: updated?.customer_code,
+        vendor_code: updated?.vendor_code,
+        created_at: createdAt instanceof Date
+          ? createdAt.toISOString()
+          : typeof createdAt === "string"
+            ? createdAt
+            : createdAt?.toString() ?? null,
+      },
+      pickup_info: {
+        truck_plate: updated?.truck_plate,
+        driver_name: updated?.driver_name,
+        driver_phone: updated?.driver_phone,
+        plan_pickup_date: updated?.plan_pickup_date,
+      },
+      container_info: {
+        container_no: updated?.container_no,
+        seal_no: updated?.seal_no,
+        container_size: updated?.container_size,
+        container_size_code: updated?.container_size_code,
+        tare_weight: updated?.tare_weight,
+        eir_image_url: updated?.eir_image_url,
+        container_image_url: updated?.container_image_url,
+      },
+      loading_info: {
+        loading_status: updated?.loading_status,
+        plan_loading_date: updated?.plan_loading_date,
+        pending_at: updated?.pending_at,
+        loading_at: updated?.loading_at,
+        loaded_at: updated?.loaded_at,
+      },
+      return_info: {
+        plan_return_date: updated?.plan_return_date,
+        return_truck_plate: updated?.return_truck_plate,
+        return_driver_name: updated?.return_driver_name,
+        return_driver_phone: updated?.return_driver_phone,
+        return_date: updated?.return_date,
+        return_completed: updated?.return_completed,
+        gcl_received: updated?.gcl_received,
+      },
     };
 
-    return NextResponse.json(
-      { updated: true, booking: result },
-      { status: 200 }
-    );
+    return NextResponse.json(response, { status: 200 });
   } catch (error) {
     console.error("Error updating booking container:", error);
     return NextResponse.json(
