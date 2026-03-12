@@ -113,6 +113,56 @@ _UPDATABLE_FIELDS_EIR = {
     "seal_no", "tare_weight", "truck_plate", "date_time",
 }
 
+_UPDATABLE_FIELDS_BOOKING_CONTAINER = {
+    "container_no", "seal_no", "container_size", "container_size_code", "tare_weight",
+}
+
+
+def get_booking_by_no(booking_no: str) -> dict | None:
+    """Fetch a single booking document by booking_no (exact, case-insensitive). Returns None if not found."""
+    collection = _get_collection("bookings")
+    doc = collection.find_one({"booking_no": {"$regex": f"^{booking_no.strip()}$", "$options": "i"}})
+    if doc is None:
+        return None
+    doc["_id"] = str(doc["_id"])
+    if isinstance(doc.get("created_at"), datetime):
+        doc["created_at"] = doc["created_at"].isoformat()
+    return doc
+
+
+def update_booking_container(booking_no: str, data: dict) -> tuple[bool, dict | None]:
+    """
+    Patch the 5 container fields of a booking identified by booking_no.
+
+    Returns:
+        (True,  updated_doc)  — patched successfully
+        (False, None)         — booking not found
+    """
+    collection = _get_collection("bookings")
+    doc = collection.find_one({"booking_no": {"$regex": f"^{booking_no.strip()}$", "$options": "i"}})
+    if doc is None:
+        return False, None
+
+    patch = {}
+    for k, v in data.items():
+        if k not in _UPDATABLE_FIELDS_BOOKING_CONTAINER:
+            continue
+        if isinstance(v, _RAW_FIELD_TYPES):
+            patch[k] = v
+        elif isinstance(v, str):
+            patch[k] = v.strip() if v.strip() else None
+        else:
+            patch[k] = v
+
+    if patch:
+        collection.update_one({"_id": doc["_id"]}, {"$set": patch})
+
+    doc.update(patch)
+    doc["_id"] = str(doc["_id"])
+    if isinstance(doc.get("created_at"), datetime):
+        doc["created_at"] = doc["created_at"].isoformat()
+    return True, doc
+
 
 def delete(prompt_key: str, record_id: str) -> bool:
     """Delete a record by its MongoDB _id string. Returns True if deleted."""
