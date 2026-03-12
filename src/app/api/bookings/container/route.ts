@@ -30,35 +30,58 @@ for (const c of "ABCDEFGHIJKLMNOPQRSTUVWXYZ") {
 }
 
 function iso6346CheckDigit(owner: string, serial: string): number {
-  const chars = (owner + serial).toUpperCase();
+  const container = (owner + serial).toUpperCase();
+  
+  // Letter positions (0-3) use weights: [1,2,4,8]
+  // Digit positions (4-9) use weights: [16,32,64,128,256,512]
+  const letterWeights = [1, 2, 4, 8];
+  const digitWeights = [16, 32, 64, 128, 256, 512];
+  
   let total = 0;
-  for (let i = 0; i < chars.length; i++) {
-    const ch = chars[i];
-    const v = /\d/.test(ch) ? parseInt(ch) : ISO6346_LETTER_MAP[ch] || 0;
-    total += v * Math.pow(2, i);
+  
+  // Process letters (positions 0-3)
+  for (let i = 0; i < 4; i++) {
+    const ch = container[i];
+    const v = ISO6346_LETTER_MAP[ch] || 0;
+    total += v * letterWeights[i];
   }
-  const remainder = total % 11;
-  return remainder === 10 ? 0 : remainder;
+  
+  // Process digits (positions 4-9)
+  for (let i = 0; i < 6; i++) {
+    const ch = container[i + 4];
+    const v = parseInt(ch) || 0;
+    total += v * digitWeights[i];
+  }
+  
+  // (total % 11) % 10
+  const checkDigit = (total % 11) % 10;
+  return checkDigit;
 }
 
 function validateISO6346(containerNo: string): { valid: boolean; error?: string } {
   const raw = containerNo.trim().toUpperCase().replace(/[\s-]/g, "");
+  
+  // Format validation (4 letters + 7 digits)
   if (!/^[A-Z]{4}\d{7}$/.test(raw)) {
     return {
       valid: false,
       error: `Container number must be 4 letters + 7 digits (e.g. MSCU1234567), got: '${containerNo}'`,
     };
   }
+  
+  // ISO 6346 check digit validation
   const owner = raw.slice(0, 4);
   const serial = raw.slice(4, 10);
   const givenCheck = parseInt(raw[10]);
   const expected = iso6346CheckDigit(owner, serial);
+  
   if (givenCheck !== expected) {
     return {
       valid: false,
       error: `Invalid ISO 6346 check digit: expected ${expected}, got ${givenCheck}`,
     };
   }
+  
   return { valid: true };
 }
 
