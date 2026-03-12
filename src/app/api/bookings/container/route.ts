@@ -147,10 +147,15 @@ export async function POST(req: NextRequest) {
     );
 
     const updated = await bookings.findOne({ _id: booking._id });
+    const createdAt = updated?.created_at;
     const result = {
       ...updated,
-      _id: updated?._id.toString(),
-      created_at: updated?.created_at?.toISOString(),
+      _id: updated?._id?.toString(),
+      created_at: createdAt instanceof Date
+        ? createdAt.toISOString()
+        : typeof createdAt === "string"
+          ? createdAt
+          : createdAt?.toString() ?? null,
     };
 
     return NextResponse.json(
