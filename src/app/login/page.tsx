@@ -18,9 +18,9 @@ export default function LoginPage() {
     // Simulate authentication for demonstration
     // In real app, we would call /api/login
     setTimeout(async () => {
-      if (username === "administrator" && password === "itl@1234") {
+      if (username === "administrator@fls.com" && password === "itl@1234") {
         const userSession = {
-          username: "administrator",
+          username: "administrator@fls.com",
           name: "ITL Administrator",
           role: "admin",
           isLoggedIn: true
