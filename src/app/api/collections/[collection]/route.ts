@@ -24,6 +24,9 @@ export async function GET(
   if (!(ALLOWED as readonly string[]).includes(collection))
     return NextResponse.json({ error: "Not found" }, { status: 404 });
 
+  const role = req.headers.get("x-itl-role");
+  const branch = req.headers.get("x-itl-branch");
+
   const col = await getCollection(collection);
   const search = Object.fromEntries(req.nextUrl.searchParams.entries());
 
@@ -31,6 +34,11 @@ export async function GET(
   const filter: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(search)) {
     if (v) filter[k] = { $regex: v, $options: "i" };
+  }
+
+  // Branch isolation: if not admin, only see own branch
+  if (role && role !== "admin" && branch) {
+    filter.branch = branch;
   }
 
   const records = await col.find(filter).sort({ created_at: -1 }).toArray();
@@ -49,6 +57,14 @@ export async function POST(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const data = await req.json();
+  const role = req.headers.get("x-itl-role");
+  const branch = req.headers.get("x-itl-branch");
+
+  // Force branch if not admin
+  if (role && role !== "admin" && branch) {
+    data.branch = branch;
+  }
+
   const col = await getCollection(collection);
 
   // Dedup check

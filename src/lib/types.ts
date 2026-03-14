@@ -3,7 +3,20 @@ export interface Customer {
   _id: string;
   code: string;   // รหัสลูกค้า e.g. "CUS001"
   name: string;   // ชื่อลูกค้า
+  branch: string; // สาขา
   created_at?: string;
+}
+
+// ── Roles & Auth ─────────────────────────────────────────────────────────────
+export type UserRole = "admin" | "leader" | "driver";
+
+export interface User {
+  _id: string;
+  username: string;
+  password?: string; // only for server-side or mock login
+  role: UserRole;
+  branch?: string; // admin has no branch (sees all), leader/driver must have branch
+  name: string;
 }
 
 // ── Job type ─────────────────────────────────────────────────────────────────
@@ -11,8 +24,18 @@ export type JobType = "Import" | "Export";
 
 // ── Driver sub-document (embedded in Vendor) ────────────────────────────────
 export interface Driver {
+  _id?: string;
   name: string;
   phone: string;
+  avatar_url?: string;
+  score?: number;      // 0-100
+  rating?: number;     // 0-5
+  jobs_count?: number;
+  status?: "active" | "on_job" | "offline";
+  joined_at?: string;
+  id_card_no?: string;
+  license_no?: string;
+  branch?: string; // สาขาที่สังกัด (Optional in nested views)
 }
 
 // ── Vendor ───────────────────────────────────────────────────────────────────
@@ -23,6 +46,7 @@ export interface Vendor {
   truck_plates?: string[]; // ทะเบียนรถ (legacy)
   trucks?: { plate: string; gps_id?: string }[]; // ทะเบียนรถ + gps_id (new)
   drivers: Driver[];      // คนขับ (หลายคน) แต่ละคนมี name + phone
+  branch: string;         // สาขา
   created_at?: string;
 }
 
@@ -31,6 +55,7 @@ export interface Container {
   _id: string;
   code: string;           // ISO type code e.g. "45G1", "22G1"
   size: string;           // ขนาด e.g. "40HC", "20", "40"
+  branch: string;         // สาขาที่ตู้สังกัด (ถ้ามี)
   created_at?: string;
 }
 
@@ -78,12 +103,13 @@ export interface Booking {
   gcl_received: boolean;  // Good Control List — ได้หรือยัง
   return_date: string;
   return_completed: boolean;
+  branch: string;         // สาขาที่เปิด Booking
 
   created_at?: string;
 }
 
 // ── Collections ──────────────────────────────────────────────────────────────
-export type Collection = "vendors" | "containers" | "bookings" | "customers";
+export type Collection = "vendors" | "containers" | "bookings" | "customers" | "users";
 
 export interface ApiResponse<T> {
   count: number;

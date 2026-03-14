@@ -8,9 +8,14 @@ function getKey(): string {
 }
 
 function headers(): HeadersInit {
+  const userStr = typeof window !== "undefined" ? sessionStorage.getItem("itl_user") : null;
+  const user = userStr ? JSON.parse(userStr) : null;
+  
   return {
     "Content-Type": "application/json",
     "X-API-Key": getKey(),
+    "x-itl-role": user?.role || "",
+    "x-itl-branch": user?.branch || "",
   };
 }
 

@@ -1,11 +1,13 @@
 "use client";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Pencil, Trash2, Search, ChevronDown, ChevronUp, ChevronRight, CalendarDays, Copy, Check, ZoomIn, X, MapPin, Loader2, Phone } from "lucide-react";
+import dynamic from "next/dynamic";
+const DriverProfile = dynamic(() => import("@/components/DriverProfile"), { ssr: false });
 import ImageUpload from "@/components/ImageUpload";
 import GeminiOcrButton from "@/components/GeminiOcrButton";
 import { containerNoMessage } from "@/lib/containerValidation";
 import { listRecords, createRecord, updateRecord, deleteRecord } from "@/lib/api";
-import type { Booking, Vendor, Container, Customer, LoadingStatus, JobType } from "@/lib/types";
+import type { Booking, Vendor, Container, Customer, LoadingStatus, JobType, Driver } from "@/lib/types";
 import PageHeader from "@/components/PageHeader";
 import Modal from "@/components/Modal";
 import ConfirmDialog from "@/components/ConfirmDialog";
@@ -259,6 +261,7 @@ export default function BookingsPage() {
   const [imageModalTitle, setImageModalTitle] = useState("");
   const [imageModalBooking, setImageModalBooking] = useState<Booking | null>(null);
   const [openingGps, setOpeningGps] = useState<string | null>(null);
+  const [driverProfileTarget, setDriverProfileTarget] = useState<Driver | null>(null);
 
   function openImageModal(url: string, title: string, booking: Booking) {
     setImageModalUrl(url);
@@ -642,7 +645,13 @@ export default function BookingsPage() {
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-2 mt-0.5">
-                                  <span className="font-bold text-slate-700 text-xs">{b.driver_name || "—"}</span>
+                                  <button 
+                                    type="button"
+                                    onClick={() => setDriverProfileTarget({ name: b.driver_name, phone: b.driver_phone })}
+                                    className="font-bold text-slate-700 text-xs hover:text-blue-600 transition-colors"
+                                  >
+                                    {b.driver_name || "—"}
+                                  </button>
                                   {b.driver_phone && (
                                     <a href={`tel:${b.driver_phone.replace(/\D/g, "")}`} onClick={e => e.stopPropagation()} 
                                       className="p-1 rounded-full bg-emerald-100 hover:bg-emerald-200 text-emerald-700 transition-colors border border-emerald-200" title={`โทร ${b.driver_phone}`}>
@@ -670,7 +679,13 @@ export default function BookingsPage() {
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-2 mt-0.5">
-                                  <span className="font-bold text-slate-700 text-xs">{b.return_driver_name || "—"}</span>
+                                  <button 
+                                    type="button"
+                                    onClick={() => setDriverProfileTarget({ name: b.return_driver_name, phone: b.return_driver_phone })}
+                                    className="font-bold text-slate-700 text-xs hover:text-blue-600 transition-colors"
+                                  >
+                                    {b.return_driver_name || "—"}
+                                  </button>
                                   {b.return_driver_phone && (
                                     <a href={`tel:${b.return_driver_phone.replace(/\D/g, "")}`} onClick={e => e.stopPropagation()} 
                                       className="p-1 rounded-full bg-violet-100 hover:bg-violet-200 text-violet-700 transition-colors border border-violet-200" title={`โทร ${b.return_driver_phone}`}>
@@ -945,6 +960,18 @@ export default function BookingsPage() {
           {/* Background hit area to close is handled by parent div's onClick */}
         </div>
       )}
+
+      {/* ── Driver Profile Modal ── */}
+      <Modal 
+        open={!!driverProfileTarget} 
+        onClose={() => setDriverProfileTarget(null)} 
+        title="ประวัติคนขับรถ" 
+        size="lg"
+      >
+        <div className="h-[500px]">
+          {driverProfileTarget && <DriverProfile driver={driverProfileTarget} mode="visitor" />}
+        </div>
+      </Modal>
     </div>
   );
 }

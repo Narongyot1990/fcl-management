@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Pencil, Trash2, Search, Plus, X, MapPin, Loader2, History, CalendarDays, MoreVertical, Route } from "lucide-react";
 import dynamic from "next/dynamic";
 const GpsMap = dynamic(() => import("@/components/GpsMap"), { ssr: false });
+const DriverProfile = dynamic(() => import("@/components/DriverProfile"), { ssr: false });
 import { listRecords, createRecord, updateRecord, deleteRecord } from "@/lib/api";
 import type { Vendor, Driver } from "@/lib/types";
 import { fetchGpsRealtime, getTodayDate } from "@/lib/gpsUtils";
@@ -53,6 +54,9 @@ export default function VendorsPage() {
   const [historyPoints, setHistoryPoints] = useState<GpsPoint[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState("");
+
+  // Driver Profile modal
+  const [driverProfileTarget, setDriverProfileTarget] = useState<Driver | null>(null);
 
   // ── GPS handlers ──
   async function handleGpsCurrentLocation(truck: { plate: string; gps_id: string }) {
@@ -324,7 +328,14 @@ export default function VendorsPage() {
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">คนขับ</span>
                   <div className="flex flex-col gap-0.5 mt-1">
                     {v.drivers.map((d, i) => (
-                      <span key={i} className="text-xs">{d.name} <span className="text-[var(--muted)]">({d.phone})</span></span>
+                      <button 
+                        key={i} 
+                        type="button"
+                        onClick={() => setDriverProfileTarget(d)}
+                        className="text-xs text-left hover:text-blue-600 transition-colors group"
+                      >
+                        {d.name} <span className="text-[var(--muted)] group-hover:text-blue-400">({d.phone})</span>
+                      </button>
                     ))}
                   </div>
                 </div>
@@ -399,9 +410,14 @@ export default function VendorsPage() {
                   <td className="px-5 py-3">
                     <div className="flex flex-col gap-0.5">
                       {(v.drivers || []).map((d, i) => (
-                        <span key={i} className="text-xs">
-                          {d.name} <span className="text-[var(--muted)]">({d.phone})</span>
-                        </span>
+                        <button 
+                          key={i} 
+                          type="button"
+                          onClick={() => setDriverProfileTarget(d)}
+                          className="text-xs text-left hover:text-blue-600 transition-colors group"
+                        >
+                          {d.name} <span className="text-[var(--muted)] group-hover:text-blue-400">({d.phone})</span>
+                        </button>
                       ))}
                     </div>
                   </td>
@@ -587,6 +603,18 @@ export default function VendorsPage() {
               </div>
             </>
           )}
+        </div>
+      </Modal>
+
+      {/* ── Driver Profile Modal ── */}
+      <Modal 
+        open={!!driverProfileTarget} 
+        onClose={() => setDriverProfileTarget(null)} 
+        title="ประวัติคนขับรถ" 
+        size="lg"
+      >
+        <div className="h-[500px]">
+          {driverProfileTarget && <DriverProfile driver={driverProfileTarget} mode="visitor" />}
         </div>
       </Modal>
     </div>

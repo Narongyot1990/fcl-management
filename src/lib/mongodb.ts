@@ -38,8 +38,9 @@ export const DEDUP_KEYS: Record<string, string[]> = {
   containers: ["code"],
   bookings: ["booking_no"],
   customers: ["code"],
+  users: ["username"],
 };
 
 // ── Allowed collections ───────────────────────────────────────────────────────
-export const ALLOWED = ["vendors", "containers", "bookings", "customers"] as const;
+export const ALLOWED = ["vendors", "containers", "bookings", "customers", "users"] as const;
 export type AllowedCollection = (typeof ALLOWED)[number];
