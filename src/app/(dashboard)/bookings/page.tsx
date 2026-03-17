@@ -48,6 +48,7 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: 
 
 // ── Step Progress Bar (5 steps) ──────────────────────────────────────────────
 const STEPS = ["Booking", "Assign", "Pickup", "Loading", "Return"];
+const STEP_MODAL_TITLES = ["Booking", "Assign Truck", "Pickup", "Loading", "Return"] as const;
 
 const LOADING_SUB: Record<string, { label: string; dot: string; badge: string; color: string }> = {
   pending:  { label: "รอโหลด",       dot: "border-2 border-amber-400 bg-white", badge: "bg-slate-50 text-slate-600 border-slate-200", color: "text-amber-600" },
@@ -75,7 +76,7 @@ function getStepDate(b: Booking, idx: number): string | undefined {
   }
 }
 
-function StepBar({ booking }: { booking: Booking }) {
+function StepBar({ booking, onStepClick }: { booking: Booking; onStepClick?: (stepIndex: number) => void }) {
   const statuses = getStepStatuses(booking);
   // Find highest completed step index for active line
   let lastDone = -1;
@@ -123,12 +124,14 @@ function StepBar({ booking }: { booking: Booking }) {
             const stepDate = getStepDate(booking, i);
             return (
               <div key={label} className="flex flex-col items-center gap-1 flex-1 z-10 w-0">
-                <div
+                <button
+                  type="button"
                   title={label}
-                  className={`w-[24px] h-[24px] rounded-full text-[10px] font-black flex items-center justify-center shrink-0 z-10 transition-all duration-300 ${dotClass}`}
+                  onClick={() => onStepClick?.(i)}
+                  className={`w-[24px] h-[24px] rounded-full text-[10px] font-black flex items-center justify-center shrink-0 z-10 transition-all duration-300 ${dotClass} ${onStepClick ? "cursor-pointer hover:scale-110" : ""}`}
                 >
                   {done ? "\u2713" : i + 1}
-                </div>
+                </button>
                 <span className={`text-[8px] sm:text-[9px] font-bold uppercase tracking-wider truncate w-full text-center leading-tight ${
                   done ? "text-slate-700" : 
                   isCurrent ? (isLoadingStep && loadingSub ? loadingSub.color : "text-blue-600") : 
@@ -248,6 +251,8 @@ export default function BookingsPage() {
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
+  const [processModalOpen, setProcessModalOpen] = useState(false);
+  const [processStep, setProcessStep] = useState<number>(0);
   const [editing, setEditing] = useState<Booking | null>(null);
   const [form, setForm] = useState<BookingForm>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
@@ -417,11 +422,8 @@ export default function BookingsPage() {
     setForm((f) => ({ ...f, container_size_code: code, container_size: match?.size ?? f.container_size }));
   }
 
-  function openCreate() { setEditing(null); setForm(EMPTY_FORM); setModalOpen(true); }
-
-  function openEdit(b: Booking) {
-    setEditing(b);
-    setForm({
+  function bookingToForm(b: Booking): BookingForm {
+    return {
       booking_date: b.booking_date ?? "",
       booking_no: b.booking_no ?? "",
       job_type: b.job_type ?? "Export",
@@ -450,8 +452,22 @@ export default function BookingsPage() {
       gcl_received: b.gcl_received ?? false,
       return_date: b.return_date ?? "",
       return_completed: b.return_completed ?? false,
-    });
+    };
+  }
+
+  function openCreate() { setEditing(null); setForm(EMPTY_FORM); setModalOpen(true); }
+
+  function openEdit(b: Booking) {
+    setEditing(b);
+    setForm(bookingToForm(b));
     setModalOpen(true);
+  }
+
+  function openProcessEdit(b: Booking, stepIndex: number) {
+    setEditing(b);
+    setProcessStep(stepIndex);
+    setForm(bookingToForm(b));
+    setProcessModalOpen(true);
   }
 
   async function handleSave(e: React.FormEvent) {
@@ -464,6 +480,18 @@ export default function BookingsPage() {
         await createRecord<Booking>("bookings", form as unknown as Record<string, unknown>);
       }
       setModalOpen(false);
+      load();
+    } catch (e: unknown) { alert(e instanceof Error ? e.message : "Save failed"); }
+    finally { setSaving(false); }
+  }
+
+  async function handleProcessSave(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editing) return;
+    setSaving(true);
+    try {
+      await updateRecord("bookings", editing._id, form as unknown as Record<string, unknown>);
+      setProcessModalOpen(false);
       load();
     } catch (e: unknown) { alert(e instanceof Error ? e.message : "Save failed"); }
     finally { setSaving(false); }
@@ -501,6 +529,139 @@ export default function BookingsPage() {
 
   const set = (k: keyof BookingForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm((prev) => ({ ...prev, [k]: e.target.value }));
+
+  function renderProcessFields() {
+    switch (processStep) {
+      case 0:
+        return (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <FormField label="วันที่จอง">
+              <Input type="date" value={form.booking_date} onChange={set("booking_date")} required />
+            </FormField>
+            <FormField label="Booking No.">
+              <Input value={form.booking_no} onChange={set("booking_no")} required />
+            </FormField>
+            <FormField label="Job Type">
+              <Select value={form.job_type} onChange={set("job_type")} options={JOB_TYPE_OPTIONS} />
+            </FormField>
+            <FormField label="Customer">
+              <Select
+                value={form.customer_code}
+                onChange={set("customer_code")}
+                options={customers.map((c) => ({ value: c.code, label: `${c.code} - ${c.name}` }))}
+                placeholder="เลือก Customer..."
+              />
+            </FormField>
+            <div className="sm:col-span-2">
+              <FormField label="Vendor">
+                <Select
+                  value={form.vendor_code}
+                  onChange={(e) => handleVendorChange(e.target.value)}
+                  options={vendors.map((v) => ({ value: v.code, label: `${v.code} - ${v.name}` }))}
+                  placeholder="เลือก Vendor..."
+                />
+              </FormField>
+            </div>
+          </div>
+        );
+      case 1:
+        return (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="sm:col-span-2">
+              <FormField label="Vendor">
+                <Select
+                  value={form.vendor_code}
+                  onChange={(e) => handleVendorChange(e.target.value)}
+                  options={vendors.map((v) => ({ value: v.code, label: `${v.code} - ${v.name}` }))}
+                  placeholder="เลือก Vendor..."
+                />
+              </FormField>
+            </div>
+            <FormField label="ทะเบียนรถ">
+              <Select value={form.truck_plate} onChange={set("truck_plate")} options={truckPlateOptions} placeholder={selectedVendor ? "เลือกทะเบียน..." : "เลือก Vendor ก่อน"} disabled={!selectedVendor} />
+            </FormField>
+            <FormField label="คนขับ">
+              <Select value={form.driver_name} onChange={(e) => handleDriverChange(e.target.value)} options={driverOptions} placeholder={selectedVendor ? "เลือกคนขับ..." : "เลือก Vendor ก่อน"} disabled={!selectedVendor} />
+            </FormField>
+            <FormField label="เบอร์โทร">
+              <Input value={form.driver_phone} onChange={set("driver_phone")} readOnly />
+            </FormField>
+          </div>
+        );
+      case 2:
+        return (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <FormField label="Plan Pickup">
+              <Input type="date" value={form.plan_pickup_date} onChange={set("plan_pickup_date")} />
+            </FormField>
+            <div />
+            <FormField
+              label="Container No."
+              hint={containerNoMessage(form.container_no) ?? (form.container_no.length === 11 ? "ISO 6346 valid" : undefined)}
+              hintType={containerNoMessage(form.container_no) ? "error" : form.container_no.length === 11 ? "success" : "default"}
+            >
+              <Input value={form.container_no} onChange={set("container_no")} placeholder="TCKU1234567" />
+            </FormField>
+            <FormField label="Seal No.">
+              <Input value={form.seal_no} onChange={set("seal_no")} />
+            </FormField>
+            <FormField label="Size">
+              <Select value={form.container_size} onChange={(e) => handleSizeChange(e.target.value)} options={sizeOptions} placeholder="เลือก Size..." />
+            </FormField>
+            <FormField label="ISO Code">
+              <Select value={form.container_size_code} onChange={(e) => handleCodeChange(e.target.value)} options={codeOptions} placeholder="เลือก Code..." />
+            </FormField>
+            <FormField label="Tare (kg)">
+              <Input value={form.tare_weight} onChange={set("tare_weight")} />
+            </FormField>
+          </div>
+        );
+      case 3:
+        return (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <FormField label="Plan Loading">
+              <Input type="date" value={form.plan_loading_date} onChange={set("plan_loading_date")} />
+            </FormField>
+            <div />
+            <FormField label="Pending เวลา">
+              <Input type="datetime-local" value={form.pending_at} onChange={set("pending_at")} />
+            </FormField>
+            <FormField label="Loading เวลา">
+              <Input type="datetime-local" value={form.loading_at} onChange={set("loading_at")} />
+            </FormField>
+            <FormField label="Loaded เวลา">
+              <Input type="datetime-local" value={form.loaded_at} onChange={set("loaded_at")} />
+            </FormField>
+          </div>
+        );
+      case 4:
+      default:
+        return (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <FormField label="Plan Return">
+              <Input type="date" value={form.plan_return_date} onChange={set("plan_return_date")} />
+            </FormField>
+            <div />
+            <FormField label="ทะเบียนรถคืน">
+              <Select value={form.return_truck_plate} onChange={set("return_truck_plate")} options={truckPlateOptions} placeholder={selectedVendor ? "เลือกทะเบียน..." : "เลือก Vendor ก่อน"} disabled={!selectedVendor} />
+            </FormField>
+            <FormField label="คนขับรถคืน">
+              <Select value={form.return_driver_name} onChange={(e) => handleReturnDriverChange(e.target.value)} options={driverOptions} placeholder={selectedVendor ? "เลือกคนขับ..." : "เลือก Vendor ก่อน"} disabled={!selectedVendor} />
+            </FormField>
+            <FormField label="เบอร์โทรรถคืน">
+              <Input value={form.return_driver_phone} onChange={set("return_driver_phone")} readOnly />
+            </FormField>
+            <FormField label="คืนตู้จริง">
+              <Input type="datetime-local" value={form.return_date} onChange={set("return_date")} />
+            </FormField>
+            <div className="sm:col-span-2 flex flex-col gap-2">
+              <Toggle checked={form.gcl_received} onChange={(v) => setForm((f) => ({ ...f, gcl_received: v }))} label="ได้รับ GCL แล้ว" />
+              <Toggle checked={form.return_completed} onChange={(v) => setForm((f) => ({ ...f, return_completed: v }))} label="คืนตู้เรียบร้อย" />
+            </div>
+          </div>
+        );
+    }
+  }
 
   return (
     <div>
@@ -592,7 +753,9 @@ export default function BookingsPage() {
                         {isExpanded && (
                           <div className="px-3.5 pb-3.5 pt-0 space-y-3 border-t border-slate-100">
                             {/* Progress bar */}
-                            <div className="rounded-lg bg-slate-50 border border-slate-100 px-3 py-3 mt-3"><StepBar booking={b} /></div>
+                            <div className="rounded-lg bg-slate-50 border border-slate-100 px-3 py-3 mt-3">
+                              <StepBar booking={b} onStepClick={(stepIdx) => openProcessEdit(b, stepIdx)} />
+                            </div>
 
                             {/* Info row */}
                             <div className="flex items-center gap-3 text-xs flex-wrap">
@@ -857,6 +1020,33 @@ export default function BookingsPage() {
             <button type="submit" disabled={saving}
               className="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50 font-medium">
               {saving ? "กำลังบันทึก…" : editing ? "บันทึก" : "สร้าง Booking"}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        open={processModalOpen}
+        onClose={() => setProcessModalOpen(false)}
+        title={`${STEP_MODAL_TITLES[processStep]} Process${editing ? ` - ${editing.booking_no}` : ""}`}
+        size="lg"
+      >
+        <form onSubmit={handleProcessSave} className="flex flex-col gap-4">
+          {renderProcessFields()}
+          <div className="flex gap-3 justify-end pt-2 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={() => setProcessModalOpen(false)}
+              className="px-4 py-2 text-sm rounded-lg border border-[var(--border)] hover:bg-slate-50 transition-colors"
+            >
+              ยกเลิก
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50 font-medium"
+            >
+              {saving ? "กำลังบันทึก..." : "บันทึก Process"}
             </button>
           </div>
         </form>
