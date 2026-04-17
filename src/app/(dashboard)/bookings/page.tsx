@@ -654,12 +654,13 @@ export default function BookingsPage() {
                 <tr>
                   <th className="px-3 py-2.5 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Date</th>
                   <th className="px-3 py-2.5 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Booking No.</th>
-                  <th className="px-3 py-2.5 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Job</th>
-                  <th className="px-3 py-2.5 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Customer</th>
-                  <th className="px-3 py-2.5 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Vendor</th>
-                  <th className="px-3 py-2.5 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Container</th>
                   <th className="px-3 py-2.5 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Size</th>
+                  <th className="px-3 py-2.5 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Code</th>
+                  <th className="px-3 py-2.5 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Container No.</th>
+                  <th className="px-3 py-2.5 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Seal No.</th>
+                  <th className="px-3 py-2.5 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Tare</th>
                   <th className="px-3 py-2.5 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Driver</th>
+                  <th className="px-3 py-2.5 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Mobile</th>
                   <th className="px-3 py-2.5 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Truck</th>
                   <th className="px-3 py-2.5 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Status</th>
                   <th className="px-3 py-2.5 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Actions</th>
@@ -677,20 +678,11 @@ export default function BookingsPage() {
                     <tr key={b._id} className="hover:bg-slate-50/80 transition-colors cursor-pointer" onClick={() => openProcessEdit(b, currentStepIdx === -1 ? 4 : currentStepIdx)}>
                       <td className="px-3 py-2.5 text-slate-500 whitespace-nowrap">{b.booking_date ? toShortDate(b.booking_date) : "—"}</td>
                       <td className="px-3 py-2.5 font-mono font-bold text-violet-700 whitespace-nowrap">{b.booking_no}</td>
-                      <td className="px-3 py-2.5 whitespace-nowrap">
-                        {b.job_type && (
-                          <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${b.job_type === "Export" ? "bg-blue-50 text-blue-700" : "bg-orange-50 text-orange-700"}`}>
-                            {b.job_type}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-3 py-2.5 text-slate-600 whitespace-nowrap">{b.customer_code || "—"}</td>
-                      <td className="px-3 py-2.5 text-slate-600 whitespace-nowrap">{b.vendor_code || "—"}</td>
+                      <td className="px-3 py-2.5 text-slate-600 whitespace-nowrap">{b.container_size || "—"}</td>
+                      <td className="px-3 py-2.5 text-slate-600 whitespace-nowrap">{b.container_size_code || "—"}</td>
                       <td className="px-3 py-2.5 font-mono text-slate-800 whitespace-nowrap">{b.container_no || "—"}</td>
-                      <td className="px-3 py-2.5 text-slate-600 whitespace-nowrap">
-                        {b.container_size || "—"}
-                        {b.container_size_code && <span className="text-slate-400 ml-1">{b.container_size_code}</span>}
-                      </td>
+                      <td className="px-3 py-2.5 font-mono text-slate-600 whitespace-nowrap">{b.seal_no || "—"}</td>
+                      <td className="px-3 py-2.5 text-slate-600 whitespace-nowrap">{b.tare_weight ? `${b.tare_weight} kg` : "—"}</td>
                       <td className="px-3 py-2.5 whitespace-nowrap">
                         <button 
                           type="button"
@@ -700,6 +692,7 @@ export default function BookingsPage() {
                           {b.driver_name || "—"}
                         </button>
                       </td>
+                      <td className="px-3 py-2.5 text-slate-600 whitespace-nowrap">{b.driver_phone || "—"}</td>
                       <td className="px-3 py-2.5 font-mono text-slate-700 whitespace-nowrap">{b.truck_plate || "—"}</td>
                       <td className="px-3 py-2.5 whitespace-nowrap">
                         {currentStepIdx === -1 ? (
