@@ -652,6 +652,7 @@ export default function BookingsPage() {
             <table className="w-full text-xs">
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
+                  <th className="px-3 py-2.5 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Date</th>
                   <th className="px-3 py-2.5 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Booking No.</th>
                   <th className="px-3 py-2.5 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Job</th>
                   <th className="px-3 py-2.5 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Customer</th>
@@ -674,6 +675,7 @@ export default function BookingsPage() {
                   
                   return (
                     <tr key={b._id} className="hover:bg-slate-50/80 transition-colors cursor-pointer" onClick={() => openProcessEdit(b, currentStepIdx === -1 ? 4 : currentStepIdx)}>
+                      <td className="px-3 py-2.5 text-slate-500 whitespace-nowrap">{b.booking_date ? toShortDate(b.booking_date) : "—"}</td>
                       <td className="px-3 py-2.5 font-mono font-bold text-violet-700 whitespace-nowrap">{b.booking_no}</td>
                       <td className="px-3 py-2.5 whitespace-nowrap">
                         {b.job_type && (
