@@ -195,6 +195,14 @@ const toShortDate = (iso: string | undefined) => {
   return `${d.getDate().toString().padStart(2, "0")}/${(d.getMonth() + 1).toString().padStart(2, "0")}`;
 };
 
+// ── Short datetime formatter (dd/MM hh:mm) ─────────────────────────────────
+const toShortDateTime = (iso: string | undefined) => {
+  if (!iso) return "\u2014";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  return `${d.getDate().toString().padStart(2, "0")}/${(d.getMonth() + 1).toString().padStart(2, "0")} ${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
+};
+
 // ── BookingForm interface ────────────────────────────────────────────────────
 interface BookingForm {
   booking_date: string;
@@ -662,6 +670,7 @@ export default function BookingsPage() {
                   <th className="px-3 py-2.5 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Driver</th>
                   <th className="px-3 py-2.5 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Mobile</th>
                   <th className="px-3 py-2.5 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Truck</th>
+                  <th className="px-3 py-2.5 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Est. Pickup</th>
                   <th className="px-3 py-2.5 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Status</th>
                   <th className="px-3 py-2.5 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Actions</th>
                 </tr>
@@ -694,6 +703,7 @@ export default function BookingsPage() {
                       </td>
                       <td className="px-3 py-2.5 text-slate-600 whitespace-nowrap">{b.driver_phone || "—"}</td>
                       <td className="px-3 py-2.5 font-mono text-slate-700 whitespace-nowrap">{b.truck_plate || "—"}</td>
+                      <td className="px-3 py-2.5 text-slate-500 whitespace-nowrap">{b.plan_pickup_date ? toShortDateTime(b.plan_pickup_date) : "—"}</td>
                       <td className="px-3 py-2.5 whitespace-nowrap">
                         {currentStepIdx === -1 ? (
                           <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-700">Done</span>
