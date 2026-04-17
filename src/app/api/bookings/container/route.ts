@@ -201,9 +201,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(response, { status: 200 });
   } catch (error) {
     console.error("Error updating booking container:", error);
+    const message =
+      error instanceof Error ? error.message : "Internal server error";
+    const status = message.includes("MONGODB_URI") ? 503 : 500;
     return NextResponse.json(
-      { detail: "Internal server error" },
-      { status: 500 }
+      { detail: message },
+      { status }
     );
   }
 }
