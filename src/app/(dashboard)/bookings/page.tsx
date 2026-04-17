@@ -214,6 +214,7 @@ interface BookingForm {
   driver_name: string;
   driver_phone: string;
   plan_pickup_date: string;
+  eta: string;
   container_no: string;
   container_size: string;
   container_size_code: string;
@@ -237,7 +238,7 @@ interface BookingForm {
 
 const EMPTY_FORM: BookingForm = {
   booking_date: "", booking_no: "", job_type: "Export", customer_code: "", vendor_code: "",
-  truck_plate: "", driver_name: "", driver_phone: "", plan_pickup_date: "",
+  truck_plate: "", driver_name: "", driver_phone: "", plan_pickup_date: "", eta: "",
   container_no: "", container_size: "", container_size_code: "",
   tare_weight: "", seal_no: "", eir_image_url: "", container_image_url: "",
   loading_status: "pending", plan_loading_date: "", pending_at: "", loading_at: "", loaded_at: "",
@@ -258,6 +259,8 @@ export default function BookingsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [processModalOpen, setProcessModalOpen] = useState(false);
   const [processStep, setProcessStep] = useState<number>(0);
@@ -339,13 +342,29 @@ export default function BookingsPage() {
     setError("");
     try {
       const res = await listRecords<Booking>("bookings", search ? { booking_no: search } : {});
-      setRecords(res.records);
+      let records = res.records;
+      
+      // Filter by date range (booking_date)
+      if (dateFrom || dateTo) {
+        const fromStr = dateFrom ? new Date(dateFrom).toISOString().split("T")[0] : null;
+        const toStr = dateTo ? new Date(dateTo + "T23:59:59").toISOString().split("T")[0] : null;
+        
+        records = records.filter((b) => {
+          if (!b.booking_date) return false;
+          const bookingDateStr = b.booking_date.split("T")[0];
+          if (fromStr && bookingDateStr < fromStr) return false;
+          if (toStr && bookingDateStr > toStr) return false;
+          return true;
+        });
+      }
+      
+      setRecords(records);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to load bookings");
     } finally {
       setLoading(false);
     }
-  }, [search]);
+  }, [search, dateFrom, dateTo]);
 
   const loadDropdowns = useCallback(async () => {
     try {
@@ -407,6 +426,7 @@ export default function BookingsPage() {
       driver_name: b.driver_name ?? "",
       driver_phone: b.driver_phone ?? "",
       plan_pickup_date: b.plan_pickup_date ?? "",
+      eta: b.eta ?? "",
       container_no: b.container_no ?? "",
       container_size: b.container_size ?? "",
       container_size_code: b.container_size_code ?? "",
@@ -565,10 +585,12 @@ export default function BookingsPage() {
       case 2:
         return (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <FormField label="Plan Pickup">
-              <Input type="date" value={form.plan_pickup_date} onChange={set("plan_pickup_date")} />
+            <FormField label="Est. Pickup (วัน-เวลา)">
+              <Input type="datetime-local" value={form.plan_pickup_date} onChange={set("plan_pickup_date")} />
             </FormField>
-            <div />
+            <FormField label="ETA ถึงปลายทาง">
+              <Input type="datetime-local" value={form.eta} onChange={set("eta")} />
+            </FormField>
             <FormField
               label="Container No."
               hint={containerNoMessage(form.container_no) ?? (form.container_no.length === 11 ? "ISO 6346 valid" : undefined)}
@@ -640,10 +662,48 @@ export default function BookingsPage() {
   return (
     <div>
       <PageHeader title="Bookings" subtitle="จัดการ Booking" onAdd={openCreate}>
-        <div className="relative">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="ค้นหา Booking No…"
-            className="pl-8 pr-3 py-1.5 text-xs border border-[var(--border)] rounded-lg shadow-sm hover:shadow-md transition-shadow focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64" />
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search Booking No…"
+              className="pl-8 pr-3 py-1.5 text-xs border border-[var(--border)] rounded-lg shadow-sm hover:shadow-md transition-shadow focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-48" />
+          </div>
+          <div className="flex items-center gap-1">
+            <button onClick={() => { 
+                const d = new Date(dateFrom || new Date().toISOString().split('T')[0]); 
+                d.setDate(d.getDate() - 1);
+                const newDate = d.toISOString().split('T')[0];
+                setDateFrom(newDate);
+                setDateTo(newDate);
+              }}
+              className="px-3 py-1.5 text-xs border border-[var(--border)] rounded-lg hover:bg-slate-50 transition-colors">
+              &lt;
+            </button>
+            <button onClick={() => { 
+                const today = new Date().toISOString().split('T')[0];
+                setDateFrom(today);
+                setDateTo(today);
+              }}
+              className="px-3 py-1.5 text-xs border border-[var(--border)] rounded-lg hover:bg-slate-50 transition-colors font-medium">
+              Today
+            </button>
+            <button onClick={() => { 
+                const d = new Date(dateFrom || new Date().toISOString().split('T')[0]); 
+                d.setDate(d.getDate() + 1);
+                const newDate = d.toISOString().split('T')[0];
+                setDateFrom(newDate);
+                setDateTo(newDate);
+              }}
+              className="px-3 py-1.5 text-xs border border-[var(--border)] rounded-lg hover:bg-slate-50 transition-colors">
+              &gt;
+            </button>
+            {(dateFrom || dateTo) && (
+              <button onClick={() => { setDateFrom(""); setDateTo(""); }}
+                className="px-3 py-1.5 text-xs text-red-500 border border-red-200 rounded-lg hover:bg-red-50 transition-colors">
+                Clear
+              </button>
+            )}
+          </div>
         </div>
       </PageHeader>
 
@@ -656,23 +716,18 @@ export default function BookingsPage() {
         ) : records.length === 0 ? (
           <div className="px-5 py-10 text-center text-[var(--muted)]">ยังไม่มี Booking กด Add New เพื่อสร้าง</div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto max-h-[calc(100vh-180px)] overflow-y-auto">
             <table className="w-full text-xs">
-              <thead className="bg-slate-50 border-b border-slate-200">
+              <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
                 <tr>
-                  <th className="px-3 py-2.5 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Date</th>
-                  <th className="px-3 py-2.5 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Booking No.</th>
-                  <th className="px-3 py-2.5 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Size</th>
-                  <th className="px-3 py-2.5 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Code</th>
-                  <th className="px-3 py-2.5 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Container No.</th>
-                  <th className="px-3 py-2.5 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Seal No.</th>
-                  <th className="px-3 py-2.5 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Tare</th>
-                  <th className="px-3 py-2.5 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Driver</th>
-                  <th className="px-3 py-2.5 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Mobile</th>
-                  <th className="px-3 py-2.5 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Truck</th>
-                  <th className="px-3 py-2.5 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Est. Pickup</th>
-                  <th className="px-3 py-2.5 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Status</th>
-                  <th className="px-3 py-2.5 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Actions</th>
+                  <th className="px-2 py-2 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap text-[10px]">Date</th>
+                  <th className="px-2 py-2 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap text-[10px]">Booking No.</th>
+                  <th className="px-2 py-2 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap text-[10px]">Est. Pickup</th>
+                  <th className="px-2 py-2 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap text-[10px]">ETA</th>
+                  <th className="px-2 py-2 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap text-[10px]">Container No.</th>
+                  <th className="px-2 py-2 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap text-[10px]">Seal No.</th>
+                  <th className="px-2 py-2 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap text-[10px]">Truck / Driver</th>
+                  <th className="px-2 py-2 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap text-[10px]">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -684,54 +739,39 @@ export default function BookingsPage() {
                   const loadBadge = currentStepIdx === 3 && loadSt ? LOADING_SUB[loadSt] : null;
                   
                   return (
-                    <tr key={b._id} className="hover:bg-slate-50/80 transition-colors cursor-pointer" onClick={() => openProcessEdit(b, currentStepIdx === -1 ? 4 : currentStepIdx)}>
-                      <td className="px-3 py-2.5 text-slate-500 whitespace-nowrap">{b.booking_date ? toShortDate(b.booking_date) : "—"}</td>
-                      <td className="px-3 py-2.5 font-mono font-bold text-violet-700 whitespace-nowrap">{b.booking_no}</td>
-                      <td className="px-3 py-2.5 text-slate-600 whitespace-nowrap">{b.container_size || "—"}</td>
-                      <td className="px-3 py-2.5 text-slate-600 whitespace-nowrap">{b.container_size_code || "—"}</td>
-                      <td className="px-3 py-2.5 font-mono text-slate-800 whitespace-nowrap">{b.container_no || "—"}</td>
-                      <td className="px-3 py-2.5 font-mono text-slate-600 whitespace-nowrap">{b.seal_no || "—"}</td>
-                      <td className="px-3 py-2.5 text-slate-600 whitespace-nowrap">{b.tare_weight ? `${b.tare_weight} kg` : "—"}</td>
-                      <td className="px-3 py-2.5 whitespace-nowrap">
-                        <button 
-                          type="button"
-                          onClick={(e) => { e.stopPropagation(); setDriverProfileTarget({ name: b.driver_name, phone: b.driver_phone }); }}
-                          className="text-slate-700 hover:text-blue-600 font-medium transition-colors"
-                        >
-                          {b.driver_name || "—"}
-                        </button>
+                    <tr key={b._id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="px-2 py-1.5 text-slate-500 whitespace-nowrap text-[11px]">{b.booking_date ? toShortDate(b.booking_date) : "—"}</td>
+                      <td className="px-2 py-1.5 font-mono font-bold text-violet-700 whitespace-nowrap text-[11px]">{b.booking_no}</td>
+                      <td className="px-2 py-1.5 text-slate-500 whitespace-nowrap text-[11px]">{b.plan_pickup_date ? toShortDateTime(b.plan_pickup_date) : "—"}</td>
+                      <td className="px-2 py-1.5 text-slate-500 whitespace-nowrap text-[11px]">{b.eta ? toShortDateTime(b.eta) : "—"}</td>
+                      <td className="px-2 py-1.5">
+                        <div className="font-mono font-bold text-slate-800 text-[11px]">{b.container_no || "—"}</div>
+                        <div className="text-[9px] text-slate-400 leading-tight">
+                          {b.container_size || "—"} {b.container_size_code ? `/ ${b.container_size_code}` : ""} · {b.tare_weight ? `${b.tare_weight} kg` : "ไม่มี tare"}
+                        </div>
                       </td>
-                      <td className="px-3 py-2.5 text-slate-600 whitespace-nowrap">{b.driver_phone || "—"}</td>
-                      <td className="px-3 py-2.5 font-mono text-slate-700 whitespace-nowrap">{b.truck_plate || "—"}</td>
-                      <td className="px-3 py-2.5 text-slate-500 whitespace-nowrap">{b.plan_pickup_date ? toShortDateTime(b.plan_pickup_date) : "—"}</td>
-                      <td className="px-3 py-2.5 whitespace-nowrap">
-                        {currentStepIdx === -1 ? (
-                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-700">Done</span>
-                        ) : loadBadge ? (
-                          <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold border ${loadSt === "pending" ? "bg-slate-50 text-slate-500 border-slate-200" : loadBadge.badge}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${loadSt === "pending" ? "bg-amber-400" : loadBadge.dot} ${loadSt === "loading" ? "animate-pulse" : ""}`} />
-                            {loadBadge.label}
-                          </span>
-                        ) : (
-                          <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${currentStepIdx >= 3 ? "bg-blue-50 text-blue-600 border border-blue-100" : currentStepIdx >= 2 ? "bg-blue-100 text-blue-700 shadow-sm" : "bg-slate-100 text-slate-500"}`}>{currentStepName}</span>
-                        )}
-                        {b.gcl_received && (
-                          <span className="ml-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-green-100 text-green-700">GCL ✓</span>
-                        )}
-                      </td>
-                      <td className="px-3 py-2.5 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center gap-1">
-                          <button onClick={() => copyPickupInfo(b)}
-                            className={`p-1 rounded hover:bg-slate-100 transition-colors ${copiedId === b._id ? "text-green-600" : "text-slate-400 hover:text-blue-600"}`}
-                            title="Copy ข้อมูล">
-                            {copiedId === b._id ? <Check size={13} /> : <Copy size={13} />}
+                      <td className="px-2 py-1.5 font-mono text-slate-600 whitespace-nowrap text-[11px]">{b.seal_no || "—"}</td>
+                      <td className="px-2 py-1.5">
+                        <div className="font-mono font-bold text-slate-800 text-[11px]">{b.truck_plate || "—"}</div>
+                        <div className="flex items-center gap-1 leading-tight">
+                          <button 
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); setDriverProfileTarget({ name: b.driver_name, phone: b.driver_phone }); }}
+                            className="text-slate-600 hover:text-blue-600 text-[10px] transition-colors"
+                          >
+                            {b.driver_name || "—"}
                           </button>
+                          {b.driver_phone && <span className="text-slate-400 text-[9px]">{b.driver_phone}</span>}
+                        </div>
+                      </td>
+                      <td className="px-2 py-1.5 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center gap-1">
                           {b.truck_plate && (() => {
                             const hasGps = vendors.find(v => v.code === b.vendor_code)?.trucks?.some(t => t.plate === b.truck_plate && t.gps_id);
                             if (hasGps) return (
                               <button type="button" onClick={() => openLocationInGoogleMaps(b.vendor_code, b.truck_plate)}
                                 disabled={openingGps === b.truck_plate}
-                                className="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-blue-600 transition-colors" title="ดูพิกัด GPS">
+                                className="p-1 rounded text-slate-400 hover:text-blue-600 transition-colors" title="ดูพิกัด GPS">
                                 {openingGps === b.truck_plate ? <Loader2 size={13} className="animate-spin" /> : <MapPin size={13} />}
                               </button>
                             );
@@ -739,14 +779,20 @@ export default function BookingsPage() {
                           })()}
                           {b.eir_image_url && (
                             <button type="button" onClick={() => openImageModal(toProxyUrl(b.eir_image_url), "EIR — " + b.booking_no, b)}
-                              className="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-blue-600 transition-colors" title="ดูรูป EIR">📄</button>
+                              className="p-1 rounded text-slate-400 hover:text-blue-600 transition-colors" title="ดูรูป EIR">📄</button>
                           )}
                           {b.container_image_url && (
                             <button type="button" onClick={() => openImageModal(toProxyUrl(b.container_image_url), "Container — " + b.booking_no, b)}
-                              className="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-blue-600 transition-colors" title="ดูรูป Container">📦</button>
+                              className="p-1 rounded text-slate-400 hover:text-blue-600 transition-colors" title="ดูรูป Container">📦</button>
                           )}
-                          <button onClick={() => openEdit(b)} className="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-blue-600 transition-colors" title="แก้ไข"><Pencil size={13} /></button>
-                          <button onClick={() => setDeleteTarget(b)} className="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-red-600 transition-colors" title="ลบ"><Trash2 size={13} /></button>
+                          <button onClick={() => openEdit(b)}
+                            className="p-1 rounded text-slate-400 hover:text-blue-600 transition-colors" title="แก้ไข">
+                            <Pencil size={13} />
+                          </button>
+                          <button onClick={() => setDeleteTarget(b)}
+                            className="p-1 rounded text-slate-400 hover:text-red-600 transition-colors" title="ลบ">
+                            <Trash2 size={13} />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -843,8 +889,11 @@ export default function BookingsPage() {
           {/* ── Pickup + Return side-by-side ── */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <Section title="Pickup รับตู้" icon="🚛" defaultOpen={!editing}>
-              <FormField label="Plan Pickup">
-                <Input type="date" value={form.plan_pickup_date} onChange={set("plan_pickup_date")} />
+              <FormField label="Est. Pickup (วัน-เวลา)">
+                <Input type="datetime-local" value={form.plan_pickup_date} onChange={set("plan_pickup_date")} />
+              </FormField>
+              <FormField label="ETA ถึงปลายทาง">
+                <Input type="datetime-local" value={form.eta} onChange={set("eta")} />
               </FormField>
               <FormField label="ทะเบียนรถ">
                 <Select value={form.truck_plate} onChange={set("truck_plate")}

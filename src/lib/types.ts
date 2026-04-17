@@ -59,6 +59,7 @@ export interface Booking {
   driver_name: string;
   driver_phone: string;
   plan_pickup_date: string;
+  eta: string;
   container_no: string;
   container_size: string;
   container_size_code: string;

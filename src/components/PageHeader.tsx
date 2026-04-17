@@ -11,7 +11,7 @@ interface PageHeaderProps {
 
 export default function PageHeader({ title, subtitle, onAdd, addLabel = "Add New", children }: PageHeaderProps) {
   return (
-    <div className="flex items-center justify-between gap-3 mb-5">
+    <div className="flex flex-wrap items-start justify-between gap-3 mb-5">
       <div className="min-w-0">
         <h1 className="text-lg font-bold text-[var(--foreground)] truncate">{title}</h1>
         {subtitle && <p className="text-xs text-[var(--muted)] mt-0.5 truncate">{subtitle}</p>}
