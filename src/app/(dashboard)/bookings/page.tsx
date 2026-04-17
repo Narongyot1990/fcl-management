@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
-import { Pencil, Trash2, Search, Copy, Check, ZoomIn, X, MapPin, Loader2, Phone } from "lucide-react";
+import { Pencil, Trash2, Search, ChevronDown, ChevronUp, Copy, Check, ZoomIn, X, MapPin, Loader2, Phone } from "lucide-react";
 import dynamic from "next/dynamic";
 const DriverProfile = dynamic(() => import("@/components/DriverProfile"), { ssr: false });
 import ImageUpload from "@/components/ImageUpload";

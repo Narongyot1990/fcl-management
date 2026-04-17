@@ -52,8 +52,8 @@ export function Select({ options, placeholder, className, ...props }: SelectProp
           {placeholder}
         </option>
       )}
-      {options.map((o) => (
-        <option key={o.value} value={o.value}>
+      {options.map((o, i) => (
+        <option key={`${o.value}-${i}`} value={o.value}>
           {o.label}
         </option>
       ))}
