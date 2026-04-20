@@ -51,9 +51,9 @@ const STEPS = ["Booking", "Assign", "Pickup", "Loading", "Return"];
 const STEP_MODAL_TITLES = ["Booking", "Assign Truck", "Pickup", "Loading", "Return"] as const;
 
 const LOADING_SUB: Record<string, { label: string; dot: string; badge: string; color: string }> = {
-  pending:  { label: "รอโหลด",       dot: "border-2 border-amber-400 bg-white", badge: "bg-slate-50 text-slate-600 border-slate-200", color: "text-amber-600" },
-  loading:  { label: "กำลังโหลด",    dot: "bg-blue-500",    badge: "bg-blue-50 text-blue-700 border-blue-200", color: "text-blue-600" },
-  loaded:   { label: "โหลดเสร็จแล้ว", dot: "bg-emerald-500", badge: "bg-emerald-50 text-emerald-700 border-emerald-200", color: "text-emerald-700" },
+  pending:  { label: "Pending",       dot: "border-2 border-amber-400 bg-white", badge: "bg-slate-50 text-slate-600 border-slate-200", color: "text-amber-600" },
+  loading:  { label: "Loading",    dot: "bg-blue-500",    badge: "bg-blue-50 text-blue-700 border-blue-200", color: "text-blue-600" },
+  loaded:   { label: "Loaded", dot: "bg-emerald-500", badge: "bg-emerald-50 text-emerald-700 border-emerald-200", color: "text-emerald-700" },
 };
 
 function getStepStatuses(b: Booking): boolean[] {
@@ -291,7 +291,7 @@ export default function BookingsPage() {
     // Find the vendor
     const vendor = vendors.find(v => v.code === vendorCode);
     if (!vendor) {
-      alert("ไม่พบข้อมูล Vendor สำหรับรายการนี้");
+      alert("Vendor data not found for this booking");
       return;
     }
 
@@ -301,7 +301,7 @@ export default function BookingsPage() {
     const gpsId = truck?.gps_id;
 
     if (!gpsId) {
-      alert("รถคันนี้ยังไม่ได้ตั้งค่า GPS ID ในระบบ Vendor");
+      alert("This truck does not have a GPS ID set in the Vendor system");
       return;
     }
 
@@ -328,7 +328,7 @@ export default function BookingsPage() {
       }
 
     } catch (err: any) {
-      alert(err.message || "เกิดข้อผิดพลาดในการดึงข้อมูลพิกัด GPS");
+      alert(err.message || "Error fetching GPS location");
     } finally {
       setOpeningGps(null);
     }
@@ -674,13 +674,17 @@ export default function BookingsPage() {
 
   return (
     <div>
-      <PageHeader title="Bookings" subtitle="จัดการ Booking" onAdd={openCreate}>
+      <PageHeader title="Bookings" subtitle="Manage Bookings" onAdd={openCreate}>
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
             <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search Booking No…"
               className="pl-8 pr-3 py-1.5 text-xs border border-[var(--border)] rounded-lg shadow-sm hover:shadow-md transition-shadow focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-48" />
           </div>
+          <button onClick={() => setShowNoContainer(!showNoContainer)}
+            className={`px-3 py-1.5 text-xs border rounded-lg transition-colors ${showNoContainer ? "bg-orange-100 border-orange-300 text-orange-700" : "border-[var(--border)] hover:bg-slate-50 text-slate-500"}`}>
+            No Container
+          </button>
           <div className="flex items-center gap-1">
             <button onClick={() => { 
                 const d = new Date(dateFrom || new Date().toISOString().split('T')[0]); 
@@ -716,10 +720,6 @@ export default function BookingsPage() {
                 Clear
               </button>
             )}
-            <button onClick={() => setShowNoContainer(!showNoContainer)}
-              className={`px-3 py-1.5 text-xs border rounded-lg transition-colors ${showNoContainer ? "bg-orange-100 border-orange-300 text-orange-700" : "border-[var(--border)] hover:bg-slate-50 text-slate-500"}`}>
-              ตู้ไม่มี
-            </button>
           </div>
         </div>
       </PageHeader>
@@ -731,7 +731,7 @@ export default function BookingsPage() {
         {loading ? (
           <div className="px-5 py-10 text-center text-[var(--muted)]">Loading…</div>
         ) : records.length === 0 ? (
-          <div className="px-5 py-10 text-center text-[var(--muted)]">ยังไม่มี Booking กด Add New เพื่อสร้าง</div>
+          <div className="px-5 py-10 text-center text-[var(--muted)]">No bookings yet. Click Add New to create one.</div>
         ) : (
           <div className="overflow-x-auto max-h-[calc(100vh-180px)] overflow-y-auto">
             <table className="w-full text-xs">
@@ -764,7 +764,7 @@ export default function BookingsPage() {
                       <td className="px-2 py-1.5">
                         <div className="font-mono font-bold text-slate-800 text-[11px]">{b.container_no || "—"}</div>
                         <div className="text-[9px] text-slate-400 leading-tight">
-                          {b.container_size || "—"} {b.container_size_code ? `/ ${b.container_size_code}` : ""} · {b.tare_weight ? `${b.tare_weight} kg` : "ไม่มี tare"}
+                          {b.container_size || "—"} {b.container_size_code ? `/ ${b.container_size_code}` : ""} · {b.tare_weight ? `${b.tare_weight} kg` : "no tare"}
                         </div>
                       </td>
                       <td className="px-2 py-1.5 font-mono text-slate-600 whitespace-nowrap text-[11px]">{b.seal_no || "—"}</td>
@@ -785,7 +785,7 @@ export default function BookingsPage() {
                         <div className="flex items-center gap-1">
                           <button onClick={() => copyPickupInfo(b)}
                             className={`p-1 rounded transition-colors ${copiedId === b._id ? "text-green-600" : "text-slate-400 hover:text-blue-600"}`}
-                            title="Copy ข้อมูล">
+                            title="Copy info">
                             {copiedId === b._id ? <Check size={13} /> : <Copy size={13} />}
                           </button>
                           {b.truck_plate && (() => {
@@ -793,7 +793,7 @@ export default function BookingsPage() {
                             if (hasGps) return (
                               <button type="button" onClick={() => openLocationInGoogleMaps(b.vendor_code, b.truck_plate)}
                                 disabled={openingGps === b.truck_plate}
-                                className="p-1 rounded text-slate-400 hover:text-blue-600 transition-colors" title="ดูพิกัด GPS">
+                                className="p-1 rounded text-slate-400 hover:text-blue-600 transition-colors" title="View GPS location">
                                 {openingGps === b.truck_plate ? <Loader2 size={13} className="animate-spin" /> : <MapPin size={13} />}
                               </button>
                             );
@@ -801,18 +801,18 @@ export default function BookingsPage() {
                           })()}
                           {b.eir_image_url && (
                             <button type="button" onClick={() => openImageModal(toProxyUrl(b.eir_image_url), "EIR — " + b.booking_no, b)}
-                              className="p-1 rounded text-slate-400 hover:text-blue-600 transition-colors" title="ดูรูป EIR">📄</button>
+                              className="p-1 rounded text-slate-400 hover:text-blue-600 transition-colors" title="View EIR image">📄</button>
                           )}
                           {b.container_image_url && (
                             <button type="button" onClick={() => openImageModal(toProxyUrl(b.container_image_url), "Container — " + b.booking_no, b)}
-                              className="p-1 rounded text-slate-400 hover:text-blue-600 transition-colors" title="ดูรูป Container">📦</button>
+                              className="p-1 rounded text-slate-400 hover:text-blue-600 transition-colors" title="View Container image">📦</button>
                           )}
                           <button onClick={() => openEdit(b)}
-                            className="p-1 rounded text-slate-400 hover:text-blue-600 transition-colors" title="แก้ไข">
+                            className="p-1 rounded text-slate-400 hover:text-blue-600 transition-colors" title="Edit">
                             <Pencil size={13} />
                           </button>
                           <button onClick={() => setDeleteTarget(b)}
-                            className="p-1 rounded text-slate-400 hover:text-red-600 transition-colors" title="ลบ">
+                            className="p-1 rounded text-slate-400 hover:text-red-600 transition-colors" title="Delete">
                             <Trash2 size={13} />
                           </button>
                         </div>
@@ -827,7 +827,7 @@ export default function BookingsPage() {
       </div>
 
       {/* ── Modal Form ── */}
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? "แก้ไข Booking" : "สร้าง Booking ใหม่"} size="xl">
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? "Edit Booking" : "Create New Booking"} size="xl">
         <form onSubmit={handleSave} className="flex flex-col gap-3">
 
           {/* ── Booking Info ── */}
@@ -949,8 +949,8 @@ export default function BookingsPage() {
                 <FormField label="คืนตู้จริง">
                   <Input type="datetime-local" value={form.return_date} onChange={set("return_date")} />
                 </FormField>
-                <Toggle checked={form.gcl_received} onChange={(v) => setForm((f) => ({ ...f, gcl_received: v }))} label="ได้รับ GCL แล้ว" />
-                <Toggle checked={form.return_completed} onChange={(v) => setForm((f) => ({ ...f, return_completed: v }))} label="คืนตู้เรียบร้อย" />
+                <Toggle checked={form.gcl_received} onChange={(v) => setForm((f) => ({ ...f, gcl_received: v }))} label="GCL received" />
+                <Toggle checked={form.return_completed} onChange={(v) => setForm((f) => ({ ...f, return_completed: v }))} label="Container returned" />
               </div>
             </Section>
           </div>
@@ -973,10 +973,10 @@ export default function BookingsPage() {
 
           <div className="flex gap-3 justify-end pt-2">
             <button type="button" onClick={() => setModalOpen(false)}
-              className="px-4 py-2 text-sm rounded-lg border border-[var(--border)] hover:bg-slate-50 transition-colors">ยกเลิก</button>
+              className="px-4 py-2 text-sm rounded-lg border border-[var(--border)] hover:bg-slate-50 transition-colors">Cancel</button>
             <button type="submit" disabled={saving}
               className="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50 font-medium">
-              {saving ? "กำลังบันทึก…" : editing ? "บันทึก" : "สร้าง Booking"}
+              {saving ? "Saving…" : editing ? "Save" : "Create Booking"}
             </button>
           </div>
         </form>
@@ -996,14 +996,14 @@ export default function BookingsPage() {
               onClick={() => setProcessModalOpen(false)}
               className="px-4 py-2 text-sm rounded-lg border border-[var(--border)] hover:bg-slate-50 transition-colors"
             >
-              ยกเลิก
+              Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
               className="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50 font-medium"
             >
-              {saving ? "กำลังบันทึก..." : "บันทึก Process"}
+              {saving ? "Saving..." : "Save Process"}
             </button>
           </div>
         </form>
@@ -1011,8 +1011,8 @@ export default function BookingsPage() {
 
       <ConfirmDialog
         open={!!deleteTarget}
-        title="ลบ Booking"
-        message={`ต้องการลบ booking "${deleteTarget?.booking_no}" ใช่หรือไม่?`}
+        title="Delete Booking"
+        message={`Are you sure you want to delete booking "${deleteTarget?.booking_no}"?`}
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
         loading={deleting}
@@ -1038,7 +1038,7 @@ export default function BookingsPage() {
                 className="px-3 py-1.5 rounded-lg bg-white/20 hover:bg-white/30 text-white text-xs font-medium transition-colors"
                 onClick={(e) => e.stopPropagation()}
               >
-                เปิดในแท็บใหม่
+                Open in new tab
               </a>
               <button
                 onClick={() => setImageModalOpen(false)}
@@ -1112,7 +1112,7 @@ export default function BookingsPage() {
       <Modal 
         open={!!driverProfileTarget} 
         onClose={() => setDriverProfileTarget(null)} 
-        title="ประวัติคนขับรถ" 
+        title="Driver History" 
         size="lg"
       >
         <div className="h-[500px]">
