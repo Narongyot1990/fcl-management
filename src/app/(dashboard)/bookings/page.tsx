@@ -261,6 +261,7 @@ export default function BookingsPage() {
   const [search, setSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [showNoContainer, setShowNoContainer] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [processModalOpen, setProcessModalOpen] = useState(false);
   const [processStep, setProcessStep] = useState<number>(0);
@@ -365,13 +366,18 @@ export default function BookingsPage() {
         });
       }
       
+      // Filter: show only bookings without container number
+      if (showNoContainer) {
+        records = records.filter((b) => !b.container_no);
+      }
+      
       setRecords(records);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to load bookings");
     } finally {
       setLoading(false);
     }
-  }, [search, dateFrom, dateTo]);
+  }, [search, dateFrom, dateTo, showNoContainer]);
 
   const loadDropdowns = useCallback(async () => {
     try {
@@ -710,6 +716,10 @@ export default function BookingsPage() {
                 Clear
               </button>
             )}
+            <button onClick={() => setShowNoContainer(!showNoContainer)}
+              className={`px-3 py-1.5 text-xs border rounded-lg transition-colors ${showNoContainer ? "bg-orange-100 border-orange-300 text-orange-700" : "border-[var(--border)] hover:bg-slate-50 text-slate-500"}`}>
+              ตู้ไม่มี
+            </button>
           </div>
         </div>
       </PageHeader>
