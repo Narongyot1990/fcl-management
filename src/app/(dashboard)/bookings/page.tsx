@@ -344,6 +344,13 @@ export default function BookingsPage() {
       const res = await listRecords<Booking>("bookings", search ? { booking_no: search } : {});
       let records = res.records;
       
+      // Sort by booking_date descending (newest first)
+      records.sort((a, b) => {
+        const dateA = a.booking_date ? new Date(a.booking_date).getTime() : 0;
+        const dateB = b.booking_date ? new Date(b.booking_date).getTime() : 0;
+        return dateB - dateA;
+      });
+      
       // Filter by date range (booking_date)
       if (dateFrom || dateTo) {
         const fromStr = dateFrom ? new Date(dateFrom).toISOString().split("T")[0] : null;
@@ -766,6 +773,11 @@ export default function BookingsPage() {
                       </td>
                       <td className="px-2 py-1.5 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center gap-1">
+                          <button onClick={() => copyPickupInfo(b)}
+                            className={`p-1 rounded transition-colors ${copiedId === b._id ? "text-green-600" : "text-slate-400 hover:text-blue-600"}`}
+                            title="Copy ข้อมูล">
+                            {copiedId === b._id ? <Check size={13} /> : <Copy size={13} />}
+                          </button>
                           {b.truck_plate && (() => {
                             const hasGps = vendors.find(v => v.code === b.vendor_code)?.trucks?.some(t => t.plate === b.truck_plate && t.gps_id);
                             if (hasGps) return (
