@@ -320,9 +320,9 @@ export default function BookingsPage() {
       }
 
       if (data.lat && data.lon) {
-        // Open Google Maps in a new tab
+        // Open Google Maps in a new tab - use window.location for better Safari compatibility
         const mapsUrl = `https://maps.google.com/?q=${data.lat},${data.lon}`;
-        window.open(mapsUrl, "_blank", "noopener,noreferrer");
+        window.open(mapsUrl, "_blank");
       } else {
         throw new Error("No coordinate data found");
       }

@@ -65,7 +65,7 @@ export default function VendorsPage() {
     try {
       const data = await fetchGpsRealtime(truck.gps_id);
       const mapsUrl = `https://maps.google.com/?q=${data.lat},${data.lon}`;
-      window.open(mapsUrl, "_blank", "noopener,noreferrer");
+      window.open(mapsUrl, "_blank");
     } catch (err: any) {
       alert(err.message || "เกิดข้อผิดพลาดในการดึงข้อมูลพิกัด GPS");
     } finally {
