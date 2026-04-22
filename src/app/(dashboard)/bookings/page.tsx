@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
-import { Pencil, Trash2, Search, ChevronDown, ChevronUp, Copy, Check, ZoomIn, X, MapPin, Loader2, Phone } from "lucide-react";
+import { Pencil, Trash2, Search, ChevronDown, ChevronUp, Copy, Check, ZoomIn, X, MapPin, Loader2, Phone, ExternalLink } from "lucide-react";
 import dynamic from "next/dynamic";
 const DriverProfile = dynamic(() => import("@/components/DriverProfile"), { ssr: false });
 import ImageUpload from "@/components/ImageUpload";
@@ -517,6 +517,9 @@ export default function BookingsPage() {
 
   // Copy booking pickup info to clipboard for email
   function copyPickupInfo(b: Booking) {
+    const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
+    const gpsUrl = b.truck_plate ? `${baseUrl}/gps/track/${encodeURIComponent(b.truck_plate)}` : "";
+    
     const text = [
       b.booking_no,
       b.container_size,
@@ -527,6 +530,7 @@ export default function BookingsPage() {
       b.driver_name,
       b.driver_phone,
       b.truck_plate,
+      gpsUrl ? `\nGPS Tracking: ${gpsUrl}` : "",
     ].join("\t");
     navigator.clipboard.writeText(text).then(() => {
       setCopiedId(b._id);
@@ -788,6 +792,12 @@ export default function BookingsPage() {
                             title="Copy info">
                             {copiedId === b._id ? <Check size={13} /> : <Copy size={13} />}
                           </button>
+                          {b.truck_plate && (
+                            <a href={`/gps/track/${encodeURIComponent(b.truck_plate)}`} target="_blank" rel="noopener noreferrer"
+                              className="p-1 rounded text-slate-400 hover:text-green-600 transition-colors" title="Open GPS Tracking URL">
+                              <ExternalLink size={13} />
+                            </a>
+                          )}
                           {b.truck_plate && (() => {
                             const hasGps = vendors.find(v => v.code === b.vendor_code)?.trucks?.some(t => t.plate === b.truck_plate && t.gps_id);
                             if (hasGps) return (
