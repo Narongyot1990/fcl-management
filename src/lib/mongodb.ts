@@ -38,7 +38,6 @@ export { ObjectId };
 
 export const DEDUP_KEYS: Record<string, string[]> = {
   vendors: ["code"],
-  containers: ["code"],
   bookings: ["booking_no"],
   customers: ["code"],
   users: ["username"],

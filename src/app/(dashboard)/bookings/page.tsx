@@ -277,6 +277,12 @@ export default function BookingsPage() {
   const [imageModalBooking, setImageModalBooking] = useState<Booking | null>(null);
   const [openingGps, setOpeningGps] = useState<string | null>(null);
   const [driverProfileTarget, setDriverProfileTarget] = useState<Driver | null>(null);
+  // Multi-booking mode
+  const [multiMode, setMultiMode] = useState(false);
+  const [multiText, setMultiText] = useState("");
+  const [multiParsed, setMultiParsed] = useState<string[]>([]);
+  const [multiDuplicateWarning, setMultiDuplicateWarning] = useState<string | null>(null);
+  const [multiChecking, setMultiChecking] = useState(false);
 
   function openImageModal(url: string, title: string, booking: Booking) {
     setImageModalUrl(url);
@@ -501,6 +507,107 @@ export default function BookingsPage() {
       setProcessModalOpen(false);
       load();
     } catch (e: unknown) { alert(e instanceof Error ? e.message : "Save failed"); }
+    finally { setSaving(false); }
+  }
+
+  // ── Multi-booking helpers ──────────────────────────────────────────────────
+  function parseMultiText(text: string): string[] {
+    return text.split(/[\n\r]+/).map((s) => s.trim()).filter(Boolean);
+  }
+
+  // Count duplicates within pasted list (how many times each value appears)
+  function countDupes(items: string[]): Map<string, number> {
+    const map = new Map<string, number>();
+    for (const item of items) {
+      map.set(item, (map.get(item) ?? 0) + 1);
+    }
+    return map;
+  }
+
+  async function handleMultiTextChange(text: string) {
+    setMultiText(text);
+    setMultiDuplicateWarning(null);
+    const items = parseMultiText(text);
+    setMultiParsed(items);
+    // Check for local duplicates (repeated in pasted list)
+    const dupeCounts = countDupes(items);
+    const localDupes = [...dupeCounts.entries()].filter(([, c]) => c > 1).map(([v]) => v);
+    if (localDupes.length > 0) {
+      setMultiDuplicateWarning(`Duplicate booking numbers in pasted list: ${localDupes.join(", ")} — will auto-suffix -1, -2, ...`);
+    }
+  }
+
+  async function handleMultiCheck() {
+    const items = parseMultiText(multiText);
+    if (items.length === 0) return;
+    setMultiChecking(true);
+    try {
+      // Only check DB for items that appear more than once in pasted list
+      const dupeCounts = countDupes(items);
+      const dupesToCheck = [...dupeCounts.entries()].filter(([, c]) => c > 1).map(([v]) => v);
+      if (dupesToCheck.length > 0) {
+        // Batch query: find all existing bookings with those numbers
+        const res = await listRecords<Booking>("bookings", {});
+        const existingMap = new Map<string, number>();
+        for (const b of res.records) {
+          const n = existingMap.get(b.booking_no) ?? 0;
+          existingMap.set(b.booking_no, n + 1);
+        }
+        for (const dup of dupesToCheck) {
+          const existingCount = existingMap.get(dup) ?? 0;
+          const suffixCount = dupeCounts.get(dup) ?? 0;
+          if (existingCount > 0) {
+            setMultiDuplicateWarning(
+              `"${dup}" has ${existingCount} existing booking(s) in DB. ` +
+              `Will create with suffix -${existingCount + 1} through -${existingCount + suffixCount}.`
+            );
+          }
+        }
+      }
+    } finally {
+      setMultiChecking(false);
+    }
+  }
+
+  async function handleMultiSave() {
+    const items = parseMultiText(multiText);
+    if (items.length === 0) { alert("No booking numbers to create"); return; }
+    // Determine suffix for each item
+    const dupeCounts = countDupes(items);
+    // Count existing in DB (batch fetch once)
+    const res = await listRecords<Booking>("bookings", {});
+    const existingCount = new Map<string, number>();
+    for (const b of res.records) {
+      existingCount.set(b.booking_no, (existingCount.get(b.booking_no) ?? 0) + 1);
+    }
+    // Build base form (excluding booking_no)
+    const baseForm = { ...form, booking_no: "" };
+    delete (baseForm as Record<string, unknown>).booking_no;
+    // Create records
+    setSaving(true);
+    try {
+      const created: string[] = [];
+      const seen = new Map<string, number>();
+      for (const rawNo of items) {
+        let suffixNum = existingCount.get(rawNo) ?? 0;
+        let finalNo = rawNo;
+        const count = dupeCounts.get(rawNo) ?? 1;
+        if (count > 1 || suffixNum > 0) {
+          suffixNum += 1;
+          finalNo = `${rawNo}-${suffixNum}`;
+          seen.set(rawNo, suffixNum);
+        } else {
+          finalNo = rawNo;
+        }
+        await createRecord<Booking>("bookings", { ...baseForm, booking_no: finalNo } as Record<string, unknown>);
+        const seenVal = seen.get(rawNo) ?? 0;
+        if (seenVal > 0) seen.set(rawNo, seenVal + 1);
+        created.push(finalNo);
+      }
+      alert(`Created ${created.length} booking(s): ${created.join(", ")}`);
+      setModalOpen(false);
+      load();
+    } catch (e: unknown) { alert(e instanceof Error ? e.message : "Multi-create failed"); }
     finally { setSaving(false); }
   }
 
@@ -838,155 +945,217 @@ export default function BookingsPage() {
 
       {/* ── Modal Form ── */}
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? "Edit Booking" : "Create New Booking"} size="xl">
-        <form onSubmit={handleSave} className="flex flex-col gap-3">
-
-          {/* ── Booking Info ── */}
-          <Section title="Booking" icon="📋" defaultOpen={!editing}>
-            <FormField label="วันที่จอง">
-              <Input type="date" value={form.booking_date} onChange={set("booking_date")} required />
-            </FormField>
-            <FormField label="Booking No.">
-              <Input value={form.booking_no} onChange={set("booking_no")} placeholder="BK-2024-001" required />
-            </FormField>
-            <FormField label="Job Type">
-              <Select value={form.job_type} onChange={set("job_type")} options={JOB_TYPE_OPTIONS} />
-            </FormField>
-            <FormField label="Customer">
-              <Select value={form.customer_code} onChange={set("customer_code")}
-                options={customers.map((c) => ({ value: c.code, label: `${c.code} — ${c.name}` }))}
-                placeholder="เลือก Customer…" />
-            </FormField>
-            <div className="col-span-2">
-              <FormField label="Vendor (ผู้ขนส่ง)">
-                <Select value={form.vendor_code} onChange={(e) => handleVendorChange(e.target.value)}
-                  options={vendors.map((v) => ({ value: v.code, label: `${v.code} — ${v.name}` }))} placeholder="เลือก Vendor…" />
-              </FormField>
-            </div>
-          </Section>
-
-          {/* ── Container ── */}
-          <Section title="Container" icon="📦" defaultOpen={!editing}>
-            <FormField
-              label="Container No."
-              hint={containerNoMessage(form.container_no) ?? (form.container_no.length === 11 ? "✓ ISO 6346 valid" : undefined)}
-              hintType={containerNoMessage(form.container_no) ? "error" : form.container_no.length === 11 ? "success" : "default"}
+        {!editing && (
+          <div className="mb-3 flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <span className="text-sm font-medium text-blue-700">Multi-Booking Mode</span>
+            <button
+              type="button"
+              onClick={() => { setMultiMode(!multiMode); setMultiText(""); setMultiParsed([]); setMultiDuplicateWarning(null); }}
+              className={`relative w-11 h-6 rounded-full transition-colors ${multiMode ? "bg-blue-600" : "bg-slate-300"}`}
             >
-              <Input
-                value={form.container_no}
-                onChange={set("container_no")}
-                placeholder="TCKU1234567"
-                className={containerNoMessage(form.container_no) ? "!border-red-400 focus:!ring-red-400" : form.container_no.length === 11 ? "!border-emerald-400 focus:!ring-emerald-400" : ""}
-              />
-            </FormField>
-            <FormField label="Seal No.">
-              <Input value={form.seal_no} onChange={set("seal_no")} placeholder="หมายเลขซีล" />
-            </FormField>
-            <FormField label="Size" hint="e.g. 40HC">
-              <Select value={form.container_size} onChange={(e) => handleSizeChange(e.target.value)}
-                options={sizeOptions} placeholder="เลือก Size…" />
-            </FormField>
-            <FormField label="ISO Code" hint="e.g. 45G1">
-              <Select value={form.container_size_code} onChange={(e) => handleCodeChange(e.target.value)}
-                options={codeOptions} placeholder="เลือก Code…" />
-            </FormField>
-            <FormField label="Tare (kg)">
-              <Input value={form.tare_weight} onChange={set("tare_weight")} placeholder="3800" />
-            </FormField>
-            <div />
-            {/* Images + AI */}
-            <div className="col-span-2 flex flex-col gap-3">
-              <div className="grid grid-cols-2 gap-3">
-                <ImageUpload label="รูป EIR" value={form.eir_image_url} type="eir"
-                  onChange={(url) => setForm((f) => ({ ...f, eir_image_url: url }))} />
-                <ImageUpload label="รูป Container" value={form.container_image_url} type="container"
-                  onChange={(url) => setForm((f) => ({ ...f, container_image_url: url }))} />
-              </div>
-              <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-slate-100">
-                <GeminiOcrButton
-                  containerImageUrl={form.container_image_url}
-                  eirImageUrl={form.eir_image_url}
-                  onResult={(r) => setForm((f) => ({
-                    ...f,
-                    ...(r.container_size_code ? { container_size_code: r.container_size_code } : {}),
-                    ...(r.tare_weight ? { tare_weight: r.tare_weight } : {}),
-                    ...(r.container_no ? { container_no: r.container_no } : {}),
-                    ...(r.seal_no ? { seal_no: r.seal_no } : {}),
-                  }))}
-                />
-                <p className="text-[10px] text-slate-400">AI อ่านจากรูปอัตโนมัติ (95%+ confidence)</p>
-              </div>
-            </div>
-          </Section>
-
-          {/* ── Pickup + Return side-by-side ── */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <Section title="Pickup รับตู้" icon="🚛" defaultOpen={!editing}>
-              <FormField label="Est. Pickup (วัน-เวลา)">
-                <Input type="datetime-local" value={form.plan_pickup_date} onChange={set("plan_pickup_date")} />
-              </FormField>
-              <FormField label="ETA ถึงปลายทาง">
-                <Input type="datetime-local" value={form.eta} onChange={set("eta")} />
-              </FormField>
-              <FormField label="ทะเบียนรถ">
-                <Select value={form.truck_plate} onChange={set("truck_plate")}
-                  options={truckPlateOptions} placeholder={selectedVendor ? "เลือกทะเบียน…" : "เลือก Vendor ก่อน"} disabled={!selectedVendor} />
-              </FormField>
-              <FormField label="คนขับ">
-                <Select value={form.driver_name} onChange={(e) => handleDriverChange(e.target.value)}
-                  options={driverOptions} placeholder={selectedVendor ? "เลือกคนขับ…" : "เลือก Vendor ก่อน"} disabled={!selectedVendor} />
-              </FormField>
-              <FormField label="เบอร์โทร">
-                <Input value={form.driver_phone} onChange={set("driver_phone")} placeholder="Auto-fill" readOnly />
-              </FormField>
-            </Section>
-
-            <Section title="Return คืนตู้" icon="🔄" defaultOpen={!editing}>
-              <FormField label="Plan Return">
-                <Input type="date" value={form.plan_return_date} onChange={set("plan_return_date")} />
-              </FormField>
-              <FormField label="ทะเบียนรถ">
-                <Select value={form.return_truck_plate} onChange={set("return_truck_plate")}
-                  options={truckPlateOptions} placeholder={selectedVendor ? "เลือกทะเบียน…" : "เลือก Vendor ก่อน"} disabled={!selectedVendor} />
-              </FormField>
-              <FormField label="คนขับ">
-                <Select value={form.return_driver_name} onChange={(e) => handleReturnDriverChange(e.target.value)}
-                  options={driverOptions} placeholder={selectedVendor ? "เลือกคนขับ…" : "เลือก Vendor ก่อน"} disabled={!selectedVendor} />
-              </FormField>
-              <FormField label="เบอร์โทร">
-                <Input value={form.return_driver_phone} onChange={set("return_driver_phone")} placeholder="Auto-fill" readOnly />
-              </FormField>
-              <div className="col-span-2 flex flex-col gap-2">
-                <FormField label="คืนตู้จริง">
-                  <Input type="datetime-local" value={form.return_date} onChange={set("return_date")} />
-                </FormField>
-                <Toggle checked={form.gcl_received} onChange={(v) => setForm((f) => ({ ...f, gcl_received: v }))} label="GCL received" />
-                <Toggle checked={form.return_completed} onChange={(v) => setForm((f) => ({ ...f, return_completed: v }))} label="Container returned" />
-              </div>
-            </Section>
+              <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${multiMode ? "translate-x-5" : ""}`} />
+            </button>
+            <span className="text-xs text-blue-600">{multiMode ? "ON — paste booking numbers below" : "OFF — single booking"}</span>
           </div>
+        )}
 
-          {/* ── Loading Status ── */}
-          <Section title="Loading Status" icon="📊" cols={2} defaultOpen={!editing}>
-            <FormField label="Plan Loading">
-              <Input type="date" value={form.plan_loading_date} onChange={set("plan_loading_date")} />
-            </FormField>
-            <FormField label="Pending เวลา">
-              <Input type="datetime-local" value={form.pending_at} onChange={set("pending_at")} />
-            </FormField>
-            <FormField label="Loading เวลา">
-              <Input type="datetime-local" value={form.loading_at} onChange={set("loading_at")} />
-            </FormField>
-            <FormField label="Loaded เวลา">
-              <Input type="datetime-local" value={form.loaded_at} onChange={set("loaded_at")} />
-            </FormField>
-          </Section>
+        <form onSubmit={multiMode && !editing ? (e) => { e.preventDefault(); handleMultiSave(); } : handleSave} className="flex flex-col gap-3">
+
+          {!multiMode || editing ? (
+            <>
+              {/* ── Booking Info ── */}
+              <Section title="Booking" icon="📋" defaultOpen={!editing}>
+                <FormField label="วันที่จอง">
+                  <Input type="date" value={form.booking_date} onChange={set("booking_date")} required />
+                </FormField>
+                <FormField label="Booking No.">
+                  <Input value={form.booking_no} onChange={set("booking_no")} placeholder="BK-2024-001" required={!multiMode || !!editing} />
+                </FormField>
+                <FormField label="Job Type">
+                  <Select value={form.job_type} onChange={set("job_type")} options={JOB_TYPE_OPTIONS} />
+                </FormField>
+                <FormField label="Customer">
+                  <Select value={form.customer_code} onChange={set("customer_code")}
+                    options={customers.map((c) => ({ value: c.code, label: `${c.code} — ${c.name}` }))}
+                    placeholder="เลือก Customer…" />
+                </FormField>
+                <div className="col-span-2">
+                  <FormField label="Vendor (ผู้ขนส่ง)">
+                    <Select value={form.vendor_code} onChange={(e) => handleVendorChange(e.target.value)}
+                      options={vendors.map((v) => ({ value: v.code, label: `${v.code} — ${v.name}` }))} placeholder="เลือก Vendor…" />
+                  </FormField>
+                </div>
+              </Section>
+
+              {/* ── Container ── */}
+              <Section title="Container" icon="📦" defaultOpen={false}>
+                <FormField label="Container No.">
+                  <Input value={form.container_no} onChange={set("container_no")} placeholder="TCKU1234567" />
+                </FormField>
+                <FormField label="Seal No.">
+                  <Input value={form.seal_no} onChange={set("seal_no")} placeholder="หมายเลขซีล" />
+                </FormField>
+                <FormField label="Size" hint="e.g. 40HC">
+                  <Select value={form.container_size} onChange={(e) => handleSizeChange(e.target.value)}
+                    options={sizeOptions} placeholder="เลือก Size…" />
+                </FormField>
+                <FormField label="ISO Code" hint="e.g. 45G1">
+                  <Select value={form.container_size_code} onChange={(e) => handleCodeChange(e.target.value)}
+                    options={codeOptions} placeholder="เลือก Code…" />
+                </FormField>
+                <FormField label="Tare (kg)">
+                  <Input value={form.tare_weight} onChange={set("tare_weight")} placeholder="3800" />
+                </FormField>
+                <div />
+                <div className="col-span-2 flex flex-col gap-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <ImageUpload label="รูป EIR" value={form.eir_image_url} type="eir"
+                      onChange={(url) => setForm((f) => ({ ...f, eir_image_url: url }))} />
+                    <ImageUpload label="รูป Container" value={form.container_image_url} type="container"
+                      onChange={(url) => setForm((f) => ({ ...f, container_image_url: url }))} />
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-slate-100">
+                    <GeminiOcrButton
+                      containerImageUrl={form.container_image_url}
+                      eirImageUrl={form.eir_image_url}
+                      onResult={(r) => setForm((f) => ({
+                        ...f,
+                        ...(r.container_size_code ? { container_size_code: r.container_size_code } : {}),
+                        ...(r.tare_weight ? { tare_weight: r.tare_weight } : {}),
+                        ...(r.container_no ? { container_no: r.container_no } : {}),
+                        ...(r.seal_no ? { seal_no: r.seal_no } : {}),
+                      }))}
+                    />
+                    <p className="text-[10px] text-slate-400">AI อ่านจากรูปอัตโนมัติ (95%+ confidence)</p>
+                  </div>
+                </div>
+              </Section>
+
+              {/* ── Pickup + Return side-by-side ── */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <Section title="Pickup รับตู้" icon="🚛" defaultOpen={false}>
+                  <FormField label="Est. Pickup (วัน-เวลา)">
+                    <Input type="datetime-local" value={form.plan_pickup_date} onChange={set("plan_pickup_date")} />
+                  </FormField>
+                  <FormField label="ETA ถึงปลายทาง">
+                    <Input type="datetime-local" value={form.eta} onChange={set("eta")} />
+                  </FormField>
+                  <FormField label="ทะเบียนรถ">
+                    <Select value={form.truck_plate} onChange={set("truck_plate")}
+                      options={truckPlateOptions} placeholder={selectedVendor ? "เลือกทะเบียน…" : "เลือก Vendor ก่อน"} disabled={!selectedVendor} />
+                  </FormField>
+                  <FormField label="คนขับ">
+                    <Select value={form.driver_name} onChange={(e) => handleDriverChange(e.target.value)}
+                      options={driverOptions} placeholder={selectedVendor ? "เลือกคนขับ…" : "เลือก Vendor ก่อน"} disabled={!selectedVendor} />
+                  </FormField>
+                  <FormField label="เบอร์โทร">
+                    <Input value={form.driver_phone} onChange={set("driver_phone")} placeholder="Auto-fill" readOnly />
+                  </FormField>
+                </Section>
+
+                <Section title="Return คืนตู้" icon="🔄" defaultOpen={false}>
+                  <FormField label="Plan Return">
+                    <Input type="date" value={form.plan_return_date} onChange={set("plan_return_date")} />
+                  </FormField>
+                  <FormField label="ทะเบียนรถ">
+                    <Select value={form.return_truck_plate} onChange={set("return_truck_plate")}
+                      options={truckPlateOptions} placeholder={selectedVendor ? "เลือกทะเบียน…" : "เลือก Vendor ก่อน"} disabled={!selectedVendor} />
+                  </FormField>
+                  <FormField label="คนขับ">
+                    <Select value={form.return_driver_name} onChange={(e) => handleReturnDriverChange(e.target.value)}
+                      options={driverOptions} placeholder={selectedVendor ? "เลือกคนขับ…" : "เลือก Vendor ก่อน"} disabled={!selectedVendor} />
+                  </FormField>
+                  <FormField label="เบอร์โทร">
+                    <Input value={form.return_driver_phone} onChange={set("return_driver_phone")} placeholder="Auto-fill" readOnly />
+                  </FormField>
+                  <div className="col-span-2 flex flex-col gap-2">
+                    <FormField label="คืนตู้จริง">
+                      <Input type="datetime-local" value={form.return_date} onChange={set("return_date")} />
+                    </FormField>
+                    <Toggle checked={form.gcl_received} onChange={(v) => setForm((f) => ({ ...f, gcl_received: v }))} label="GCL received" />
+                    <Toggle checked={form.return_completed} onChange={(v) => setForm((f) => ({ ...f, return_completed: v }))} label="Container returned" />
+                  </div>
+                </Section>
+              </div>
+
+              {/* ── Loading Status ── */}
+              <Section title="Loading Status" icon="📊" cols={2} defaultOpen={false}>
+                <FormField label="Plan Loading">
+                  <Input type="date" value={form.plan_loading_date} onChange={set("plan_loading_date")} />
+                </FormField>
+                <FormField label="Pending เวลา">
+                  <Input type="datetime-local" value={form.pending_at} onChange={set("pending_at")} />
+                </FormField>
+                <FormField label="Loading เวลา">
+                  <Input type="datetime-local" value={form.loading_at} onChange={set("loading_at")} />
+                </FormField>
+                <FormField label="Loaded เวลา">
+                  <Input type="datetime-local" value={form.loaded_at} onChange={set("loaded_at")} />
+                </FormField>
+              </Section>
+            </>
+          ) : (
+            <>
+              {/* ── Multi-booking: shared fields (collapsed by default) ── */}
+              <Section title="Shared Info (Booking, Customer, Vendor)" icon="📋" defaultOpen={true}>
+                <FormField label="วันที่จอง">
+                  <Input type="date" value={form.booking_date} onChange={set("booking_date")} required />
+                </FormField>
+                <FormField label="Job Type">
+                  <Select value={form.job_type} onChange={set("job_type")} options={JOB_TYPE_OPTIONS} />
+                </FormField>
+                <FormField label="Customer">
+                  <Select value={form.customer_code} onChange={set("customer_code")}
+                    options={customers.map((c) => ({ value: c.code, label: `${c.code} — ${c.name}` }))}
+                    placeholder="เลือก Customer…" />
+                </FormField>
+                <div className="col-span-2">
+                  <FormField label="Vendor (ผู้ขนส่ง)">
+                    <Select value={form.vendor_code} onChange={(e) => handleVendorChange(e.target.value)}
+                      options={vendors.map((v) => ({ value: v.code, label: `${v.code} — ${v.name}` }))} placeholder="เลือก Vendor…" />
+                  </FormField>
+                </div>
+                <FormField label="ทะเบียนรถ">
+                  <Select value={form.truck_plate} onChange={set("truck_plate")}
+                    options={truckPlateOptions} placeholder={selectedVendor ? "เลือกทะเบียน…" : "เลือก Vendor ก่อน"} disabled={!selectedVendor} />
+                </FormField>
+                <FormField label="คนขับ">
+                  <Select value={form.driver_name} onChange={(e) => handleDriverChange(e.target.value)}
+                    options={driverOptions} placeholder={selectedVendor ? "เลือกคนขับ…" : "เลือก Vendor ก่อน"} disabled={!selectedVendor} />
+                </FormField>
+              </Section>
+
+              {/* ── Multi-booking: paste area ── */}
+              <Section title="Booking Numbers (paste from Excel)" icon="📝" defaultOpen={true}>
+                <div className="col-span-2 flex flex-col gap-2">
+                  <textarea
+                    value={multiText}
+                    onChange={(e) => handleMultiTextChange(e.target.value)}
+                    placeholder={`Paste booking numbers here (one per line), e.g.:\nTHD1505395\nTHD1505395\n90785160\n90785160\nBKK6A1475500`}
+                    rows={8}
+                    className="w-full px-3 py-2 text-sm border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono resize-y"
+                  />
+                  {multiParsed.length > 0 && (
+                    <div className="text-xs text-slate-500">{multiParsed.length} booking number(s) detected</div>
+                  )}
+                  {multiDuplicateWarning && (
+                    <div className="text-xs px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-amber-700">{multiDuplicateWarning}</div>
+                  )}
+                  <button type="button" onClick={handleMultiCheck} disabled={multiChecking || multiParsed.length === 0}
+                    className="self-start px-3 py-1.5 text-xs border border-blue-300 rounded-lg hover:bg-blue-50 text-blue-600 disabled:opacity-40 transition-colors">
+                    {multiChecking ? "Checking DB…" : "Check for duplicates in DB"}
+                  </button>
+                </div>
+              </Section>
+            </>
+          )}
 
           <div className="flex gap-3 justify-end pt-2">
             <button type="button" onClick={() => setModalOpen(false)}
               className="px-4 py-2 text-sm rounded-lg border border-[var(--border)] hover:bg-slate-50 transition-colors">Cancel</button>
             <button type="submit" disabled={saving}
               className="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50 font-medium">
-              {saving ? "Saving…" : editing ? "Save" : "Create Booking"}
+              {saving ? "Saving…" : editing ? "Save" : multiMode ? `Create ${multiParsed.length > 0 ? multiParsed.length : ""} Booking${multiParsed.length !== 1 ? "s" : ""}` : "Create Booking"}
             </button>
           </div>
         </form>
