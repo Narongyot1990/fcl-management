@@ -273,6 +273,8 @@ export default function BookingsPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const [imageModalUrl, setImageModalUrl] = useState("");
+  const [imageModalEirUrl, setImageModalEirUrl] = useState("");
+  const [imageModalContainerUrl, setImageModalContainerUrl] = useState("");
   const [imageModalTitle, setImageModalTitle] = useState("");
   const [imageModalBooking, setImageModalBooking] = useState<Booking | null>(null);
   const [openingGps, setOpeningGps] = useState<string | null>(null);
@@ -286,7 +288,18 @@ export default function BookingsPage() {
 
   function openImageModal(url: string, title: string, booking: Booking) {
     setImageModalUrl(url);
+    setImageModalEirUrl("");
+    setImageModalContainerUrl("");
     setImageModalTitle(title);
+    setImageModalBooking(booking);
+    setImageModalOpen(true);
+  }
+
+  function openBothImagesModal(booking: Booking) {
+    setImageModalEirUrl(toProxyUrl(booking.eir_image_url));
+    setImageModalContainerUrl(toProxyUrl(booking.container_image_url));
+    setImageModalUrl("");
+    setImageModalTitle(`📋 EIR + 📦 Container — ${booking.booking_no}`);
     setImageModalBooking(booking);
     setImageModalOpen(true);
   }
@@ -916,11 +929,15 @@ export default function BookingsPage() {
                             );
                             return null;
                           })()}
-                          {b.eir_image_url && (
+                          {b.eir_image_url && b.container_image_url && (
+                            <button type="button" onClick={() => openBothImagesModal(b)}
+                              className="p-1 rounded text-slate-400 hover:text-blue-600 transition-colors" title="View both EIR + Container">🖼️</button>
+                          )}
+                          {b.eir_image_url && !b.container_image_url && (
                             <button type="button" onClick={() => openImageModal(toProxyUrl(b.eir_image_url), "EIR — " + b.booking_no, b)}
                               className="p-1 rounded text-slate-400 hover:text-blue-600 transition-colors" title="View EIR image">📄</button>
                           )}
-                          {b.container_image_url && (
+                          {!b.eir_image_url && b.container_image_url && (
                             <button type="button" onClick={() => openImageModal(toProxyUrl(b.container_image_url), "Container — " + b.booking_no, b)}
                               className="p-1 rounded text-slate-400 hover:text-blue-600 transition-colors" title="View Container image">📦</button>
                           )}
@@ -1198,7 +1215,7 @@ export default function BookingsPage() {
       />
 
       {/* ── Image fullscreen overlay ── */}
-      {imageModalOpen && imageModalUrl && (
+      {imageModalOpen && (imageModalUrl || imageModalEirUrl || imageModalContainerUrl) && (
         <div
           className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm"
           onClick={() => setImageModalOpen(false)}
@@ -1209,6 +1226,9 @@ export default function BookingsPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <span className="text-white font-semibold text-sm">{imageModalTitle}</span>
+              {imageModalEirUrl && imageModalContainerUrl && (
+                <span className="text-white/50 text-xs ml-2">📋 EIR left · 📦 Container right</span>
+              )}
             <div className="flex items-center gap-3">
               <a
                 href={imageModalUrl}
@@ -1228,62 +1248,119 @@ export default function BookingsPage() {
             </div>
           </div>
 
-          {/* Image */}
-          <div className="flex-1 w-full flex items-center justify-center p-6 mt-14 mb-[120px]">
-            <img
-              src={imageModalUrl}
-              alt={imageModalTitle}
-              className="max-w-full max-h-full object-contain rounded-xl shadow-2xl"
-              onClick={(e) => e.stopPropagation()}
-            />
-          </div>
+          {/* Images: side-by-side or single */}
+          {imageModalEirUrl && imageModalContainerUrl ? (
+            <div className="flex-1 w-full flex items-center justify-center gap-4 p-6 mt-14 mb-[140px]">
+              <div className="flex-1 flex flex-col items-center gap-2">
+                <span className="text-white/40 text-[9px] uppercase font-bold tracking-widest">📄 EIR</span>
+                <img src={imageModalEirUrl} alt="EIR" className="max-w-full max-h-full object-contain rounded-xl shadow-2xl" onClick={(e) => e.stopPropagation()} />
+              </div>
+              <div className="flex-1 flex flex-col items-center gap-2">
+                <span className="text-white/40 text-[9px] uppercase font-bold tracking-widest">📦 Container</span>
+                <img src={imageModalContainerUrl} alt="Container" className="max-w-full max-h-full object-contain rounded-xl shadow-2xl" onClick={(e) => e.stopPropagation()} />
+              </div>
+            </div>
+          ) : (
+            <div className="flex-1 w-full flex items-center justify-center p-6 mt-14 mb-[120px]">
+              <img src={imageModalUrl} alt={imageModalTitle}
+                className="max-w-full max-h-full object-contain rounded-xl shadow-2xl"
+                onClick={(e) => e.stopPropagation()} />
+            </div>
+          )}
 
-          {/* Bottom Dock: Container Info */}
+          {/* Bottom Dock: Booking + Container + Driver info */}
           {imageModalBooking && (
-            <div 
-              className="absolute bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-4xl bg-black/70 backdrop-blur-xl border border-white/10 rounded-2xl p-4 md:px-8 md:py-5 flex flex-col md:flex-row gap-4 md:gap-8 shadow-2xl pointer-events-auto"
+            <div
+              className="absolute bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-5xl bg-black/70 backdrop-blur-xl border border-white/10 rounded-2xl p-4 md:px-6 md:py-4 shadow-2xl pointer-events-auto"
               onClick={(e) => e.stopPropagation()}
             >
-               {/* 1. Booking */}
-               <div className="flex flex-col">
-                 <span className="text-white/50 text-[10px] uppercase font-bold tracking-widest mb-1">Booking No.</span>
-                 <span className="text-white font-mono font-bold text-base md:text-lg">{imageModalBooking.booking_no}</span>
-               </div>
-               
-               {/* Vertical Divider (Hidden on Mobile) */}
-               <div className="hidden md:block w-px bg-white/20 self-stretch" />
-               <div className="md:hidden h-px w-full bg-white/10" />
+              <div className="flex flex-wrap items-start gap-4 md:gap-5 mb-2">
+                {/* Booking */}
+                <div className="flex flex-col">
+                  <span className="text-white/40 text-[9px] uppercase font-bold tracking-widest mb-1">Booking No.</span>
+                  <span className="text-white font-mono font-bold text-sm md:text-base">{imageModalBooking.booking_no}</span>
+                </div>
+                {/* Container */}
+                <div className="flex flex-col">
+                  <span className="text-white/40 text-[9px] uppercase font-bold tracking-widest mb-1">Container / Seal</span>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-amber-300 font-mono font-black text-base md:text-lg leading-none">{imageModalBooking.container_no || "—"}</span>
+                    <span className="text-white/70 text-xs">{imageModalBooking.container_size || "—"} {imageModalBooking.container_size_code ? `/ ${imageModalBooking.container_size_code}` : ""}</span>
+                  </div>
+                  <span className="text-emerald-400 font-mono text-xs mt-0.5">Seal: {imageModalBooking.seal_no || "—"}</span>
+                </div>
+                {/* Tare */}
+                <div className="flex flex-col">
+                  <span className="text-white/40 text-[9px] uppercase font-bold tracking-widest mb-1">Tare</span>
+                  <span className="text-white font-black text-base">{imageModalBooking.tare_weight ? `${imageModalBooking.tare_weight} kg` : "—"}</span>
+                </div>
+                <div className="hidden md:block w-px bg-white/20 self-stretch" />
+                {/* Driver */}
+                <div className="flex flex-col">
+                  <span className="text-white/40 text-[9px] uppercase font-bold tracking-widest mb-1">Driver</span>
+                  <span className="text-white font-medium text-sm">{imageModalBooking.driver_name || "—"}</span>
+                  <span className="text-blue-300 text-xs">{imageModalBooking.driver_phone || ""}</span>
+                </div>
+                {/* Truck */}
+                <div className="flex flex-col">
+                  <span className="text-white/40 text-[9px] uppercase font-bold tracking-widest mb-1">Truck</span>
+                  <span className="text-white font-mono font-bold text-sm">{imageModalBooking.truck_plate || "—"}</span>
+                </div>
+                {/* ETA */}
+                {imageModalBooking.eta && (
+                  <div className="flex flex-col">
+                    <span className="text-white/40 text-[9px] uppercase font-bold tracking-widest mb-1">ETA</span>
+                    <span className="text-orange-300 font-medium text-xs">{toShortDateTime(imageModalBooking.eta)}</span>
+                  </div>
+                )}
+                {/* Loading status */}
+                {imageModalBooking.loaded_at && (
+                  <div className="flex flex-col">
+                    <span className="text-white/40 text-[9px] uppercase font-bold tracking-widest mb-1">Loaded</span>
+                    <span className="text-emerald-400 font-medium text-xs">✅ {toShortDateTime(imageModalBooking.loaded_at)}</span>
+                  </div>
+                )}
+                {imageModalBooking.loading_at && !imageModalBooking.loaded_at && (
+                  <div className="flex flex-col">
+                    <span className="text-white/40 text-[9px] uppercase font-bold tracking-widest mb-1">Loading</span>
+                    <span className="text-blue-400 font-medium text-xs">🔄 {toShortDateTime(imageModalBooking.loading_at)}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
-               {/* 2. Container Info & Seal */}
+          
+          {imageModalBooking && (
+            
+               
+               
+               
                <div className="flex flex-col">
-                 <span className="text-white/50 text-[10px] uppercase font-bold tracking-widest mb-1">Container & Seal</span>
+                 
                  <div className="flex flex-col gap-1">
                    <div className="flex items-baseline gap-2">
-                     <span className="text-amber-300 font-mono font-black text-lg md:text-xl tracking-tight leading-none">{imageModalBooking.container_no || "N/A"}</span>
+                     
                      <span className="text-white/80 font-medium text-sm">
-                       ({imageModalBooking.container_size || "—"} {imageModalBooking.container_size_code ? `/ ${imageModalBooking.container_size_code}` : ""})
+                        {imageModalBooking.container_size_code ? `/ ${imageModalBooking.container_size_code}` : ""})
                      </span>
                    </div>
                    <div className="flex items-center gap-2">
-                     <span className="text-white/50 text-[10px] uppercase font-bold tracking-widest">Seal No:</span>
-                     <span className="text-emerald-400 font-mono font-bold text-sm leading-none">{imageModalBooking.seal_no || "N/A"}</span>
+                     
+                     
                    </div>
                  </div>
                </div>
 
-               {/* Vertical Divider */}
+               
                <div className="hidden md:block w-px bg-white/20 self-stretch" />
                <div className="md:hidden h-px w-full bg-white/10" />
 
-               {/* 3. Tare Weight */}
-               <div className="flex flex-col">
-                 <span className="text-white/50 text-[10px] uppercase font-bold tracking-widest mb-1">Tare Weight</span>
-                 <span className="text-white font-black text-base md:text-lg">{imageModalBooking.tare_weight ? `${imageModalBooking.tare_weight} kg` : "—"}</span>
-               </div>
+               
             </div>
           )}
 
-          {/* Background hit area to close is handled by parent div's onClick */}
+          
         </div>
       )}
 
