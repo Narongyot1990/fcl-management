@@ -10,7 +10,7 @@ import {
   Loader2,
 } from "lucide-react";
 import type { Booking, Vendor, Driver } from "@/lib/types";
-import { toProxyUrl } from "@/lib/imageUtils";
+import { toProxyUrl } from "@/app/(dashboard)/bookings/utils/booking-utils";
 
 interface BookingActionsProps {
   booking: Booking;
