@@ -65,7 +65,7 @@ export default function ImageFullscreenModal({
       </div>
 
       {/* Side-by-side Images - horizontal on desktop, vertical on mobile */}
-      <div className={`flex-1 w-full flex items-center justify-center gap-4 p-4 md:p-6 mt-14 mb-[160px] md:mb-[140px] ${hasBoth ? "flex-col md:flex-row" : "flex-col"}`}>
+      <div className={`flex-1 w-full flex items-center justify-center gap-4 p-4 md:p-6 mt-14 mb-[120px] md:mb-[100px] ${hasBoth ? "flex-col md:flex-row" : "flex-col"}`}>
         {hasBoth ? (
           <>
             {/* EIR Image */}
@@ -75,7 +75,7 @@ export default function ImageFullscreenModal({
                 <img
                   src={eirImageUrl}
                   alt="EIR"
-                  className="max-w-full max-h-[35vh] md:max-h-[55vh] object-contain rounded-xl shadow-2xl"
+                  className="max-w-full max-h-[50vh] md:max-h-[80vh] object-contain rounded-xl shadow-2xl"
                   onClick={(e) => e.stopPropagation()}
                 />
               </div>
@@ -89,7 +89,7 @@ export default function ImageFullscreenModal({
                 <img
                   src={containerImageUrl}
                   alt="Container"
-                  className="max-w-full max-h-[35vh] md:max-h-[55vh] object-contain rounded-xl shadow-2xl"
+                  className="max-w-full max-h-[50vh] md:max-h-[80vh] object-contain rounded-xl shadow-2xl"
                   onClick={(e) => e.stopPropagation()}
                 />
               </div>
@@ -99,7 +99,7 @@ export default function ImageFullscreenModal({
           <img
             src={eirImageUrl || containerImageUrl}
             alt={title || "Image"}
-            className="max-w-full max-h-[60vh] object-contain rounded-xl shadow-2xl"
+            className="max-w-full max-h-[80vh] object-contain rounded-xl shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           />
         )}
@@ -108,7 +108,7 @@ export default function ImageFullscreenModal({
       {/* Bottom Dock: Combined Info */}
       {booking && (
         <div
-          className="absolute bottom-4 left-4 right-4 max-w-6xl mx-auto bg-black/70 backdrop-blur-xl border border-white/10 rounded-2xl p-4 md:px-8 md:py-5 shadow-2xl pointer-events-auto overflow-auto max-h-[25vh]"
+          className="absolute bottom-4 left-4 right-4 max-w-6xl mx-auto bg-black/70 backdrop-blur-xl border border-white/10 rounded-2xl p-4 md:px-8 md:py-5 shadow-2xl pointer-events-auto overflow-auto max-h-[20vh]"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Mobile: 2 columns, Tablet: 3 columns, Desktop: horizontal layout */}
