@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
-import { Search } from "lucide-react";
+import { Filter, RotateCcw, Search } from "lucide-react";
 import dynamic from "next/dynamic";
 const DriverProfile = dynamic(() => import("@/components/DriverProfile"), { ssr: false });
 import ImageUpload from "@/components/ImageUpload";
@@ -26,6 +26,15 @@ import {
 import type { BookingForm } from "./types/booking-form";
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100] as const;
+const WORKFLOW_FILTERS = [
+  { value: "all", label: "All" },
+  { value: "no_truck", label: "No truck" },
+  { value: "no_container", label: "No container" },
+  { value: "loading_pending", label: "Loading pending" },
+  { value: "loaded", label: "Loaded" },
+  { value: "return_pending", label: "Return pending" },
+] as const;
+type WorkflowFilter = (typeof WORKFLOW_FILTERS)[number]["value"];
 
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function BookingsPage() {
@@ -39,7 +48,7 @@ export default function BookingsPage() {
   const [search, setSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [showNoContainer, setShowNoContainer] = useState(false);
+  const [workflowFilter, setWorkflowFilter] = useState<WorkflowFilter>("all");
   const [modalOpen, setModalOpen] = useState(false);
   const [processModalOpen, setProcessModalOpen] = useState(false);
   const [processStep] = useState(0);
@@ -123,7 +132,7 @@ export default function BookingsPage() {
           booking_no: search.trim(),
           date_from: dateFrom,
           date_to: dateTo,
-          no_container: showNoContainer,
+          workflow: workflowFilter === "all" ? "" : workflowFilter,
         },
         { page, limit: pageSize }
       );
@@ -135,7 +144,7 @@ export default function BookingsPage() {
     } finally {
       setLoading(false);
     }
-  }, [search, dateFrom, dateTo, showNoContainer, page, pageSize]);
+  }, [search, dateFrom, dateTo, workflowFilter, page, pageSize]);
 
   const loadDropdowns = useCallback(async () => {
     try {
@@ -152,7 +161,7 @@ export default function BookingsPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [search, dateFrom, dateTo, showNoContainer, pageSize]);
+  }, [search, dateFrom, dateTo, workflowFilter, pageSize]);
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => { loadDropdowns(); }, [loadDropdowns]);
@@ -360,6 +369,13 @@ export default function BookingsPage() {
     setForm((prev) => ({ ...prev, [k]: e.target.value }));
 
   const setFormField = (key: keyof BookingForm, value: unknown) => setForm((f) => ({ ...f, [key]: value }));
+  const hasFilters = !!search || !!dateFrom || !!dateTo || workflowFilter !== "all";
+  function clearFilters() {
+    setSearch("");
+    setDateFrom("");
+    setDateTo("");
+    setWorkflowFilter("all");
+  }
   const firstRecord = totalRecords === 0 ? 0 : (page - 1) * pageSize + 1;
   const lastRecord = Math.min(page * pageSize, totalRecords);
   const paginationPages = Array.from(
@@ -375,53 +391,84 @@ export default function BookingsPage() {
 
   // ── Render ──
   return (
-    <div>
-      <PageHeader title="Bookings" subtitle="Manage Bookings" onAdd={openCreate}>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search Booking No…"
-              className="pl-8 pr-3 py-1.5 text-xs border border-[var(--border)] rounded-lg shadow-sm hover:shadow-md transition-shadow focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-48" />
+    <div className="space-y-4">
+      <PageHeader title="Bookings" subtitle="Booking operations board" onAdd={openCreate} />
+      <div className="border border-slate-200 bg-white p-3 shadow-sm">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="relative w-full sm:max-w-xs">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search booking no..."
+                className="w-full rounded-lg border border-[var(--border)] bg-white py-2 pl-9 pr-3 text-sm shadow-sm outline-none transition focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <DateNavigator dateFrom={dateFrom} dateTo={dateTo} onDateFromChange={setDateFrom} onDateToChange={setDateTo} />
           </div>
-          <button onClick={() => setShowNoContainer(!showNoContainer)}
-            className={`px-3 py-1.5 text-xs border rounded-lg transition-colors ${showNoContainer ? "bg-orange-100 border-orange-300 text-orange-700" : "border-[var(--border)] hover:bg-slate-50 text-slate-500"}`}>
-            No Container
-          </button>
-          <DateNavigator dateFrom={dateFrom} dateTo={dateTo} onDateFromChange={setDateFrom} onDateToChange={setDateTo} />
-          <select
-            value={pageSize}
-            onChange={(e) => setPageSize(Number(e.target.value))}
-            className="px-2 py-1.5 text-xs border border-[var(--border)] rounded-lg shadow-sm hover:shadow-md transition-shadow focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-            aria-label="Bookings per page"
-          >
-            {PAGE_SIZE_OPTIONS.map((size) => (
-              <option key={size} value={size}>{size} / page</option>
-            ))}
-          </select>
+          <div className="flex items-center gap-2">
+            {hasFilters && (
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50"
+              >
+                <RotateCcw size={13} /> Reset
+              </button>
+            )}
+            <select
+              value={pageSize}
+              onChange={(e) => setPageSize(Number(e.target.value))}
+              className="rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-xs shadow-sm outline-none transition focus:ring-2 focus:ring-blue-500"
+              aria-label="Bookings per page"
+            >
+              {PAGE_SIZE_OPTIONS.map((size) => (
+                <option key={size} value={size}>{size} / page</option>
+              ))}
+            </select>
+          </div>
         </div>
-      </PageHeader>
+        <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-slate-100 pt-3">
+          <span className="inline-flex items-center gap-1.5 pr-1 text-xs font-medium text-slate-500">
+            <Filter size={13} /> Workflow
+          </span>
+          {WORKFLOW_FILTERS.map((filter) => (
+            <button
+              key={filter.value}
+              type="button"
+              onClick={() => setWorkflowFilter(filter.value)}
+              className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                workflowFilter === filter.value
+                  ? "border-blue-600 bg-blue-600 text-white"
+                  : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+              }`}
+            >
+              {filter.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
-      {error && <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">{error}</div>}
+      {error && <div className="border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>}
 
       {/* ── Bookings Table ── */}
-      <div className="bg-white rounded-2xl border border-[var(--border)] shadow-sm overflow-hidden">
+      <div className="overflow-hidden border border-[var(--border)] bg-white shadow-sm">
         {loading ? (
           <div className="px-5 py-10 text-center text-[var(--muted)]">Loading…</div>
         ) : records.length === 0 ? (
           <div className="px-5 py-10 text-center text-[var(--muted)]">No bookings yet. Click Add New to create one.</div>
         ) : (
-          <div className="overflow-x-auto max-h-[calc(100vh-180px)] overflow-y-auto">
+          <div className="overflow-x-auto max-h-[calc(100vh-230px)] overflow-y-auto">
             <table className="w-full text-xs">
               <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
                 <tr>
-                  <th className="px-2 py-2 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap text-[10px]">Date</th>
-                  <th className="px-2 py-2 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap text-[10px]">Booking No.</th>
-                  <th className="px-2 py-2 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap text-[10px]">Est. Pickup</th>
-                  <th className="px-2 py-2 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap text-[10px]">ETA</th>
-                  <th className="px-2 py-2 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap text-[10px]">Container No.</th>
-                  <th className="px-2 py-2 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap text-[10px]">Seal No.</th>
-                  <th className="px-2 py-2 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap text-[10px]">Truck / Driver</th>
-                  <th className="px-2 py-2 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap text-[10px]">Actions</th>
+                  <th className="px-3 py-2 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap text-[10px]">Booking</th>
+                  <th className="px-3 py-2 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap text-[10px]">Schedule</th>
+                  <th className="px-3 py-2 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap text-[10px]">Container</th>
+                  <th className="px-3 py-2 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap text-[10px]">Truck / Driver</th>
+                  <th className="px-3 py-2 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap text-[10px]">Status</th>
+                  <th className="px-3 py-2 text-right font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap text-[10px]">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">

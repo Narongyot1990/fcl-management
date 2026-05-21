@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { Pencil, Trash2, Search, Plus, X, MapPin, Loader2, History, CalendarDays, MoreVertical, Route } from "lucide-react";
+import { Pencil, Trash2, Search, Plus, X, MapPin, Loader2, History, CalendarDays, MoreVertical, Route, Truck, UsersRound, Satellite } from "lucide-react";
 import dynamic from "next/dynamic";
 const GpsMap = dynamic(() => import("@/components/GpsMap"), { ssr: false });
 const DriverProfile = dynamic(() => import("@/components/DriverProfile"), { ssr: false });
@@ -253,8 +253,12 @@ export default function VendorsPage() {
     }
   }
 
+  const totalTrucks = records.reduce((sum, vendor) => sum + (vendor.trucks?.length || vendor.truck_plates?.length || 0), 0);
+  const totalDrivers = records.reduce((sum, vendor) => sum + (vendor.drivers?.length || 0), 0);
+  const gpsEnabled = records.reduce((sum, vendor) => sum + (vendor.trucks?.filter((truck) => truck.gps_id).length || 0), 0);
+
   return (
-    <div>
+    <div className="space-y-4">
       <PageHeader title="Vendors" subtitle="จัดการข้อมูลผู้ขนส่ง ทะเบียนรถ และคนขับ" onAdd={openCreate}>
         <div className="relative">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
@@ -266,6 +270,25 @@ export default function VendorsPage() {
           />
         </div>
       </PageHeader>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
+        <div className="border border-slate-200 bg-white px-4 py-3 shadow-sm">
+          <div className="flex items-center gap-2 text-xs font-medium text-slate-500"><Truck size={14} /> Vendors</div>
+          <div className="mt-2 text-2xl font-bold text-slate-900">{records.length}</div>
+        </div>
+        <div className="border border-slate-200 bg-white px-4 py-3 shadow-sm">
+          <div className="flex items-center gap-2 text-xs font-medium text-slate-500"><Truck size={14} /> Trucks</div>
+          <div className="mt-2 text-2xl font-bold text-slate-900">{totalTrucks}</div>
+        </div>
+        <div className="border border-slate-200 bg-white px-4 py-3 shadow-sm">
+          <div className="flex items-center gap-2 text-xs font-medium text-slate-500"><UsersRound size={14} /> Drivers</div>
+          <div className="mt-2 text-2xl font-bold text-slate-900">{totalDrivers}</div>
+        </div>
+        <div className="border border-slate-200 bg-white px-4 py-3 shadow-sm">
+          <div className="flex items-center gap-2 text-xs font-medium text-slate-500"><Satellite size={14} /> GPS enabled</div>
+          <div className="mt-2 text-2xl font-bold text-slate-900">{gpsEnabled}</div>
+        </div>
+      </div>
 
       {error && (
         <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">{error}</div>

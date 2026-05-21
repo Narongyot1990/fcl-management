@@ -1,7 +1,7 @@
 "use client";
-import { Pencil, Trash2, Copy, Check, MapPin, Loader2, ExternalLink, Images } from "lucide-react";
+import { Pencil, Trash2, Copy, Check, MapPin, Loader2, ExternalLink, Images, FileText, Package } from "lucide-react";
 import type { Booking, Vendor } from "@/lib/types";
-import { toShortDate, toShortDateTime, toProxyUrl } from "../utils/booking-utils";
+import { getStepStatuses, toShortDate, toShortDateTime, toProxyUrl } from "../utils/booking-utils";
 
 interface BookingRowProps {
   booking: Booking;
@@ -17,88 +17,112 @@ interface BookingRowProps {
   onDriverProfile: (driver: { name: string; phone: string }) => void;
 }
 
+function statusFor(booking: Booking) {
+  const steps = getStepStatuses(booking);
+  if (!steps[1]) return { label: "Assign truck", className: "border-amber-200 bg-amber-50 text-amber-700" };
+  if (!steps[2]) return { label: "Container", className: "border-orange-200 bg-orange-50 text-orange-700" };
+  if (!steps[3]) return { label: "Loading", className: "border-blue-200 bg-blue-50 text-blue-700" };
+  if (!steps[4]) return { label: "Return", className: "border-violet-200 bg-violet-50 text-violet-700" };
+  return { label: "Complete", className: "border-emerald-200 bg-emerald-50 text-emerald-700" };
+}
+
 export default function BookingRow({
   booking, vendors, copiedId, openingGps,
   onEdit, onDelete, onCopy, onOpenImages, onOpenSingleImage, onOpenGps, onDriverProfile,
 }: BookingRowProps) {
   const vendor = vendors.find(v => v.code === booking.vendor_code);
-
   const hasEir = !!booking.eir_image_url;
   const hasContainer = !!booking.container_image_url;
   const hasBothImages = hasEir && hasContainer;
-
   const eirProxyUrl = toProxyUrl(booking.eir_image_url);
   const containerProxyUrl = toProxyUrl(booking.container_image_url);
+  const status = statusFor(booking);
 
   return (
-    <tr className="hover:bg-slate-50/80 transition-colors">
-      <td className="px-2 py-1.5 text-slate-500 whitespace-nowrap text-[11px]">{booking.booking_date ? toShortDate(booking.booking_date) : "—"}</td>
-      <td className="px-2 py-1.5 font-mono font-bold text-violet-700 whitespace-nowrap text-[11px]">{booking.booking_no}</td>
-      <td className="px-2 py-1.5 text-slate-500 whitespace-nowrap text-[11px]">{booking.plan_pickup_date ? toShortDateTime(booking.plan_pickup_date) : "—"}</td>
-      <td className="px-2 py-1.5 text-slate-500 whitespace-nowrap text-[11px]">{booking.eta ? toShortDateTime(booking.eta) : "—"}</td>
-      <td className="px-2 py-1.5">
-        <div className="font-mono font-bold text-slate-800 text-[11px]">{booking.container_no || "—"}</div>
-        <div className="text-[9px] text-slate-400 leading-tight">
-          {booking.container_size || "—"} {booking.container_size_code ? `/ ${booking.container_size_code}` : ""} · {booking.tare_weight ? `${booking.tare_weight} kg` : "no tare"}
-        </div>
+    <tr className="hover:bg-slate-50/80 transition-colors align-top">
+      <td className="px-3 py-2.5 whitespace-nowrap">
+        <div className="font-mono text-[12px] font-bold text-violet-700">{booking.booking_no}</div>
+        <div className="mt-0.5 text-[10px] text-slate-400">{booking.booking_date ? toShortDate(booking.booking_date) : "-"}</div>
+        <div className="mt-1 text-[10px] text-slate-500">{booking.customer_code || "No customer"}</div>
       </td>
-      <td className="px-2 py-1.5 font-mono text-slate-600 whitespace-nowrap text-[11px]">{booking.seal_no || "—"}</td>
-      <td className="px-2 py-1.5">
-        <div className="font-mono font-bold text-slate-800 text-[11px]">{booking.truck_plate || "—"}</div>
-        <div className="flex items-center gap-1 leading-tight">
-          <button type="button" onClick={(e) => { e.stopPropagation(); onDriverProfile({ name: booking.driver_name, phone: booking.driver_phone }); }}
-            className="text-slate-600 hover:text-blue-600 text-[10px] transition-colors">
-            {booking.driver_name || "—"}
-          </button>
-          {booking.driver_phone && <span className="text-slate-400 text-[9px]">{booking.driver_phone}</span>}
-        </div>
+
+      <td className="px-3 py-2.5 whitespace-nowrap">
+        <div className="text-[10px] font-medium uppercase text-slate-400">Pickup</div>
+        <div className="text-[11px] text-slate-700">{booking.plan_pickup_date ? toShortDateTime(booking.plan_pickup_date) : "-"}</div>
+        <div className="mt-1 text-[10px] font-medium uppercase text-slate-400">ETA</div>
+        <div className="text-[11px] text-slate-700">{booking.eta ? toShortDateTime(booking.eta) : "-"}</div>
       </td>
-      <td className="px-2 py-1.5 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center gap-1">
+
+      <td className="px-3 py-2.5 min-w-48">
+        <div className="font-mono text-[12px] font-bold text-slate-800">{booking.container_no || "-"}</div>
+        <div className="mt-0.5 flex flex-wrap items-center gap-1 text-[10px] text-slate-500">
+          <span>{booking.container_size || "No size"}</span>
+          {booking.container_size_code && <span className="font-mono text-slate-600">{booking.container_size_code}</span>}
+          <span>{booking.tare_weight ? `${booking.tare_weight} kg` : "No tare"}</span>
+        </div>
+        <div className="mt-1 font-mono text-[10px] text-slate-500">Seal: {booking.seal_no || "-"}</div>
+      </td>
+
+      <td className="px-3 py-2.5 min-w-44">
+        <div className="font-mono text-[12px] font-bold text-slate-800">{booking.truck_plate || "-"}</div>
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onDriverProfile({ name: booking.driver_name, phone: booking.driver_phone }); }}
+          className="mt-0.5 block text-left text-[11px] text-slate-600 hover:text-blue-600"
+        >
+          {booking.driver_name || "No driver"}
+        </button>
+        {booking.driver_phone && <div className="text-[10px] text-slate-400">{booking.driver_phone}</div>}
+      </td>
+
+      <td className="px-3 py-2.5 whitespace-nowrap">
+        <span className={`inline-flex border px-2 py-0.5 text-[10px] font-semibold ${status.className}`}>{status.label}</span>
+        <div className="mt-1 text-[10px] text-slate-400">{booking.vendor_code || "No vendor"}</div>
+      </td>
+
+      <td className="px-3 py-2.5 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-end gap-1">
           <button onClick={() => onCopy(booking)}
-            className={`p-1 rounded transition-colors ${copiedId === booking._id ? "text-green-600" : "text-slate-400 hover:text-blue-600"}`}
+            className={`p-1.5 transition-colors ${copiedId === booking._id ? "text-green-600" : "text-slate-400 hover:text-blue-600"}`}
             title="Copy info">
-            {copiedId === booking._id ? <Check size={13} /> : <Copy size={13} />}
+            {copiedId === booking._id ? <Check size={14} /> : <Copy size={14} />}
           </button>
           {booking.truck_plate && (
             <a href={`/gps/track/${encodeURIComponent(booking.truck_plate)}`} target="_blank" rel="noopener noreferrer"
-              className="p-1 rounded text-slate-400 hover:text-green-600 transition-colors" title="Open GPS Tracking URL">
-              <ExternalLink size={13} />
+              className="p-1.5 text-slate-400 hover:text-green-600 transition-colors" title="Open GPS Tracking URL">
+              <ExternalLink size={14} />
             </a>
           )}
           {booking.truck_plate && vendor?.trucks?.some(t => t.plate === booking.truck_plate && t.gps_id) && (
             <button type="button" onClick={() => onOpenGps(booking.vendor_code, booking.truck_plate)}
               disabled={openingGps === booking.truck_plate}
-              className="p-1 rounded text-slate-400 hover:text-blue-600 transition-colors" title="View GPS location">
-              {openingGps === booking.truck_plate ? <Loader2 size={13} className="animate-spin" /> : <MapPin size={13} />}
+              className="p-1.5 text-slate-400 hover:text-blue-600 transition-colors" title="View GPS location">
+              {openingGps === booking.truck_plate ? <Loader2 size={14} className="animate-spin" /> : <MapPin size={14} />}
             </button>
           )}
-          {/* Combined images button */}
           {hasBothImages && (
-            <button
-              type="button"
-              onClick={() => onOpenImages(eirProxyUrl, containerProxyUrl, booking)}
-              className="p-1 rounded bg-purple-100 text-purple-600 hover:bg-purple-200 transition-colors"
-              title="View both images"
-            >
-              <Images size={13} />
+            <button type="button" onClick={() => onOpenImages(eirProxyUrl, containerProxyUrl, booking)}
+              className="p-1.5 text-purple-600 hover:bg-purple-50 transition-colors" title="View both images">
+              <Images size={14} />
             </button>
           )}
-          {/* Individual EIR button */}
           {hasEir && (
-            <button type="button" onClick={() => onOpenSingleImage(eirProxyUrl, "EIR — " + booking.booking_no, booking)}
-              className="p-1 rounded text-slate-400 hover:text-blue-600 transition-colors" title="View EIR image">📄</button>
+            <button type="button" onClick={() => onOpenSingleImage(eirProxyUrl, "EIR - " + booking.booking_no, booking)}
+              className="p-1.5 text-slate-400 hover:text-blue-600 transition-colors" title="View EIR image">
+              <FileText size={14} />
+            </button>
           )}
-          {/* Individual Container button */}
           {hasContainer && (
-            <button type="button" onClick={() => onOpenSingleImage(containerProxyUrl, "Container — " + booking.booking_no, booking)}
-              className="p-1 rounded text-slate-400 hover:text-blue-600 transition-colors" title="View Container image">📦</button>
+            <button type="button" onClick={() => onOpenSingleImage(containerProxyUrl, "Container - " + booking.booking_no, booking)}
+              className="p-1.5 text-slate-400 hover:text-blue-600 transition-colors" title="View container image">
+              <Package size={14} />
+            </button>
           )}
-          <button onClick={() => onEdit(booking)} className="p-1 rounded text-slate-400 hover:text-blue-600 transition-colors" title="Edit">
-            <Pencil size={13} />
+          <button onClick={() => onEdit(booking)} className="p-1.5 text-slate-400 hover:text-blue-600 transition-colors" title="Edit">
+            <Pencil size={14} />
           </button>
-          <button onClick={() => onDelete(booking)} className="p-1 rounded text-slate-400 hover:text-red-600 transition-colors" title="Delete">
-            <Trash2 size={13} />
+          <button onClick={() => onDelete(booking)} className="p-1.5 text-slate-400 hover:text-red-600 transition-colors" title="Delete">
+            <Trash2 size={14} />
           </button>
         </div>
       </td>

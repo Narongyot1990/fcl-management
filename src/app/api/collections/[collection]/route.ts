@@ -9,6 +9,7 @@ const CONTROL_PARAMS = new Set([
   "date_to",
   "no_container",
   "booking_nos",
+  "workflow",
 ]);
 
 function routeError(error: unknown) {
@@ -66,6 +67,30 @@ export async function GET(
           { container_no: null },
           { container_no: "" },
         ];
+      }
+
+      if (search.workflow === "no_truck") {
+        filter.$or = [
+          { truck_plate: { $exists: false } },
+          { truck_plate: null },
+          { truck_plate: "" },
+        ];
+      } else if (search.workflow === "no_container") {
+        filter.$or = [
+          { container_no: { $exists: false } },
+          { container_no: null },
+          { container_no: "" },
+        ];
+      } else if (search.workflow === "loading_pending") {
+        filter.loaded_at = { $in: [null, ""] };
+        filter.truck_plate = { $nin: [null, ""] };
+        filter.container_no = { $nin: [null, ""] };
+      } else if (search.workflow === "loaded") {
+        filter.loaded_at = { $nin: [null, ""] };
+      } else if (search.workflow === "return_pending") {
+        filter.loaded_at = { $nin: [null, ""] };
+        filter.return_completed = { $ne: true };
+        filter.return_date = { $in: [null, ""] };
       }
 
       if (search.booking_nos) {
