@@ -1,6 +1,5 @@
 "use client";
 import { FormField, Input, Select } from "@/components/FormField";
-import Section from "./Section";
 import Toggle from "./Toggle";
 import { type BookingForm } from "../types/booking-form";
 import type { Vendor } from "@/lib/types";

@@ -10,7 +10,7 @@ Why:
 
 - `package.json` is configured for the main app workflow
 - `vercel.json` points to the Next.js build
-- The dashboard UI, CRUD flow, upload flow, OCR flow, GPS flow, and webhook route all exist in `src/app`
+- The dashboard UI, CRUD flow, upload flow, OCR flow, and GPS flow exist in `src/app`
 
 The Python code is still relevant, but it looks like a parallel or older implementation:
 
@@ -81,9 +81,6 @@ Use these files first when changing behavior:
 - Upload route: `src/app/api/upload-image/route.ts`
 - Image proxy route: `src/app/api/image/[filename]/route.ts`
 - GPS route: `src/app/api/gps/route.ts`
-- LINE webhook route: `src/app/api/line/webhook/route.ts`
-- Auth gate: `src/components/AuthGate.tsx`
-- Login screen: `src/app/login/page.tsx`
 
 ## 5. Important Runtime Flows
 
@@ -116,26 +113,19 @@ Use these files first when changing behavior:
 
 ### LINE flow
 
-- There are two LINE implementations in the repo:
-  - Active-looking Next.js webhook route: `src/app/api/line/webhook/route.ts`
-  - Legacy Flask server: `app.py`
-- The current Next.js webhook mostly logs requests and returns success
+- The current tree does not contain an active Next.js LINE webhook route
+- The remaining LINE implementation is the legacy Flask server in `app.py`
 - Do not assume the LINE bot is fully active without checking code paths first
 
 ## 6. Authentication And Authorization Reality
 
-Current auth is partial and inconsistent.
+Current auth is not implemented in the active Next.js UI.
 
-- `src/components/AuthGate.tsx` checks for `sessionStorage.itl_user`
-- `src/app/login/page.tsx` uses mock hardcoded credentials
-- Collection routes currently have `checkAuth()` that always returns `true`
-- Branch filtering in collection GET/POST depends on headers:
-  - `x-itl-role`
-  - `x-itl-branch`
+- Collection routes currently do not enforce real authentication.
+- Branch filtering is documented as a concept but is not active in the current generic collection route.
 
 Practical implication:
 
-- UI-level auth exists
 - API-level auth is not fully enforced for generic collection routes
 - Do not describe this system as secure without first hardening it
 
@@ -175,7 +165,7 @@ When changing features, prefer this order:
 2. Update the domain type in `src/lib/types.ts` if the data shape changes
 3. Update the API route
 4. Update the UI that consumes it
-5. Check any matching helper in `src/lib/` or `src/services/`
+5. Check any matching helper in `src/lib/`
 
 For booking-related tasks, start in `src/app/(dashboard)/bookings/page.tsx` and then follow calls outward.
 

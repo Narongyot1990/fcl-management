@@ -32,9 +32,7 @@ src/
       gps/history/
       gps/history-raw/
       image/[filename]/
-      line/webhook/
       upload-image/
-    login/
     globals.css
     layout.tsx
   components/
@@ -44,11 +42,8 @@ src/
     api.ts
     containerValidation.ts
     gpsUtils.ts
-    lineUtils.ts
     mongodb.ts
     types.ts
-  services/
-    lineService.ts
 
 api/
   index.py
@@ -96,7 +91,6 @@ Key responsibilities:
 - File upload to Vercel Blob
 - Image proxying from private Blob storage
 - GPS lookup using DTC API
-- LINE webhook logging endpoint
 
 ### Shared Type And Data Layer
 
@@ -131,17 +125,14 @@ Files under `src/lib` define common models and utilities:
 1. Booking page reads selected vendor and assigned truck
 2. It finds `gps_id` from `vendor.trucks[]`
 3. UI calls `/api/gps` with that `gps_id`
-4. Route calls DTC GPS API
+4. Route calls the shared DTC GPS helper in `src/lib/dtcGps.ts`
 5. UI opens Google Maps using returned coordinates
 
 ### LINE webhook
 
-There are two webhook implementations:
+The current tree does not contain an active Next.js LINE webhook route.
 
-- `src/app/api/line/webhook/route.ts`
-- `app.py`
-
-The Next.js route is currently the easier path to inspect, but it mostly logs requests and returns success. The Flask app contains a more traditional signature verification and reply flow.
+The legacy Flask app in `app.py` contains the remaining LINE webhook flow.
 
 ## Branch Model
 

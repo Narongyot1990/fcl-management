@@ -1,5 +1,4 @@
 "use client";
-import React from "react";
 import {
   Pencil,
   Trash2,
@@ -9,7 +8,7 @@ import {
   MapPin,
   Loader2,
 } from "lucide-react";
-import type { Booking, Vendor, Driver } from "@/lib/types";
+import type { Booking, Vendor } from "@/lib/types";
 import { toProxyUrl } from "@/app/(dashboard)/bookings/utils/booking-utils";
 
 interface BookingActionsProps {
@@ -22,7 +21,6 @@ interface BookingActionsProps {
   onDelete: (booking: Booking) => void;
   onOpenGpsLocation: (vendorCode: string, truckPlate: string) => void;
   onOpenImage: (url: string, title: string, booking: Booking) => void;
-  onDriverProfile: (driver: Driver) => void;
 }
 
 export default function BookingActions({
@@ -35,17 +33,11 @@ export default function BookingActions({
   onDelete,
   onOpenGpsLocation,
   onOpenImage,
-  onDriverProfile,
 }: BookingActionsProps) {
   const hasGps =
     vendors.find((v) => v.code === booking.vendor_code)?.trucks?.some(
       (t) => t.plate === booking.truck_plate && t.gps_id
     ) ?? false;
-
-  const handleDriverClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onDriverProfile({ name: booking.driver_name, phone: booking.driver_phone });
-  };
 
   return (
     <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>

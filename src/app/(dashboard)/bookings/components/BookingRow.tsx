@@ -1,7 +1,7 @@
 "use client";
 import { Pencil, Trash2, Copy, Check, MapPin, Loader2, ExternalLink, Images } from "lucide-react";
 import type { Booking, Vendor } from "@/lib/types";
-import { STEPS, LOADING_SUB, getStepStatuses, toShortDate, toShortDateTime, toProxyUrl } from "../utils/booking-utils";
+import { toShortDate, toShortDateTime, toProxyUrl } from "../utils/booking-utils";
 
 interface BookingRowProps {
   booking: Booking;
@@ -21,9 +21,6 @@ export default function BookingRow({
   booking, vendors, copiedId, openingGps,
   onEdit, onDelete, onCopy, onOpenImages, onOpenSingleImage, onOpenGps, onDriverProfile,
 }: BookingRowProps) {
-  const stepStatuses = getStepStatuses(booking);
-  const currentStepIdx = stepStatuses.findIndex((s) => !s);
-  const loadSt = booking.loaded_at ? "loaded" : booking.loading_at ? "loading" : booking.pending_at ? "pending" : null;
   const vendor = vendors.find(v => v.code === booking.vendor_code);
 
   const hasEir = !!booking.eir_image_url;

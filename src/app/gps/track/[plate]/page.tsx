@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import type { ApiResponse, Vendor } from "@/lib/types";
 
 interface GpsData {
   lat: number;
@@ -22,20 +23,18 @@ export default function GpsTrackPage() {
       try {
         // First, find the vendor and truck by plate
         const vendorsRes = await fetch("/api/collections/vendors");
-        const vendorsData = await vendorsRes.json();
+        const vendorsData = await vendorsRes.json() as ApiResponse<Vendor>;
         const vendors = vendorsData.records || [];
 
         let foundGpsId: string | null = null;
-        let foundPlate: string | null = null;
 
         for (const vendor of vendors) {
           if (vendor.trucks) {
-            const truck = vendor.trucks.find((t: any) => 
+            const truck = vendor.trucks.find((t) =>
               t.plate === plate || t.plate.replace(/\s/g, "") === plate.replace(/\s/g, "")
             );
             if (truck && truck.gps_id) {
               foundGpsId = truck.gps_id;
-              foundPlate = truck.plate;
               break;
             }
           }

@@ -1,6 +1,6 @@
 # AI Support / ITL FCL Management
 
-This repository contains an internal logistics support system for FCL booking and container operations. The main user-facing app is a Next.js dashboard with CRUD screens, API routes, image upload, OCR-assisted data extraction, GPS lookup, and a LINE webhook endpoint.
+This repository contains an internal logistics support system for FCL booking and container operations. The main user-facing app is a Next.js dashboard with CRUD screens, API routes, image upload, OCR-assisted data extraction, and GPS lookup.
 
 There are also Python services in the repo. Based on the current structure, those Python files look like legacy or auxiliary services rather than the primary runtime for the dashboard.
 
@@ -10,7 +10,7 @@ There are also Python services in the repo. Based on the current structure, thos
 - Primary backend in this repo: Next.js route handlers under `src/app/api`
 - Database: MongoDB
 - File storage: Vercel Blob
-- External integrations: Gemini OCR, LINE Messaging API, DTC GPS API
+- External integrations: Gemini OCR and DTC GPS API
 - Legacy/secondary backend code: FastAPI and Flask Python files
 
 ## What This App Does
@@ -20,7 +20,6 @@ There are also Python services in the repo. Based on the current structure, thos
 - Upload container and EIR images
 - Use OCR to extract container fields from uploaded images
 - Resolve GPS coordinates for trucks using vendor truck `gps_id`
-- Expose a LINE webhook route
 
 ## Repo Map
 
@@ -30,15 +29,13 @@ There are also Python services in the repo. Based on the current structure, thos
 |   |-- app/
 |   |   |-- (dashboard)/        # Main dashboard pages
 |   |   |-- api/                # Active Next.js API routes
-|   |   `-- login/              # Mock login page
 |   |-- components/             # Shared UI components
-|   |-- lib/                    # Types, MongoDB client, helpers
-|   `-- services/               # Frontend-facing service wrappers
+|   `-- lib/                    # Types, MongoDB client, helpers
 |-- api/                        # FastAPI app for Vercel Python runtime
 |-- services/                   # Python data and integration services
 |-- handlers/                   # Python handlers
 |-- docs/                       # Project documentation
-|-- app.py                      # Standalone Flask LINE webhook server
+|-- app.py                      # Legacy standalone Flask LINE webhook server
 `-- dashboard_html.py           # Standalone dashboard-related script
 ```
 
@@ -51,7 +48,6 @@ There are also Python services in the repo. Based on the current structure, thos
 - Booking container patch API: `src/app/api/bookings/container/route.ts`
 - OCR API: `src/app/api/gemini-ocr/route.ts`
 - GPS API: `src/app/api/gps/route.ts`
-- LINE webhook: `src/app/api/line/webhook/route.ts`
 
 ## Quick Start
 
@@ -78,8 +74,8 @@ MONGODB_URI=
 MONGODB_DB=eir_scanner
 OCR_API_SECRET=
 GEMINI_API_KEY=
-LINE_CHANNEL_SECRET=
-LINE_CHANNEL_ACCESS_TOKEN=
+DTC_GPS_API_BASE_URL=https://gps.dtc.co.th:8099
+DTC_GPS_API_TOKEN=
 ```
 
 Optional or integration-specific variables:
@@ -89,6 +85,8 @@ GEMINI_MODEL=
 OCR_API_URL=
 OPENCLAW_WEBHOOK_URL=
 OPENCLAW_API_KEY=
+LINE_CHANNEL_SECRET=
+LINE_CHANNEL_ACCESS_TOKEN=
 ```
 
 ## Run Locally
@@ -102,9 +100,9 @@ Open `http://localhost:3000`.
 ## Important Notes
 
 - The Next.js app appears to be the main active application.
-- Login is currently mock/session-based on the client side.
+- There is no active login screen in the current Next.js tree.
 - Some API routes currently bypass real authentication checks.
-- There are hardcoded credentials/tokens in parts of the source code. They should be moved to environment variables before production hardening.
+- Integration credentials should be kept in environment variables. DTC GPS uses `DTC_GPS_API_TOKEN`.
 - Some older Thai text appears with encoding issues in legacy files; prefer the newer docs in `docs/` and `AGENTS.md` as the working reference.
 
 ## Recommended Docs To Read Next

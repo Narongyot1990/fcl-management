@@ -3,7 +3,7 @@ import React from "react";
 import { 
   User, Phone, Star, TrendingUp, Package, Truck, 
   ShieldCheck, MapPin, Calendar, ExternalLink, 
-  Settings, Bell, Award, History, Edit3
+  Bell, Award, History, Edit3
 } from "lucide-react";
 import type { Driver } from "@/lib/types";
 import { clsx } from "clsx";

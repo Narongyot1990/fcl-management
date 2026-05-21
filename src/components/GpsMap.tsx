@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef } from "react";
+import type { Map as LeafletMap } from "leaflet";
 
 export interface GpsPoint {
   time: string;
@@ -20,7 +21,7 @@ interface GpsMapProps {
 
 export default function GpsMap({ points }: GpsMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<any>(null);
+  const mapInstanceRef = useRef<LeafletMap | null>(null);
 
   useEffect(() => {
     if (!mapRef.current || points.length === 0) return;
@@ -28,7 +29,7 @@ export default function GpsMap({ points }: GpsMapProps) {
     // Dynamic import to avoid SSR issues
     import("leaflet").then((L) => {
       // Fix default icon issue with webpack
-      delete (L.Icon.Default.prototype as any)._getIconUrl;
+      delete (L.Icon.Default.prototype as { _getIconUrl?: unknown })._getIconUrl;
       L.Icon.Default.mergeOptions({
         iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
         iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",

@@ -67,20 +67,17 @@ LINE_CHANNEL_ACCESS_TOKEN=
 
 Relevant implementations:
 
-- `src/app/api/line/webhook/route.ts`
-- `src/services/lineService.ts`
-- `src/lib/lineUtils.ts`
 - `services/line_client.py`
 - `app.py`
 
 Current status:
 
-- The Next.js webhook route currently behaves more like a logger/test endpoint than a full production bot
-- A more complete reply flow exists in the Flask app
+- There is no active Next.js LINE webhook route in the current tree
+- The remaining LINE implementation is the legacy Flask path
 
 When working on LINE features:
 
-1. Decide whether the target runtime is Next.js or Python
+1. Decide whether to add a new Next.js route or update the Python path
 2. Move any remaining hardcoded values into env vars
 3. Verify signature handling before enabling replies
 
@@ -104,6 +101,9 @@ Relevant file:
 Used by:
 
 - `src/app/api/gps/route.ts`
+- `src/app/api/gps/history/route.ts`
+- `src/app/api/gps/history-raw/route.ts`
+- `src/lib/dtcGps.ts`
 
 Current behavior:
 
@@ -113,13 +113,12 @@ Current behavior:
 
 Important note:
 
-- The current code contains a hardcoded API token and endpoint
-- That token should be moved to environment variables before production hardening
+- GPS token and base URL are read from environment variables
 
-Recommended env vars if you refactor this area:
+Environment variables:
 
 ```env
-DTC_GPS_API_URL=
+DTC_GPS_API_BASE_URL=https://gps.dtc.co.th:8099
 DTC_GPS_API_TOKEN=
 ```
 

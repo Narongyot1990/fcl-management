@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { X, ExternalLink } from "lucide-react";
+import { X } from "lucide-react";
 import type { Booking } from "@/lib/types";
 
 interface ImageFullscreenModalProps {

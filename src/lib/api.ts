@@ -2,6 +2,8 @@ import type { ApiResponse, Collection } from "./types";
 
 const BASE = "/api/collections";
 
+type ListValue = string | number | boolean | undefined | null;
+
 function getKey(): string {
   if (typeof window === "undefined") return "";
   return sessionStorage.getItem("eir_api_key") ?? "";
@@ -24,10 +26,19 @@ async function handleRes<T>(res: Response): Promise<T> {
 
 export async function listRecords<T>(
   collection: Collection,
-  filters: Record<string, string> = {}
+  filters: Record<string, ListValue> = {},
+  options: Record<string, ListValue> = {}
 ): Promise<ApiResponse<T>> {
   const params = new URLSearchParams(
-    Object.fromEntries(Object.entries(filters).filter(([, v]) => v))
+    Object.entries({ ...filters, ...options }).reduce<Record<string, string>>(
+      (acc, [key, value]) => {
+        if (value !== undefined && value !== null && value !== "") {
+          acc[key] = String(value);
+        }
+        return acc;
+      },
+      {}
+    )
   );
   const url = `${BASE}/${collection}${params.size ? `?${params}` : ""}`;
   const res = await fetch(url, { headers: headers() });

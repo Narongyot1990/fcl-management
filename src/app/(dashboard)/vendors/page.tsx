@@ -20,6 +20,16 @@ interface VendorForm {
   drivers: Driver[];
 }
 
+interface StationReportRow {
+  station_f?: string;
+  station_n?: string;
+  start_date?: string;
+  start_time?: string;
+  end_date?: string;
+  end_time?: string;
+  distance?: string | number;
+}
+
 const EMPTY: VendorForm = {
   code: "", name: "", trucks: [{ plate: "", gps_id: "" }], drivers: [{ name: "", phone: "" }],
 };
@@ -44,7 +54,7 @@ export default function VendorsPage() {
   const [stationOpen, setStationOpen] = useState(false);
   const [stationDateMode, setStationDateMode] = useState<"today" | "custom">("today");
   const [stationDate, setStationDate] = useState(getTodayDate());
-  const [stationData, setStationData] = useState<any[]>([]);
+  const [stationData, setStationData] = useState<StationReportRow[]>([]);
   const [stationLoading, setStationLoading] = useState(false);
   const [stationError, setStationError] = useState("");
   // History (raw) modal
@@ -66,8 +76,8 @@ export default function VendorsPage() {
       const data = await fetchGpsRealtime(truck.gps_id);
       const mapsUrl = `https://maps.google.com/?q=${data.lat},${data.lon}`;
       window.open(mapsUrl, "_blank");
-    } catch (err: any) {
-      alert(err.message || "เกิดข้อผิดพลาดในการดึงข้อมูลพิกัด GPS");
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "เกิดข้อผิดพลาดในการดึงข้อมูลพิกัด GPS");
     } finally {
       setGpsLoading(null);
     }
@@ -94,11 +104,11 @@ export default function VendorsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ gps_id: gpsId, date }),
       });
-      const json = await res.json();
+      const json = await res.json() as { error?: string; stations?: StationReportRow[] };
       if (!res.ok) throw new Error(json.error || "ไม่สามารถดึงข้อมูลได้");
       setStationData(json.stations || []);
-    } catch (err: any) {
-      setStationError(err.message || "ไม่สามารถดึงข้อมูลประวัติได้");
+    } catch (err: unknown) {
+      setStationError(err instanceof Error ? err.message : "ไม่สามารถดึงข้อมูลประวัติได้");
     } finally {
       setStationLoading(false);
     }
@@ -125,11 +135,11 @@ export default function VendorsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ gps_id: gpsId, date }),
       });
-      const json = await res.json();
+      const json = await res.json() as { error?: string; points?: GpsPoint[] };
       if (!res.ok) throw new Error(json.error || "ไม่สามารถดึงข้อมูลได้");
       setHistoryPoints(json.points || []);
-    } catch (err: any) {
-      setHistoryError(err.message || "ไม่สามารถดึงข้อมูลประวัติได้");
+    } catch (err: unknown) {
+      setHistoryError(err instanceof Error ? err.message : "ไม่สามารถดึงข้อมูลประวัติได้");
     } finally {
       setHistoryLoading(false);
     }
@@ -548,7 +558,7 @@ export default function VendorsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {stationData.map((s: any, i: number) => (
+                  {stationData.map((s, i) => (
                     <tr key={i} className="border-b border-slate-100 last:border-0 hover:bg-violet-50/30 transition-colors">
                       <td className="px-3 py-2 text-slate-400">{i + 1}</td>
                       <td className="px-3 py-2"><div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" /><span className="font-medium text-slate-700">{s.station_f || "—"}</span></div></td>

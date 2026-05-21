@@ -87,4 +87,8 @@ export type Collection = "vendors" | "containers" | "bookings" | "customers" | "
 export interface ApiResponse<T> {
   count: number;
   records: T[];
+  page?: number;
+  limit?: number;
+  total?: number;
+  totalPages?: number;
 }

@@ -5,7 +5,6 @@ import dynamic from "next/dynamic";
 const DriverProfile = dynamic(() => import("@/components/DriverProfile"), { ssr: false });
 import ImageUpload from "@/components/ImageUpload";
 import GeminiOcrButton from "@/components/GeminiOcrButton";
-import { containerNoMessage } from "@/lib/containerValidation";
 import { listRecords, createRecord, updateRecord, deleteRecord } from "@/lib/api";
 import type { Booking, Vendor, Container, Customer, Driver } from "@/lib/types";
 import PageHeader from "@/components/PageHeader";
@@ -19,7 +18,6 @@ import Section from "./components/Section";
 import Toggle from "./components/Toggle";
 import ProcessModalFields from "./components/ProcessModalFields";
 import {
-  STEPS,
   STEP_MODAL_TITLES,
   JOB_TYPE_OPTIONS,
   EMPTY_FORM,
@@ -27,18 +25,24 @@ import {
 } from "./utils/booking-utils";
 import type { BookingForm } from "./types/booking-form";
 
+const PAGE_SIZE_OPTIONS = [25, 50, 100] as const;
+
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function BookingsPage() {
   const [records, setRecords] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [showNoContainer, setShowNoContainer] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [processModalOpen, setProcessModalOpen] = useState(false);
-  const [processStep, setProcessStep] = useState(0);
+  const [processStep] = useState(0);
   const [editing, setEditing] = useState<Booking | null>(null);
   const [form, setForm] = useState<BookingForm>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
@@ -113,32 +117,25 @@ export default function BookingsPage() {
     setLoading(true);
     setError("");
     try {
-      const res = await listRecords<Booking>("bookings", search ? { booking_no: search } : {});
-      let records = res.records;
-      records.sort((a, b) => {
-        const dateA = a.booking_date ? new Date(a.booking_date).getTime() : 0;
-        const dateB = b.booking_date ? new Date(b.booking_date).getTime() : 0;
-        return dateB - dateA;
-      });
-      if (dateFrom || dateTo) {
-        const fromStr = dateFrom ? new Date(dateFrom).toISOString().split("T")[0] : null;
-        const toStr = dateTo ? new Date(dateTo + "T23:59:59").toISOString().split("T")[0] : null;
-        records = records.filter((b) => {
-          if (!b.booking_date) return false;
-          const bookingDateStr = b.booking_date.split("T")[0];
-          if (fromStr && bookingDateStr < fromStr) return false;
-          if (toStr && bookingDateStr > toStr) return false;
-          return true;
-        });
-      }
-      if (showNoContainer) records = records.filter((b) => !b.container_no);
-      setRecords(records);
+      const res = await listRecords<Booking>(
+        "bookings",
+        {
+          booking_no: search.trim(),
+          date_from: dateFrom,
+          date_to: dateTo,
+          no_container: showNoContainer,
+        },
+        { page, limit: pageSize }
+      );
+      setRecords(res.records);
+      setTotalRecords(res.total ?? res.count);
+      setTotalPages(res.totalPages ?? 1);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to load bookings");
     } finally {
       setLoading(false);
     }
-  }, [search, dateFrom, dateTo, showNoContainer]);
+  }, [search, dateFrom, dateTo, showNoContainer, page, pageSize]);
 
   const loadDropdowns = useCallback(async () => {
     try {
@@ -152,6 +149,10 @@ export default function BookingsPage() {
       setCustomers(cusRes.records);
     } catch { /* ignore */ }
   }, []);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, dateFrom, dateTo, showNoContainer, pageSize]);
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => { loadDropdowns(); }, [loadDropdowns]);
@@ -224,7 +225,6 @@ export default function BookingsPage() {
 
   function openCreate() { setEditing(null); setForm(EMPTY_FORM); setModalOpen(true); }
   function openEdit(b: Booking) { setEditing(b); setForm(bookingToForm(b)); setModalOpen(true); }
-  function openProcessEdit(b: Booking, stepIndex: number) { setEditing(b); setProcessStep(stepIndex); setForm(bookingToForm(b)); setProcessModalOpen(true); }
 
   // ── Save Handlers ──
   async function handleSave(e: React.FormEvent) {
@@ -285,7 +285,7 @@ export default function BookingsPage() {
       const dupeCounts = countDupes(items);
       const dupesToCheck = [...dupeCounts.entries()].filter(([, c]) => c > 1).map(([v]) => v);
       if (dupesToCheck.length > 0) {
-        const res = await listRecords<Booking>("bookings", {});
+        const res = await listRecords<Booking>("bookings", { booking_nos: dupesToCheck.join(",") });
         const existingMap = new Map<string, number>();
         for (const b of res.records) existingMap.set(b.booking_no, (existingMap.get(b.booking_no) ?? 0) + 1);
         for (const dup of dupesToCheck) {
@@ -305,7 +305,7 @@ export default function BookingsPage() {
     const items = parseMultiText(multiText);
     if (items.length === 0) { alert("No booking numbers to create"); return; }
     const dupeCounts = countDupes(items);
-    const res = await listRecords<Booking>("bookings", {});
+    const res = await listRecords<Booking>("bookings", { booking_nos: [...new Set(items)].join(",") });
     const existingCount = new Map<string, number>();
     for (const b of res.records) existingCount.set(b.booking_no, (existingCount.get(b.booking_no) ?? 0) + 1);
     const baseForm = { ...form, booking_no: "" };
@@ -360,6 +360,18 @@ export default function BookingsPage() {
     setForm((prev) => ({ ...prev, [k]: e.target.value }));
 
   const setFormField = (key: keyof BookingForm, value: unknown) => setForm((f) => ({ ...f, [key]: value }));
+  const firstRecord = totalRecords === 0 ? 0 : (page - 1) * pageSize + 1;
+  const lastRecord = Math.min(page * pageSize, totalRecords);
+  const paginationPages = Array.from(
+    { length: Math.min(totalPages, 7) },
+    (_, index) => {
+      const start = Math.min(
+        Math.max(page - 3, 1),
+        Math.max(totalPages - 6, 1)
+      );
+      return start + index;
+    }
+  );
 
   // ── Render ──
   return (
@@ -376,6 +388,16 @@ export default function BookingsPage() {
             No Container
           </button>
           <DateNavigator dateFrom={dateFrom} dateTo={dateTo} onDateFromChange={setDateFrom} onDateToChange={setDateTo} />
+          <select
+            value={pageSize}
+            onChange={(e) => setPageSize(Number(e.target.value))}
+            className="px-2 py-1.5 text-xs border border-[var(--border)] rounded-lg shadow-sm hover:shadow-md transition-shadow focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+            aria-label="Bookings per page"
+          >
+            {PAGE_SIZE_OPTIONS.map((size) => (
+              <option key={size} value={size}>{size} / page</option>
+            ))}
+          </select>
         </div>
       </PageHeader>
 
@@ -423,6 +445,64 @@ export default function BookingsPage() {
             </table>
           </div>
         )}
+        <div className="flex flex-col gap-2 border-t border-slate-100 px-4 py-3 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            Showing <span className="font-semibold text-slate-700">{firstRecord}</span>
+            {" - "}
+            <span className="font-semibold text-slate-700">{lastRecord}</span>
+            {" of "}
+            <span className="font-semibold text-slate-700">{totalRecords}</span>
+          </div>
+          <div className="flex flex-wrap items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setPage(1)}
+              disabled={page <= 1 || loading}
+              className="px-2 py-1 rounded border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-white"
+            >
+              First
+            </button>
+            <button
+              type="button"
+              onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+              disabled={page <= 1 || loading}
+              className="px-2 py-1 rounded border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-white"
+            >
+              Prev
+            </button>
+            {paginationPages.map((pageNumber) => (
+              <button
+                type="button"
+                key={pageNumber}
+                onClick={() => setPage(pageNumber)}
+                disabled={loading}
+                className={`min-w-8 px-2 py-1 rounded border transition-colors ${
+                  pageNumber === page
+                    ? "border-blue-600 bg-blue-600 text-white"
+                    : "border-slate-200 hover:bg-slate-50"
+                }`}
+              >
+                {pageNumber}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}
+              disabled={page >= totalPages || loading}
+              className="px-2 py-1 rounded border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-white"
+            >
+              Next
+            </button>
+            <button
+              type="button"
+              onClick={() => setPage(totalPages)}
+              disabled={page >= totalPages || loading}
+              className="px-2 py-1 rounded border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-white"
+            >
+              Last
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* ── Main Modal Form ── */}

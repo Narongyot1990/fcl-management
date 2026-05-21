@@ -35,13 +35,18 @@ Allowed collections:
 Behavior:
 
 - Query params become case-insensitive regex filters
-- If role is not `admin`, branch filtering can be applied from headers
+- For `bookings`, `page` and `limit` enable server-side pagination
+- For `bookings`, `date_from`, `date_to`, `no_container`, and `booking_nos` are supported filters
 - Response shape:
 
 ```json
 {
   "count": 12,
-  "records": []
+  "records": [],
+  "page": 1,
+  "limit": 50,
+  "total": 120,
+  "totalPages": 3
 }
 ```
 
@@ -54,8 +59,8 @@ Purpose:
 Behavior:
 
 - Performs dedup check using keys from `src/lib/mongodb.ts`
+- Booking inserts also rely on a unique `booking_no` index when it can be created
 - Adds `created_at`
-- Can force `branch` from request headers for non-admin users
 
 Success response:
 
@@ -245,30 +250,14 @@ Success response:
 
 Related routes exist:
 
-- `GET /api/gps/history`
-- `GET /api/gps/history-raw`
+- `POST /api/gps/history`
+- `POST /api/gps/history-raw`
 
 Inspect those route files before changing historical GPS behavior.
 
 ## LINE
 
-### `POST /api/line/webhook`
-
-Purpose:
-
-- Receive LINE webhook calls
-
-Current behavior:
-
-- Logs headers and body
-- Returns success payload
-- Does not currently behave like a fully active bot flow
-
-### `GET /api/line/webhook`
-
-Purpose:
-
-- Simple route-health response for testing
+There is no active Next.js LINE webhook route in the current tree. The remaining LINE path is the legacy Flask implementation in `app.py`.
 
 ## Legacy Python API
 

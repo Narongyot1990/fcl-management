@@ -1,11 +1,35 @@
-﻿import { NextRequest, NextResponse } from "next/server";
-import { getCollection, DEDUP_KEYS, ALLOWED } from "@/lib/mongodb";
+import { NextRequest, NextResponse } from "next/server";
+import type { Sort } from "mongodb";
+import { getCollection, DEDUP_KEYS, ALLOWED, MongoServerError } from "@/lib/mongodb";
+
+const CONTROL_PARAMS = new Set([
+  "page",
+  "limit",
+  "date_from",
+  "date_to",
+  "no_container",
+  "booking_nos",
+]);
 
 function routeError(error: unknown) {
   const message =
     error instanceof Error ? error.message : "Internal server error";
   const status = message.includes("MONGODB_URI") ? 503 : 500;
   return NextResponse.json({ error: message }, { status });
+}
+
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function toPositiveInt(value: string | null): number | null {
+  if (!value) return null;
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function isDuplicateKeyError(error: unknown): boolean {
+  return error instanceof MongoServerError && error.code === 11000;
 }
 
 export async function GET(
@@ -23,12 +47,57 @@ export async function GET(
     const filter: Record<string, unknown> = {};
 
     for (const [key, value] of Object.entries(search)) {
-      if (value) {
-        filter[key] = { $regex: value, $options: "i" };
+      if (value && !CONTROL_PARAMS.has(key)) {
+        filter[key] = { $regex: escapeRegex(value), $options: "i" };
       }
     }
 
-    const records = await col.find(filter).sort({ created_at: -1 }).toArray();
+    if (collection === "bookings") {
+      const dateRange: Record<string, string> = {};
+      if (search.date_from) dateRange.$gte = search.date_from;
+      if (search.date_to) dateRange.$lte = `${search.date_to}T23:59:59.999Z`;
+      if (Object.keys(dateRange).length > 0) {
+        filter.booking_date = dateRange;
+      }
+
+      if (search.no_container === "true") {
+        filter.$or = [
+          { container_no: { $exists: false } },
+          { container_no: null },
+          { container_no: "" },
+        ];
+      }
+
+      if (search.booking_nos) {
+        const bookingNos = search.booking_nos
+          .split(",")
+          .map((value) => value.trim())
+          .filter(Boolean);
+        if (bookingNos.length > 0) {
+          filter.booking_no = { $in: bookingNos };
+        }
+      }
+    }
+
+    const page = toPositiveInt(req.nextUrl.searchParams.get("page"));
+    const rawLimit = toPositiveInt(req.nextUrl.searchParams.get("limit"));
+    const limit = rawLimit ? Math.min(rawLimit, 200) : null;
+    const shouldPaginate = page !== null || limit !== null;
+    const currentPage = page ?? 1;
+    const pageLimit = limit ?? 50;
+    const sort: Sort = collection === "bookings"
+      ? { booking_date: -1, created_at: -1 }
+      : { created_at: -1 };
+
+    const cursor = col.find(filter).sort(sort);
+    if (shouldPaginate) {
+      cursor.skip((currentPage - 1) * pageLimit).limit(pageLimit);
+    }
+
+    const [records, total] = await Promise.all([
+      cursor.toArray(),
+      shouldPaginate ? col.countDocuments(filter) : Promise.resolve(null),
+    ]);
     const mapped = records.map(
       (record: Record<string, unknown> & { _id: { toString(): string } }) => ({
         ...record,
@@ -36,7 +105,18 @@ export async function GET(
       })
     );
 
-    return NextResponse.json({ count: mapped.length, records: mapped });
+    return NextResponse.json({
+      count: mapped.length,
+      records: mapped,
+      ...(shouldPaginate
+        ? {
+            page: currentPage,
+            limit: pageLimit,
+            total,
+            totalPages: Math.max(1, Math.ceil((total ?? 0) / pageLimit)),
+          }
+        : {}),
+    });
   } catch (error) {
     return routeError(error);
   }
@@ -76,7 +156,18 @@ export async function POST(
     }
 
     const doc = { ...data, created_at: new Date().toISOString() };
-    const result = await col.insertOne(doc);
+    let result;
+    try {
+      result = await col.insertOne(doc);
+    } catch (error) {
+      if (isDuplicateKeyError(error)) {
+        return NextResponse.json(
+          { error: "Record already exists (duplicate)" },
+          { status: 409 }
+        );
+      }
+      throw error;
+    }
 
     return NextResponse.json({
       created: true,
