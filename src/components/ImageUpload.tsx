@@ -124,7 +124,11 @@ export default function ImageUpload({ label, value, type, onChange }: Props) {
         <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={onInputChange} />
 
         {value ? (
-          <div className="relative group w-full rounded-lg overflow-hidden border border-slate-200 bg-slate-50">
+          <div
+            onDrop={onDrop}
+            onDragOver={(e) => e.preventDefault()}
+            className="relative group w-full rounded-lg overflow-hidden border border-slate-200 bg-slate-50"
+          >
             <img src={value} alt={label} className="w-full h-32 object-cover" />
             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
               <button

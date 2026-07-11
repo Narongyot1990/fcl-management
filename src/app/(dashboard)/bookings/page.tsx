@@ -12,6 +12,11 @@ import PageHeader from "@/components/PageHeader";
 import Modal from "@/components/Modal";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { FormField, Input, Select } from "@/components/FormField";
+import { getTodayDate } from "@/lib/gpsUtils";
+
+// ── Default codes pre-selected on new booking (most bookings use these) ──────
+const DEFAULT_CUSTOMER_CODE = "HRF";
+const DEFAULT_VENDOR_CODE = "FLS";
 
 // ── Collapsible section (form) ───────────────────────────────────────────────
 function Section({ title, icon, children, cols = 2, defaultOpen = true }: { title: string; icon?: string; children: React.ReactNode; cols?: number; defaultOpen?: boolean }) {
@@ -417,7 +422,16 @@ export default function BookingsPage() {
     setForm((f) => ({ ...f, container_size_code: code, container_size: match?.size ?? f.container_size }));
   }
 
-  function openCreate() { setEditing(null); setForm(EMPTY_FORM); setModalOpen(true); }
+  function openCreate() {
+    setEditing(null);
+    setForm({
+      ...EMPTY_FORM,
+      booking_date: getTodayDate(),
+      customer_code: customers.find((c) => c.code === DEFAULT_CUSTOMER_CODE)?.code ?? "",
+      vendor_code: vendors.find((v) => v.code === DEFAULT_VENDOR_CODE)?.code ?? "",
+    });
+    setModalOpen(true);
+  }
 
   function openEdit(b: Booking) {
     setEditing(b);
@@ -778,13 +792,17 @@ export default function BookingsPage() {
                 <GeminiOcrButton
                   containerImageUrl={form.container_image_url}
                   eirImageUrl={form.eir_image_url}
-                  onResult={(r) => setForm((f) => ({
-                    ...f,
-                    ...(r.container_size_code ? { container_size_code: r.container_size_code } : {}),
-                    ...(r.tare_weight ? { tare_weight: r.tare_weight } : {}),
-                    ...(r.container_no ? { container_no: r.container_no } : {}),
-                    ...(r.seal_no ? { seal_no: r.seal_no } : {}),
-                  }))}
+                  onResult={(r) => setForm((f) => {
+                    const sizeMatch = r.container_size_code ? containers.find((c) => c.code === r.container_size_code) : undefined;
+                    return {
+                      ...f,
+                      ...(r.container_size_code ? { container_size_code: r.container_size_code } : {}),
+                      ...(sizeMatch ? { container_size: sizeMatch.size } : {}),
+                      ...(r.tare_weight ? { tare_weight: r.tare_weight } : {}),
+                      ...(r.container_no ? { container_no: r.container_no } : {}),
+                      ...(r.seal_no ? { seal_no: r.seal_no } : {}),
+                    };
+                  })}
                 />
                 <p className="text-[10px] text-slate-400">AI อ่านจากรูปอัตโนมัติ (95%+ confidence)</p>
               </div>
