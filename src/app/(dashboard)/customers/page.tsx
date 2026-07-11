@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { Pencil, Trash2, Search } from "lucide-react";
+import { Building2, Pencil, Search, Trash2, UsersRound } from "lucide-react";
 import { listRecords, createRecord, updateRecord, deleteRecord } from "@/lib/api";
 import type { Customer } from "@/lib/types";
 import PageHeader from "@/components/PageHeader";
@@ -64,42 +64,84 @@ export default function CustomersPage() {
     finally { setDeleting(false); }
   }
 
+  const newest = records[0]?.created_at ? new Date(records[0].created_at).toLocaleDateString() : "-";
+
   return (
-    <div>
-      <PageHeader title="Customers" subtitle="จัดการข้อมูลลูกค้า" onAdd={openCreate}>
-        <div className="relative">
+    <div className="space-y-4">
+      <PageHeader title="Customers" subtitle="Customer master data for booking operations" onAdd={openCreate}>
+        <div className="relative w-full sm:w-72">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="ค้นหาชื่อลูกค้า…"
-            className="pl-9 pr-4 py-2 text-sm border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-56" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search customer name..."
+            className="w-full rounded-lg border border-[var(--border)] bg-white py-2 pl-9 pr-3 text-sm shadow-sm outline-none transition focus:ring-2 focus:ring-blue-500"
+          />
         </div>
       </PageHeader>
 
-      {error && <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">{error}</div>}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="border border-slate-200 bg-white px-4 py-3 shadow-sm">
+          <div className="flex items-center gap-2 text-xs font-medium text-slate-500"><UsersRound size={14} /> Total customers</div>
+          <div className="mt-2 text-2xl font-bold text-slate-900">{records.length}</div>
+        </div>
+        <div className="border border-slate-200 bg-white px-4 py-3 shadow-sm">
+          <div className="flex items-center gap-2 text-xs font-medium text-slate-500"><Search size={14} /> Filtered by</div>
+          <div className="mt-2 truncate text-sm font-semibold text-slate-800">{search || "All customers"}</div>
+        </div>
+        <div className="border border-slate-200 bg-white px-4 py-3 shadow-sm">
+          <div className="flex items-center gap-2 text-xs font-medium text-slate-500"><Building2 size={14} /> Latest record</div>
+          <div className="mt-2 text-sm font-semibold text-slate-800">{newest}</div>
+        </div>
+      </div>
 
-      <div className="bg-white rounded-2xl border border-[var(--border)] shadow-sm overflow-hidden">
+      {error && <div className="border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>}
+
+      <div className="md:hidden space-y-2">
+        {loading ? (
+          <div className="border border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-500">Loading...</div>
+        ) : records.length === 0 ? (
+          <div className="border border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-500">No customers found.</div>
+        ) : records.map((c) => (
+          <div key={c._id} className="border border-slate-200 bg-white p-3 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="font-mono text-sm font-bold text-blue-700">{c.code}</div>
+                <div className="mt-1 truncate text-sm font-semibold text-slate-900">{c.name}</div>
+              </div>
+              <div className="flex shrink-0 items-center gap-1">
+                <button type="button" onClick={() => openEdit(c)} className="p-1.5 text-slate-400 hover:text-blue-600" title="Edit"><Pencil size={15} /></button>
+                <button type="button" onClick={() => setDeleteTarget(c)} className="p-1.5 text-slate-400 hover:text-red-600" title="Delete"><Trash2 size={15} /></button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="hidden overflow-hidden border border-slate-200 bg-white shadow-sm md:block">
         <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-[var(--border)] bg-slate-50">
-              <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide w-8">#</th>
-              <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Customer Code</th>
-              <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Customer Name</th>
-              <th className="px-5 py-3 w-20" />
+          <thead className="bg-slate-50">
+            <tr className="border-b border-slate-200">
+              <th className="w-14 px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wide text-slate-500">#</th>
+              <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wide text-slate-500">Code</th>
+              <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wide text-slate-500">Customer</th>
+              <th className="w-28 px-4 py-3 text-right text-[11px] font-bold uppercase tracking-wide text-slate-500">Actions</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-slate-100">
             {loading ? (
-              <tr><td colSpan={4} className="px-5 py-10 text-center text-[var(--muted)]">Loading…</td></tr>
+              <tr><td colSpan={4} className="px-5 py-10 text-center text-slate-500">Loading...</td></tr>
             ) : records.length === 0 ? (
-              <tr><td colSpan={4} className="px-5 py-10 text-center text-[var(--muted)]">ยังไม่มีลูกค้า กด Add New เพื่อเพิ่ม</td></tr>
+              <tr><td colSpan={4} className="px-5 py-10 text-center text-slate-500">No customers found.</td></tr>
             ) : records.map((c, i) => (
-              <tr key={c._id} className="border-b border-[var(--border)] last:border-0 hover:bg-slate-50 transition-colors">
-                <td className="px-5 py-3 text-[var(--muted)] text-xs">{i + 1}</td>
-                <td className="px-5 py-3 font-mono font-medium text-blue-700">{c.code}</td>
-                <td className="px-5 py-3 font-medium">{c.name}</td>
-                <td className="px-5 py-3">
-                  <div className="flex items-center gap-1 justify-end">
-                    <button onClick={() => openEdit(c)} className="p-1.5 rounded-lg hover:bg-blue-50 text-[var(--muted)] hover:text-blue-600 transition-colors"><Pencil size={14} /></button>
-                    <button onClick={() => setDeleteTarget(c)} className="p-1.5 rounded-lg hover:bg-red-50 text-[var(--muted)] hover:text-red-600 transition-colors"><Trash2 size={14} /></button>
+              <tr key={c._id} className="hover:bg-slate-50">
+                <td className="px-4 py-3 text-xs text-slate-400">{i + 1}</td>
+                <td className="px-4 py-3 font-mono font-bold text-blue-700">{c.code}</td>
+                <td className="px-4 py-3 font-medium text-slate-900">{c.name}</td>
+                <td className="px-4 py-3">
+                  <div className="flex items-center justify-end gap-1">
+                    <button type="button" onClick={() => openEdit(c)} className="p-1.5 text-slate-400 hover:text-blue-600" title="Edit"><Pencil size={15} /></button>
+                    <button type="button" onClick={() => setDeleteTarget(c)} className="p-1.5 text-slate-400 hover:text-red-600" title="Delete"><Trash2 size={15} /></button>
                   </div>
                 </td>
               </tr>
@@ -108,27 +150,27 @@ export default function CustomersPage() {
         </table>
       </div>
 
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? "แก้ไขลูกค้า" : "เพิ่มลูกค้าใหม่"} size="sm">
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? "Edit customer" : "Add customer"} size="sm">
         <form onSubmit={handleSave} className="flex flex-col gap-4">
           <FormField label="Customer Code" required>
             <Input value={form.code} onChange={set("code")} placeholder="e.g. CUS001" required />
           </FormField>
           <FormField label="Customer Name" required>
-            <Input value={form.name} onChange={set("name")} placeholder="ชื่อลูกค้า / บริษัท" required />
+            <Input value={form.name} onChange={set("name")} placeholder="Company or customer name" required />
           </FormField>
           <div className="flex gap-3 justify-end pt-1">
             <button type="button" onClick={() => setModalOpen(false)}
-              className="px-4 py-2 text-sm rounded-lg border border-[var(--border)] hover:bg-slate-50 transition-colors">ยกเลิก</button>
+              className="px-4 py-2 text-sm rounded-lg border border-[var(--border)] hover:bg-slate-50 transition-colors">Cancel</button>
             <button type="submit" disabled={saving}
               className="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50 font-medium">
-              {saving ? "กำลังบันทึก…" : editing ? "บันทึก" : "เพิ่มลูกค้า"}
+              {saving ? "Saving..." : editing ? "Save" : "Add customer"}
             </button>
           </div>
         </form>
       </Modal>
 
-      <ConfirmDialog open={!!deleteTarget} title="ลบลูกค้า"
-        message={`ต้องการลบ "${deleteTarget?.name}" ใช่หรือไม่?`}
+      <ConfirmDialog open={!!deleteTarget} title="Delete customer"
+        message={`Delete "${deleteTarget?.name}"? This action cannot be undone.`}
         onConfirm={handleDelete} onCancel={() => setDeleteTarget(null)} loading={deleting} />
     </div>
   );

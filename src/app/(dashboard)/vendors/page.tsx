@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { Pencil, Trash2, Search, Plus, X, MapPin, Loader2, History, CalendarDays, MoreVertical, Route } from "lucide-react";
+import { Pencil, Trash2, Search, Plus, X, MapPin, Loader2, History, CalendarDays, MoreVertical, Route, Truck, UsersRound, Satellite } from "lucide-react";
 import dynamic from "next/dynamic";
 const GpsMap = dynamic(() => import("@/components/GpsMap"), { ssr: false });
 const DriverProfile = dynamic(() => import("@/components/DriverProfile"), { ssr: false });
@@ -18,6 +18,16 @@ interface VendorForm {
   name: string;
   trucks: { plate: string; gps_id: string }[];
   drivers: Driver[];
+}
+
+interface StationReportRow {
+  station_f?: string;
+  station_n?: string;
+  start_date?: string;
+  start_time?: string;
+  end_date?: string;
+  end_time?: string;
+  distance?: string | number;
 }
 
 const EMPTY: VendorForm = {
@@ -44,7 +54,7 @@ export default function VendorsPage() {
   const [stationOpen, setStationOpen] = useState(false);
   const [stationDateMode, setStationDateMode] = useState<"today" | "custom">("today");
   const [stationDate, setStationDate] = useState(getTodayDate());
-  const [stationData, setStationData] = useState<any[]>([]);
+  const [stationData, setStationData] = useState<StationReportRow[]>([]);
   const [stationLoading, setStationLoading] = useState(false);
   const [stationError, setStationError] = useState("");
   // History (raw) modal
@@ -65,9 +75,9 @@ export default function VendorsPage() {
     try {
       const data = await fetchGpsRealtime(truck.gps_id);
       const mapsUrl = `https://maps.google.com/?q=${data.lat},${data.lon}`;
-      window.open(mapsUrl, "_blank", "noopener,noreferrer");
-    } catch (err: any) {
-      alert(err.message || "เกิดข้อผิดพลาดในการดึงข้อมูลพิกัด GPS");
+      window.open(mapsUrl, "_blank");
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "เกิดข้อผิดพลาดในการดึงข้อมูลพิกัด GPS");
     } finally {
       setGpsLoading(null);
     }
@@ -94,11 +104,11 @@ export default function VendorsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ gps_id: gpsId, date }),
       });
-      const json = await res.json();
+      const json = await res.json() as { error?: string; stations?: StationReportRow[] };
       if (!res.ok) throw new Error(json.error || "ไม่สามารถดึงข้อมูลได้");
       setStationData(json.stations || []);
-    } catch (err: any) {
-      setStationError(err.message || "ไม่สามารถดึงข้อมูลประวัติได้");
+    } catch (err: unknown) {
+      setStationError(err instanceof Error ? err.message : "ไม่สามารถดึงข้อมูลประวัติได้");
     } finally {
       setStationLoading(false);
     }
@@ -125,11 +135,11 @@ export default function VendorsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ gps_id: gpsId, date }),
       });
-      const json = await res.json();
+      const json = await res.json() as { error?: string; points?: GpsPoint[] };
       if (!res.ok) throw new Error(json.error || "ไม่สามารถดึงข้อมูลได้");
       setHistoryPoints(json.points || []);
-    } catch (err: any) {
-      setHistoryError(err.message || "ไม่สามารถดึงข้อมูลประวัติได้");
+    } catch (err: unknown) {
+      setHistoryError(err instanceof Error ? err.message : "ไม่สามารถดึงข้อมูลประวัติได้");
     } finally {
       setHistoryLoading(false);
     }
@@ -243,8 +253,12 @@ export default function VendorsPage() {
     }
   }
 
+  const totalTrucks = records.reduce((sum, vendor) => sum + (vendor.trucks?.length || vendor.truck_plates?.length || 0), 0);
+  const totalDrivers = records.reduce((sum, vendor) => sum + (vendor.drivers?.length || 0), 0);
+  const gpsEnabled = records.reduce((sum, vendor) => sum + (vendor.trucks?.filter((truck) => truck.gps_id).length || 0), 0);
+
   return (
-    <div>
+    <div className="space-y-4">
       <PageHeader title="Vendors" subtitle="จัดการข้อมูลผู้ขนส่ง ทะเบียนรถ และคนขับ" onAdd={openCreate}>
         <div className="relative">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
@@ -256,6 +270,25 @@ export default function VendorsPage() {
           />
         </div>
       </PageHeader>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
+        <div className="border border-slate-200 bg-white px-4 py-3 shadow-sm">
+          <div className="flex items-center gap-2 text-xs font-medium text-slate-500"><Truck size={14} /> Vendors</div>
+          <div className="mt-2 text-2xl font-bold text-slate-900">{records.length}</div>
+        </div>
+        <div className="border border-slate-200 bg-white px-4 py-3 shadow-sm">
+          <div className="flex items-center gap-2 text-xs font-medium text-slate-500"><Truck size={14} /> Trucks</div>
+          <div className="mt-2 text-2xl font-bold text-slate-900">{totalTrucks}</div>
+        </div>
+        <div className="border border-slate-200 bg-white px-4 py-3 shadow-sm">
+          <div className="flex items-center gap-2 text-xs font-medium text-slate-500"><UsersRound size={14} /> Drivers</div>
+          <div className="mt-2 text-2xl font-bold text-slate-900">{totalDrivers}</div>
+        </div>
+        <div className="border border-slate-200 bg-white px-4 py-3 shadow-sm">
+          <div className="flex items-center gap-2 text-xs font-medium text-slate-500"><Satellite size={14} /> GPS enabled</div>
+          <div className="mt-2 text-2xl font-bold text-slate-900">{gpsEnabled}</div>
+        </div>
+      </div>
 
       {error && (
         <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">{error}</div>
@@ -548,7 +581,7 @@ export default function VendorsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {stationData.map((s: any, i: number) => (
+                  {stationData.map((s, i) => (
                     <tr key={i} className="border-b border-slate-100 last:border-0 hover:bg-violet-50/30 transition-colors">
                       <td className="px-3 py-2 text-slate-400">{i + 1}</td>
                       <td className="px-3 py-2"><div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" /><span className="font-medium text-slate-700">{s.station_f || "—"}</span></div></td>

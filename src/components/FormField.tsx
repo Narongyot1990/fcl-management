@@ -25,7 +25,7 @@ export function FormField({ label, required, children, hint, hintType }: FormFie
   );
 }
 
-interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {}
+type InputProps = React.InputHTMLAttributes<HTMLInputElement>;
 
 export function Input({ className, ...props }: InputProps) {
   return (
@@ -52,8 +52,8 @@ export function Select({ options, placeholder, className, ...props }: SelectProp
           {placeholder}
         </option>
       )}
-      {options.map((o) => (
-        <option key={o.value} value={o.value}>
+      {options.map((o, i) => (
+        <option key={`${o.value}-${i}`} value={o.value}>
           {o.label}
         </option>
       ))}
@@ -61,7 +61,7 @@ export function Select({ options, placeholder, className, ...props }: SelectProp
   );
 }
 
-interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {}
+type TextareaProps = React.TextareaHTMLAttributes<HTMLTextAreaElement>;
 
 export function Textarea({ className, ...props }: TextareaProps) {
   return (

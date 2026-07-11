@@ -1,6 +1,6 @@
 "use client";
 import React, { useRef, useState } from "react";
-import { UploadCloud, X, Image as ImageIcon, Loader2, Crop } from "lucide-react";
+import { X, Image as ImageIcon, Loader2, Crop } from "lucide-react";
 import imageCompression from "browser-image-compression";
 import ImageCropModal from "./ImageCropModal";
 

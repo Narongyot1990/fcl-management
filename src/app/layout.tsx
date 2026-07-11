@@ -6,7 +6,7 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "FCL Management System",
-  description: "Full Container Load management dashboard",
+  description: "Full Container Load operations system",
 };
 
 export default function RootLayout({
