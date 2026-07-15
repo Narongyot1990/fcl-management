@@ -1,7 +1,7 @@
 "use client";
 import { Pencil, Trash2, Copy, Check, MapPin, Loader2, ExternalLink, Images, FileText, Package } from "lucide-react";
 import type { Booking, Vendor } from "@/lib/types";
-import { getStepStatuses, toShortDate, toShortDateTime, toProxyUrl } from "../utils/booking-utils";
+import { toShortDate, toShortDateTime, toProxyUrl } from "../utils/booking-utils";
 
 interface BookingRowProps {
   booking: Booking;
@@ -17,15 +17,6 @@ interface BookingRowProps {
   onDriverProfile: (driver: { name: string; phone: string }) => void;
 }
 
-function statusFor(booking: Booking) {
-  const steps = getStepStatuses(booking);
-  if (!steps[1]) return { label: "Assign truck", className: "border-amber-200 bg-amber-50 text-amber-700" };
-  if (!steps[2]) return { label: "Container", className: "border-orange-200 bg-orange-50 text-orange-700" };
-  if (!steps[3]) return { label: "Loading", className: "border-blue-200 bg-blue-50 text-blue-700" };
-  if (!steps[4]) return { label: "Return", className: "border-violet-200 bg-violet-50 text-violet-700" };
-  return { label: "Complete", className: "border-emerald-200 bg-emerald-50 text-emerald-700" };
-}
-
 export default function BookingRow({
   booking, vendors, copiedId, openingGps,
   onEdit, onDelete, onCopy, onOpenImages, onOpenSingleImage, onOpenGps, onDriverProfile,
@@ -36,7 +27,6 @@ export default function BookingRow({
   const hasBothImages = hasEir && hasContainer;
   const eirProxyUrl = toProxyUrl(booking.eir_image_url);
   const containerProxyUrl = toProxyUrl(booking.container_image_url);
-  const status = statusFor(booking);
 
   return (
     <tr className="hover:bg-slate-50/80 transition-colors align-top">
@@ -64,7 +54,10 @@ export default function BookingRow({
       </td>
 
       <td className="px-3 py-2.5 min-w-44">
-        <div className="font-mono text-[12px] font-bold text-slate-800">{booking.truck_plate || "-"}</div>
+        <div className="font-mono text-[12px] font-bold text-slate-800">
+          {booking.truck_plate || "-"}
+          {booking.vendor_code && <span className="ml-1.5 font-normal text-[10px] text-slate-400">({booking.vendor_code})</span>}
+        </div>
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); onDriverProfile({ name: booking.driver_name, phone: booking.driver_phone }); }}
@@ -73,11 +66,6 @@ export default function BookingRow({
           {booking.driver_name || "No driver"}
         </button>
         {booking.driver_phone && <div className="text-[10px] text-slate-400">{booking.driver_phone}</div>}
-      </td>
-
-      <td className="px-3 py-2.5 whitespace-nowrap">
-        <span className={`inline-flex border px-2 py-0.5 text-[10px] font-semibold ${status.className}`}>{status.label}</span>
-        <div className="mt-1 text-[10px] text-slate-400">{booking.vendor_code || "No vendor"}</div>
       </td>
 
       <td className="px-3 py-2.5 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>

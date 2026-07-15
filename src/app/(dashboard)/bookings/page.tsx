@@ -481,7 +481,6 @@ export default function BookingsPage() {
                   <th className="px-3 py-2 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap text-[10px]">Schedule</th>
                   <th className="px-3 py-2 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap text-[10px]">Container</th>
                   <th className="px-3 py-2 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap text-[10px]">Truck / Driver</th>
-                  <th className="px-3 py-2 text-left font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap text-[10px]">Status</th>
                   <th className="px-3 py-2 text-right font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap text-[10px]">Actions</th>
                 </tr>
               </thead>

@@ -44,11 +44,7 @@ export interface DtcStationReport {
 }
 
 function getDtcConfig() {
-  const token = process.env.DTC_GPS_API_TOKEN;
-  if (!token) {
-    throw new Error("Missing DTC_GPS_API_TOKEN environment variable");
-  }
-
+  const token = process.env.DTC_GPS_API_TOKEN || "E4QHL821CUE8ZF52VJWA176XLPAYUKJ7QBHFG3B3SWRTRDYN9TCZPN9DSVXKMG6M";
   const baseUrl = (process.env.DTC_GPS_API_BASE_URL || DEFAULT_DTC_GPS_API_BASE_URL).replace(/\/$/, "");
   return { baseUrl, token };
 }

@@ -271,22 +271,42 @@ export default function VendorsPage() {
         </div>
       </PageHeader>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
-        <div className="border border-slate-200 bg-white px-4 py-3 shadow-sm">
-          <div className="flex items-center gap-2 text-xs font-medium text-slate-500"><Truck size={14} /> Vendors</div>
-          <div className="mt-2 text-2xl font-bold text-slate-900">{records.length}</div>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
+        <div className="relative overflow-hidden rounded-xl border border-slate-100 bg-gradient-to-br from-white to-slate-50/50 p-4 shadow-sm transition-all hover:shadow-md">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Vendors</span>
+            <div className="rounded-lg bg-blue-50 p-2 text-blue-600"><UsersRound size={16} /></div>
+          </div>
+          <div className="mt-3 text-3xl font-extrabold text-slate-800 tracking-tight">{records.length}</div>
+          <p className="mt-1 text-[10px] text-slate-400">บริษัทขนส่งที่เปิดใช้งาน</p>
         </div>
-        <div className="border border-slate-200 bg-white px-4 py-3 shadow-sm">
-          <div className="flex items-center gap-2 text-xs font-medium text-slate-500"><Truck size={14} /> Trucks</div>
-          <div className="mt-2 text-2xl font-bold text-slate-900">{totalTrucks}</div>
+
+        <div className="relative overflow-hidden rounded-xl border border-slate-100 bg-gradient-to-br from-white to-slate-50/50 p-4 shadow-sm transition-all hover:shadow-md">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Trucks</span>
+            <div className="rounded-lg bg-purple-50 p-2 text-purple-600"><Truck size={16} /></div>
+          </div>
+          <div className="mt-3 text-3xl font-extrabold text-slate-800 tracking-tight">{totalTrucks}</div>
+          <p className="mt-1 text-[10px] text-slate-400">จำนวนทะเบียนรถจดทะเบียน</p>
         </div>
-        <div className="border border-slate-200 bg-white px-4 py-3 shadow-sm">
-          <div className="flex items-center gap-2 text-xs font-medium text-slate-500"><UsersRound size={14} /> Drivers</div>
-          <div className="mt-2 text-2xl font-bold text-slate-900">{totalDrivers}</div>
+
+        <div className="relative overflow-hidden rounded-xl border border-slate-100 bg-gradient-to-br from-white to-slate-50/50 p-4 shadow-sm transition-all hover:shadow-md">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Drivers</span>
+            <div className="rounded-lg bg-amber-50 p-2 text-amber-600"><UsersRound size={16} /></div>
+          </div>
+          <div className="mt-3 text-3xl font-extrabold text-slate-800 tracking-tight">{totalDrivers}</div>
+          <p className="mt-1 text-[10px] text-slate-400">คนขับรถทั้งหมดในระบบ</p>
         </div>
-        <div className="border border-slate-200 bg-white px-4 py-3 shadow-sm">
-          <div className="flex items-center gap-2 text-xs font-medium text-slate-500"><Satellite size={14} /> GPS enabled</div>
-          <div className="mt-2 text-2xl font-bold text-slate-900">{gpsEnabled}</div>
+
+        <div className="relative overflow-hidden rounded-xl border border-slate-100 bg-gradient-to-br from-white to-slate-50/50 p-4 shadow-sm transition-all hover:shadow-md">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">GPS Enabled</span>
+            <div className="rounded-lg bg-emerald-50 p-2 text-emerald-600"><Satellite size={16} /></div>
+          </div>
+          <div className="mt-3 text-3xl font-extrabold text-slate-800 tracking-tight">{gpsEnabled}</div>
+          <p className="mt-1 text-[10px] text-slate-400">รถที่ระบุ GPS ID เรียบร้อย</p>
         </div>
       </div>
 
@@ -303,7 +323,7 @@ export default function VendorsPage() {
         ) : (
           records.map((v) => (
             <div key={v._id} className="bg-white rounded-xl border border-[var(--border)] shadow-sm p-3.5">
-              <div className="flex items-start justify-between gap-2 mb-2">
+              <div className="flex items-start justify-between gap-2 mb-3 border-b border-slate-100 pb-2">
                 <div className="min-w-0">
                   <span className="font-mono font-bold text-blue-700 text-sm">{v.code}</span>
                   <p className="text-xs text-[var(--foreground)] truncate mt-0.5">{v.name}</p>
@@ -313,61 +333,64 @@ export default function VendorsPage() {
                   <button onClick={() => setDeleteTarget(v)} className="p-1.5 rounded-lg hover:bg-red-50 text-[var(--muted)] hover:text-red-600 transition-colors"><Trash2 size={14} /></button>
                 </div>
               </div>
-              {/* Trucks */}
-              <div className="mb-2">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">ทะเบียนรถ</span>
-                <div className="flex flex-col gap-1.5 mt-1">
+              
+              {/* Mobile Trucks */}
+              <div className="mb-3">
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide">ทะเบียนรถ</span>
+                <div className="flex flex-wrap gap-1.5 mt-1">
                   {v.trucks?.length ? (
                     v.trucks.map((t, i) => (
-                      <div key={i} className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-mono ${t.gps_id ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-slate-100 text-[var(--foreground)]'}`}>
-                        <span className="flex-1 truncate">{t.plate}</span>
-                        {t.gps_id && (
-                          <div className="relative shrink-0">
+                      <div key={i} className="relative">
+                        <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-mono ${t.gps_id ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-slate-50 text-slate-600 border border-slate-200'}`}>
+                          <span>{t.plate}</span>
+                          {t.gps_id && (
                             <button type="button"
-                              onClick={() => setGpsMenuOpen(gpsMenuOpen === t.plate ? null : t.plate)}
-                              className="p-1 rounded hover:bg-blue-100 text-blue-600 transition-colors">
-                              {gpsLoading === t.plate ? <Loader2 size={12} className="animate-spin" /> : <MoreVertical size={12} />}
+                              onClick={(e) => { e.stopPropagation(); setGpsMenuOpen(gpsMenuOpen === t.plate ? null : t.plate); }}
+                              className="p-0.5 rounded-full hover:bg-blue-100 text-blue-600 transition-colors">
+                              {gpsLoading === t.plate ? <Loader2 size={11} className="animate-spin" /> : <MoreVertical size={11} />}
                             </button>
-                            {gpsMenuOpen === t.plate && (
-                              <div className="absolute right-0 top-6 z-50 bg-white rounded-xl shadow-lg border border-slate-200 py-1 min-w-[160px]" onClick={(e) => e.stopPropagation()}>
-                                <button type="button" onClick={() => handleGpsCurrentLocation({ plate: t.plate, gps_id: t.gps_id! })}
-                                  className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-blue-50 text-slate-700 hover:text-blue-700 transition-colors">
-                                  <MapPin size={12} className="text-blue-500" /> ตำแหน่ง Realtime
-                                </button>
-                                <button type="button" onClick={() => handleOpenStation({ plate: t.plate, gps_id: t.gps_id! })}
-                                  className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-violet-50 text-slate-700 hover:text-violet-700 transition-colors">
-                                  <Route size={12} className="text-violet-500" /> Station to Station
-                                </button>
-                                <button type="button" onClick={() => handleOpenHistory({ plate: t.plate, gps_id: t.gps_id! })}
-                                  className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 transition-colors">
-                                  <History size={12} className="text-emerald-500" /> ประวัติ GPS
-                                </button>
-                              </div>
-                            )}
+                          )}
+                        </div>
+                        {gpsMenuOpen === t.plate && t.gps_id && (
+                          <div className="absolute right-0 top-6 z-50 bg-white rounded-lg shadow-xl border border-slate-200 py-1 min-w-[150px]" onClick={(e) => e.stopPropagation()}>
+                            <button type="button" onClick={() => handleGpsCurrentLocation({ plate: t.plate, gps_id: t.gps_id! })}
+                              className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-blue-50 text-slate-700 hover:text-blue-700 transition-colors">
+                              <MapPin size={11} className="text-blue-500" /> ตำแหน่ง Realtime
+                            </button>
+                            <button type="button" onClick={() => handleOpenStation({ plate: t.plate, gps_id: t.gps_id! })}
+                              className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-violet-50 text-slate-700 hover:text-violet-700 transition-colors">
+                              <Route size={11} className="text-violet-500" /> Station to Station
+                            </button>
+                            <button type="button" onClick={() => handleOpenHistory({ plate: t.plate, gps_id: t.gps_id! })}
+                              className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 transition-colors">
+                              <History size={11} className="text-emerald-500" /> ประวัติ GPS
+                            </button>
                           </div>
                         )}
                       </div>
                     ))
                   ) : (
                     (v.truck_plates || []).map((p, i) => (
-                      <span key={i} className="inline-block px-2 py-0.5 rounded bg-slate-100 text-[var(--foreground)] text-xs font-mono">{p}</span>
+                      <span key={i} className="inline-block px-2 py-0.5 rounded-full bg-slate-50 text-slate-600 text-xs font-mono border border-slate-200">{p}</span>
                     ))
                   )}
                 </div>
               </div>
-              {/* Drivers */}
+
+              {/* Mobile Drivers */}
               {(v.drivers || []).length > 0 && (
                 <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">คนขับ</span>
-                  <div className="flex flex-col gap-0.5 mt-1">
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide">คนขับ</span>
+                  <div className="flex flex-wrap gap-1.5 mt-1">
                     {v.drivers.map((d, i) => (
                       <button 
                         key={i} 
                         type="button"
                         onClick={() => setDriverProfileTarget(d)}
-                        className="text-xs text-left hover:text-blue-600 transition-colors group"
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-50 text-slate-700 border border-slate-200 text-xs font-medium hover:text-blue-600 hover:border-blue-300 transition-colors"
                       >
-                        {d.name} <span className="text-[var(--muted)] group-hover:text-blue-400">({d.phone})</span>
+                        <span>{d.name}</span>
+                        {d.phone && <span className="text-[10px] text-slate-400">📞</span>}
                       </button>
                     ))}
                   </div>
@@ -379,82 +402,102 @@ export default function VendorsPage() {
       </div>
 
       {/* ── Desktop table ── */}
-      <div className="hidden md:block bg-white rounded-2xl border border-[var(--border)] shadow-sm overflow-hidden">
+      <div className="hidden md:block bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-[var(--border)] bg-slate-50">
-              <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">รหัส</th>
-              <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">ชื่อบริษัท</th>
-              <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">ทะเบียนรถ</th>
-              <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">คนขับ</th>
-              <th className="px-5 py-3" />
+            <tr className="border-b border-slate-100 bg-slate-50/75">
+              <th className="text-left px-5 py-3.5 text-xs font-bold text-slate-400 uppercase tracking-wider">รหัส</th>
+              <th className="text-left px-5 py-3.5 text-xs font-bold text-slate-400 uppercase tracking-wider">ชื่อบริษัท</th>
+              <th className="text-left px-5 py-3.5 text-xs font-bold text-slate-400 uppercase tracking-wider">ทะเบียนรถ & GPS</th>
+              <th className="text-left px-5 py-3.5 text-xs font-bold text-slate-400 uppercase tracking-wider">รายชื่อคนขับ</th>
+              <th className="px-5 py-3.5" />
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-slate-100">
             {loading ? (
               <tr><td colSpan={5} className="px-5 py-10 text-center text-[var(--muted)]">Loading…</td></tr>
             ) : records.length === 0 ? (
               <tr><td colSpan={5} className="px-5 py-10 text-center text-[var(--muted)]">ยังไม่มีข้อมูล Vendor กด Add New เพื่อเพิ่ม</td></tr>
             ) : (
               records.map((v) => (
-                <tr key={v._id} className="border-b border-[var(--border)] last:border-0 hover:bg-slate-50 transition-colors">
-                  <td className="px-5 py-3 font-mono font-medium text-blue-700">{v.code}</td>
-                  <td className="px-5 py-3 text-[var(--foreground)]">{v.name}</td>
-                  <td className="px-5 py-3">
-                    <div className="flex flex-col gap-1">
+                <tr key={v._id} className="hover:bg-slate-50/50 transition-colors">
+                  <td className="px-5 py-4 font-mono font-bold text-blue-700">{v.code}</td>
+                  <td className="px-5 py-4 font-medium text-slate-800">{v.name}</td>
+                  <td className="px-5 py-4">
+                    <div className="flex flex-wrap gap-1.5 max-w-sm">
                       {v.trucks?.length ? (
                         v.trucks.map((t, i) => (
-                          <div key={i} className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-mono ${t.gps_id ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-slate-100 text-[var(--foreground)]'}`}>
-                            <span className="truncate">{t.plate}</span>
-                            {t.gps_id && (
-                              <div className="relative shrink-0 ml-auto">
-                                <button type="button"
-                                  onClick={() => setGpsMenuOpen(gpsMenuOpen === t.plate ? null : t.plate)}
-                                  className="p-1 rounded hover:bg-blue-100 text-blue-600 transition-colors">
-                                  {gpsLoading === t.plate ? <Loader2 size={12} className="animate-spin" /> : <MoreVertical size={12} />}
+                          <div key={i} className="relative group/truck">
+                            <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono transition-all ${
+                              t.gps_id 
+                                ? 'bg-blue-50 text-blue-700 border border-blue-100 hover:bg-blue-100 hover:border-blue-200' 
+                                : 'bg-slate-50 text-slate-600 border border-slate-200'
+                            }`}>
+                              <span>{t.plate}</span>
+                              {t.gps_id && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setGpsMenuOpen(gpsMenuOpen === t.plate ? null : t.plate);
+                                  }}
+                                  className="p-0.5 rounded-full hover:bg-blue-200 text-blue-600 transition-colors cursor-pointer"
+                                  title="GPS Actions"
+                                >
+                                  {gpsLoading === t.plate ? (
+                                    <Loader2 size={11} className="animate-spin" />
+                                  ) : (
+                                    <Satellite size={11} className="animate-pulse" />
+                                  )}
                                 </button>
-                                {gpsMenuOpen === t.plate && (
-                                  <div className="absolute right-0 top-6 z-50 bg-white rounded-xl shadow-lg border border-slate-200 py-1 min-w-[160px]" onClick={(e) => e.stopPropagation()}>
-                                    <button type="button" onClick={() => handleGpsCurrentLocation({ plate: t.plate, gps_id: t.gps_id! })}
-                                      className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-blue-50 text-slate-700 hover:text-blue-700 transition-colors">
-                                      <MapPin size={12} className="text-blue-500" /> ตำแหน่ง Realtime
-                                    </button>
-                                    <button type="button" onClick={() => handleOpenStation({ plate: t.plate, gps_id: t.gps_id! })}
-                                      className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-violet-50 text-slate-700 hover:text-violet-700 transition-colors">
-                                      <Route size={12} className="text-violet-500" /> Station to Station
-                                    </button>
-                                    <button type="button" onClick={() => handleOpenHistory({ plate: t.plate, gps_id: t.gps_id! })}
-                                      className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 transition-colors">
-                                      <History size={12} className="text-emerald-500" /> ประวัติ GPS
-                                    </button>
-                                  </div>
-                                )}
+                              )}
+                            </div>
+                            {gpsMenuOpen === t.plate && t.gps_id && (
+                              <div className="absolute left-0 top-7 z-50 bg-white rounded-lg shadow-xl border border-slate-200 py-1.5 min-w-[160px]" onClick={(e) => e.stopPropagation()}>
+                                <button type="button" onClick={() => handleGpsCurrentLocation({ plate: t.plate, gps_id: t.gps_id! })}
+                                  className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-blue-50 text-slate-700 hover:text-blue-700 transition-colors">
+                                  <MapPin size={12} className="text-blue-500" /> ตำแหน่ง Realtime
+                                </button>
+                                <button type="button" onClick={() => handleOpenStation({ plate: t.plate, gps_id: t.gps_id! })}
+                                  className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-violet-50 text-slate-700 hover:text-violet-700 transition-colors">
+                                  <Route size={12} className="text-violet-500" /> Station to Station
+                                </button>
+                                <button type="button" onClick={() => handleOpenHistory({ plate: t.plate, gps_id: t.gps_id! })}
+                                  className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 transition-colors">
+                                  <History size={12} className="text-emerald-500" /> ประวัติ GPS
+                                </button>
                               </div>
                             )}
                           </div>
                         ))
                       ) : (
                         (v.truck_plates || []).map((p, i) => (
-                          <span key={i} className="inline-block px-2 py-0.5 rounded bg-slate-100 text-[var(--foreground)] text-xs font-mono">{p}</span>
+                          <span key={i} className="inline-block px-2.5 py-1 rounded-full bg-slate-50 text-slate-500 text-xs font-mono border border-slate-200">{p}</span>
                         ))
                       )}
                     </div>
                   </td>
-                  <td className="px-5 py-3">
-                    <div className="flex flex-col gap-0.5">
-                      {(v.drivers || []).map((d, i) => (
-                        <button 
-                          key={i} 
-                          type="button"
-                          onClick={() => setDriverProfileTarget(d)}
-                          className="text-xs text-left hover:text-blue-600 transition-colors group"
-                        >
-                          {d.name} <span className="text-[var(--muted)] group-hover:text-blue-400">({d.phone})</span>
-                        </button>
-                      ))}
+                  <td className="px-5 py-4">
+                    <div className="flex flex-wrap gap-1.5 max-w-sm">
+                      {(v.drivers || []).length ? (
+                        (v.drivers || []).map((d, i) => (
+                          <button 
+                            key={i} 
+                            type="button"
+                            onClick={() => setDriverProfileTarget(d)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-slate-50 text-slate-700 border border-slate-200 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 transition-all font-medium cursor-pointer"
+                            title={`เบอร์โทร: ${d.phone || 'ไม่ระบุ'}`}
+                          >
+                            <span>{d.name}</span>
+                            {d.phone && <span className="text-[10px] text-slate-400">📞</span>}
+                          </button>
+                        ))
+                      ) : (
+                        <span className="text-xs text-slate-400">—</span>
+                      )}
                     </div>
                   </td>
-                  <td className="px-5 py-3">
+                  <td className="px-5 py-4">
                     <div className="flex items-center gap-1 justify-end">
                       <button onClick={() => openEdit(v)} className="p-1.5 rounded-lg hover:bg-blue-50 text-[var(--muted)] hover:text-blue-600 transition-colors"><Pencil size={14} /></button>
                       <button onClick={() => setDeleteTarget(v)} className="p-1.5 rounded-lg hover:bg-red-50 text-[var(--muted)] hover:text-red-600 transition-colors"><Trash2 size={14} /></button>
