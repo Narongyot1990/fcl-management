@@ -401,113 +401,112 @@ export default function VendorsPage() {
         )}
       </div>
 
-      {/* ── Desktop table ── */}
+      {/* ── Desktop grid table ── */}
       <div className="hidden md:block bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-slate-100 bg-slate-50/75">
-              <th className="text-left px-5 py-3.5 text-xs font-bold text-slate-400 uppercase tracking-wider">รหัส</th>
-              <th className="text-left px-5 py-3.5 text-xs font-bold text-slate-400 uppercase tracking-wider">ชื่อบริษัท</th>
-              <th className="text-left px-5 py-3.5 text-xs font-bold text-slate-400 uppercase tracking-wider">ทะเบียนรถ & GPS</th>
-              <th className="text-left px-5 py-3.5 text-xs font-bold text-slate-400 uppercase tracking-wider">รายชื่อคนขับ</th>
-              <th className="px-5 py-3.5" />
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {loading ? (
-              <tr><td colSpan={5} className="px-5 py-10 text-center text-[var(--muted)]">Loading…</td></tr>
-            ) : records.length === 0 ? (
-              <tr><td colSpan={5} className="px-5 py-10 text-center text-[var(--muted)]">ยังไม่มีข้อมูล Vendor กด Add New เพื่อเพิ่ม</td></tr>
-            ) : (
-              records.map((v) => (
-                <tr key={v._id} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="px-5 py-4 font-mono font-bold text-blue-700">{v.code}</td>
-                  <td className="px-5 py-4 font-medium text-slate-800">{v.name}</td>
-                  <td className="px-5 py-4">
-                    <div className="flex flex-wrap gap-1.5 max-w-sm">
-                      {v.trucks?.length ? (
-                        v.trucks.map((t, i) => (
-                          <div key={i} className="relative group/truck">
-                            <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono transition-all ${
-                              t.gps_id 
-                                ? 'bg-blue-50 text-blue-700 border border-blue-100 hover:bg-blue-100 hover:border-blue-200' 
-                                : 'bg-slate-50 text-slate-600 border border-slate-200'
-                            }`}>
-                              <span>{t.plate}</span>
-                              {t.gps_id && (
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setGpsMenuOpen(gpsMenuOpen === t.plate ? null : t.plate);
-                                  }}
-                                  className="p-0.5 rounded-full hover:bg-blue-200 text-blue-600 transition-colors cursor-pointer"
-                                  title="GPS Actions"
-                                >
-                                  {gpsLoading === t.plate ? (
-                                    <Loader2 size={11} className="animate-spin" />
-                                  ) : (
-                                    <Satellite size={11} className="animate-pulse" />
-                                  )}
-                                </button>
-                              )}
-                            </div>
-                            {gpsMenuOpen === t.plate && t.gps_id && (
-                              <div className="absolute left-0 top-7 z-50 bg-white rounded-lg shadow-xl border border-slate-200 py-1.5 min-w-[160px]" onClick={(e) => e.stopPropagation()}>
-                                <button type="button" onClick={() => handleGpsCurrentLocation({ plate: t.plate, gps_id: t.gps_id! })}
-                                  className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-blue-50 text-slate-700 hover:text-blue-700 transition-colors">
-                                  <MapPin size={12} className="text-blue-500" /> ตำแหน่ง Realtime
-                                </button>
-                                <button type="button" onClick={() => handleOpenStation({ plate: t.plate, gps_id: t.gps_id! })}
-                                  className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-violet-50 text-slate-700 hover:text-violet-700 transition-colors">
-                                  <Route size={12} className="text-violet-500" /> Station to Station
-                                </button>
-                                <button type="button" onClick={() => handleOpenHistory({ plate: t.plate, gps_id: t.gps_id! })}
-                                  className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 transition-colors">
-                                  <History size={12} className="text-emerald-500" /> ประวัติ GPS
-                                </button>
-                              </div>
+        {/* Table Header */}
+        <div className="grid grid-cols-12 border-b border-slate-100 bg-slate-50/75 px-5 py-3.5 text-xs font-bold text-slate-400 uppercase tracking-wider">
+          <div className="col-span-1">รหัส</div>
+          <div className="col-span-2">ชื่อบริษัท</div>
+          <div className="col-span-4">ทะเบียนรถ & GPS</div>
+          <div className="col-span-4">รายชื่อคนขับ</div>
+          <div className="col-span-1 text-right">Actions</div>
+        </div>
+
+        {/* Table Body */}
+        <div className="divide-y divide-slate-100">
+          {loading ? (
+            <div className="px-5 py-10 text-center text-[var(--muted)]">Loading…</div>
+          ) : records.length === 0 ? (
+            <div className="px-5 py-10 text-center text-[var(--muted)]">ยังไม่มีข้อมูล Vendor กด Add New เพื่อเพิ่ม</div>
+          ) : (
+            records.map((v) => (
+              <div key={v._id} className="grid grid-cols-12 px-5 py-4 hover:bg-slate-50/50 transition-colors items-start">
+                <div className="col-span-1 font-mono font-bold text-blue-700">{v.code}</div>
+                <div className="col-span-2 font-medium text-slate-800 pr-2 truncate" title={v.name}>{v.name}</div>
+                <div className="col-span-4 pr-4">
+                  <div className="flex flex-wrap gap-1.5">
+                    {v.trucks?.length ? (
+                      v.trucks.map((t, i) => (
+                        <div key={i} className="relative group/truck">
+                          <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono transition-all ${
+                            t.gps_id 
+                              ? 'bg-blue-50 text-blue-700 border border-blue-100 hover:bg-blue-100 hover:border-blue-200' 
+                              : 'bg-slate-50 text-slate-600 border border-slate-200'
+                          }`}>
+                            <span>{t.plate}</span>
+                            {t.gps_id && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setGpsMenuOpen(gpsMenuOpen === t.plate ? null : t.plate);
+                                }}
+                                className="p-0.5 rounded-full hover:bg-blue-200 text-blue-600 transition-colors cursor-pointer"
+                                title="GPS Actions"
+                              >
+                                {gpsLoading === t.plate ? (
+                                  <Loader2 size={11} className="animate-spin" />
+                                ) : (
+                                  <Satellite size={11} className="animate-pulse" />
+                                )}
+                              </button>
                             )}
                           </div>
-                        ))
-                      ) : (
-                        (v.truck_plates || []).map((p, i) => (
-                          <span key={i} className="inline-block px-2.5 py-1 rounded-full bg-slate-50 text-slate-500 text-xs font-mono border border-slate-200">{p}</span>
-                        ))
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-5 py-4">
-                    <div className="flex flex-wrap gap-1.5 max-w-sm">
-                      {(v.drivers || []).length ? (
-                        (v.drivers || []).map((d, i) => (
-                          <button 
-                            key={i} 
-                            type="button"
-                            onClick={() => setDriverProfileTarget(d)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-slate-50 text-slate-700 border border-slate-200 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 transition-all font-medium cursor-pointer"
-                            title={`เบอร์โทร: ${d.phone || 'ไม่ระบุ'}`}
-                          >
-                            <span>{d.name}</span>
-                            {d.phone && <span className="text-[10px] text-slate-400">📞</span>}
-                          </button>
-                        ))
-                      ) : (
-                        <span className="text-xs text-slate-400">—</span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-5 py-4">
-                    <div className="flex items-center gap-1 justify-end">
-                      <button onClick={() => openEdit(v)} className="p-1.5 rounded-lg hover:bg-blue-50 text-[var(--muted)] hover:text-blue-600 transition-colors"><Pencil size={14} /></button>
-                      <button onClick={() => setDeleteTarget(v)} className="p-1.5 rounded-lg hover:bg-red-50 text-[var(--muted)] hover:text-red-600 transition-colors"><Trash2 size={14} /></button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+                          {gpsMenuOpen === t.plate && t.gps_id && (
+                            <div className="absolute left-0 top-7 z-50 bg-white rounded-lg shadow-xl border border-slate-200 py-1.5 min-w-[160px]" onClick={(e) => e.stopPropagation()}>
+                              <button type="button" onClick={() => handleGpsCurrentLocation({ plate: t.plate, gps_id: t.gps_id! })}
+                                className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-blue-50 text-slate-700 hover:text-blue-700 transition-colors">
+                                <MapPin size={12} className="text-blue-500" /> ตำแหน่ง Realtime
+                              </button>
+                              <button type="button" onClick={() => handleOpenStation({ plate: t.plate, gps_id: t.gps_id! })}
+                                className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-violet-50 text-slate-700 hover:text-violet-700 transition-colors">
+                                <Route size={12} className="text-violet-500" /> Station to Station
+                              </button>
+                              <button type="button" onClick={() => handleOpenHistory({ plate: t.plate, gps_id: t.gps_id! })}
+                                className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 transition-colors">
+                                <History size={12} className="text-emerald-500" /> ประวัติ GPS
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    ) : (
+                      (v.truck_plates || []).map((p, i) => (
+                        <span key={i} className="inline-block px-2.5 py-1 rounded-full bg-slate-50 text-slate-500 text-xs font-mono border border-slate-200">{p}</span>
+                      ))
+                    )}
+                  </div>
+                </div>
+                <div className="col-span-4 pr-2">
+                  <div className="flex flex-wrap gap-1.5">
+                    {(v.drivers || []).length ? (
+                      (v.drivers || []).map((d, i) => (
+                        <button 
+                          key={i} 
+                          type="button"
+                          onClick={() => setDriverProfileTarget(d)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-slate-50 text-slate-700 border border-slate-200 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 transition-all font-medium cursor-pointer"
+                          title={`เบอร์โทร: ${d.phone || 'ไม่ระบุ'}`}
+                        >
+                          <span>{d.name}</span>
+                          {d.phone && <span className="text-[10px] text-slate-400">📞</span>}
+                        </button>
+                      ))
+                    ) : (
+                      <span className="text-xs text-slate-400">—</span>
+                    )}
+                  </div>
+                </div>
+                <div className="col-span-1">
+                  <div className="flex items-center gap-1 justify-end">
+                    <button onClick={() => openEdit(v)} className="p-1.5 rounded-lg hover:bg-blue-50 text-[var(--muted)] hover:text-blue-600 transition-colors"><Pencil size={14} /></button>
+                    <button onClick={() => setDeleteTarget(v)} className="p-1.5 rounded-lg hover:bg-red-50 text-[var(--muted)] hover:text-red-600 transition-colors"><Trash2 size={14} /></button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </div>
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? "แก้ไข Vendor" : "เพิ่ม Vendor"} size="lg">
