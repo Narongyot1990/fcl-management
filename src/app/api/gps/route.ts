@@ -29,6 +29,7 @@ export async function POST(req: Request) {
     console.error("GPS API Error:", error);
     const message = error instanceof Error ? error.message : "Internal Server Error";
     const status = message.includes("DTC_GPS_API_TOKEN") ? 503 : 500;
-    return NextResponse.json({ error: message }, { status });
+    const diag = ` (BaseURL: ${process.env.DTC_GPS_API_BASE_URL || "https://gps.dtc.co.th:8099"}, Token: ${process.env.DTC_GPS_API_TOKEN ? "env" : "fallback"})`;
+    return NextResponse.json({ error: `${message}${diag}` }, { status });
   }
 }
