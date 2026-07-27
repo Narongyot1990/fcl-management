@@ -370,13 +370,54 @@ export default function BookingsPage() {
   }
 
   function copyPickupInfo(b: Booking) {
-    const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
-    const gpsUrl = b.truck_plate ? `${baseUrl}/gps/track/${encodeURIComponent(b.truck_plate)}` : "";
-    const text = [b.booking_no, b.container_size, b.container_size_code, b.container_no, b.seal_no, b.tare_weight, b.driver_name, b.driver_phone, b.truck_plate, gpsUrl ? `\nGPS Tracking: ${gpsUrl}` : ""].join("\t");
-    navigator.clipboard.writeText(text).then(() => {
+    const cells = [
+      b.booking_no,
+      b.container_size,
+      b.container_size_code,
+      b.container_no,
+      b.seal_no,
+      b.tare_weight,
+      b.driver_name,
+      b.driver_phone,
+      b.truck_plate,
+    ];
+    const headers = [
+      "Booking number",
+      "Size",
+      "Code",
+      "Container number",
+      "Seal number",
+      "Tare Weight",
+      "Driver Name",
+      "Mobile Number",
+      "Truck number",
+    ];
+    const th = (label: string) =>
+      `<th style="background:#92D050;color:#000;font-weight:bold;border:1px solid #000;padding:4px 8px;text-align:center;">${label}</th>`;
+    const td = (value: string) =>
+      `<td style="border:1px solid #000;padding:4px 8px;text-align:center;">${value ?? ""}</td>`;
+    const html = `<table style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;">
+      <tr>${headers.map(th).join("")}</tr>
+      <tr>${cells.map((v) => td(String(v ?? ""))).join("")}</tr>
+    </table>`;
+    const text = [headers.join("\t"), cells.join("\t")].join("\n");
+
+    const doCopy = () => {
       setCopiedId(b._id);
       setTimeout(() => setCopiedId(null), 2000);
-    });
+    };
+
+    if (typeof ClipboardItem !== "undefined") {
+      const item = new ClipboardItem({
+        "text/html": new Blob([html], { type: "text/html" }),
+        "text/plain": new Blob([text], { type: "text/plain" }),
+      });
+      navigator.clipboard.write([item]).then(doCopy).catch(() => {
+        navigator.clipboard.writeText(text).then(doCopy);
+      });
+    } else {
+      navigator.clipboard.writeText(text).then(doCopy);
+    }
   }
 
   const set = (k: keyof BookingForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
