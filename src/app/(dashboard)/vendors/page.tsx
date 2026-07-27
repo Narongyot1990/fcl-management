@@ -4,6 +4,7 @@ import { Pencil, Trash2, Search, Plus, X, MapPin, Loader2, History, CalendarDays
 import dynamic from "next/dynamic";
 const GpsMap = dynamic(() => import("@/components/GpsMap"), { ssr: false });
 const DriverProfile = dynamic(() => import("@/components/DriverProfile"), { ssr: false });
+import TimelineVisualizer from "@/components/TimelineVisualizer";
 import { listRecords, createRecord, updateRecord, deleteRecord } from "@/lib/api";
 import type { Vendor, Driver } from "@/lib/types";
 import { fetchGpsRealtime, getTodayDate } from "@/lib/gpsUtils";
@@ -714,8 +715,16 @@ export default function VendorsPage() {
           ) : stationData.length === 0 ? (
             <div className="py-6 text-sm text-slate-400 text-center bg-slate-50 rounded-lg">ไม่พบข้อมูลสลับสถานีสำหรับวันที่นี้</div>
           ) : (
-            <div className="overflow-hidden rounded-xl border border-slate-200 shadow-sm">
-              <table className="w-full text-xs">
+            <>
+              {/* Timeline Visualizer */}
+              <TimelineVisualizer
+                stations={stationData}
+                startTimeStr={stationStartTime}
+                endTimeStr={stationEndTime}
+              />
+
+              <div className="overflow-hidden rounded-xl border border-slate-200 shadow-sm mt-2">
+                <table className="w-full text-xs">
                 <thead>
                   <tr className={`border-b border-slate-200 ${stationVersion === "v2" ? "bg-gradient-to-r from-amber-50 to-orange-50" : "bg-gradient-to-r from-violet-50 to-blue-50"}`}>
                     <th className="text-left px-3 py-2.5 font-semibold text-slate-500">#</th>
@@ -733,13 +742,13 @@ export default function VendorsPage() {
                       <td className="px-3 py-2"><div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" /><span className="font-medium text-slate-700">{s.station_f || "—"}</span></div></td>
                       <td className="px-3 py-2 text-slate-500 whitespace-nowrap">{s.start_date} {s.start_time}</td>
                       <td className="px-3 py-2"><div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" /><span className="font-medium text-slate-700">{s.station_n || "—"}</span></div></td>
-                      <td className="px-3 py-2 text-slate-500 whitespace-nowrap">{s.end_date} {s.end_time}</td>
                       <td className="px-3 py-2 text-right font-bold text-emerald-600">{s.distance || "—"}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
+          </>
           )}
         </div>
       </Modal>
