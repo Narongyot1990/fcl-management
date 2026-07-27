@@ -541,6 +541,57 @@ export default function BookingsPage() {
     }
   }
 
+  function copyBookingInfo(booking: BookingWithShipments) {
+    const headers = [
+      "Booking number",
+      "Size",
+      "Code",
+      "Container number",
+      "Seal number",
+      "Tare Weight",
+      "Driver Name",
+      "Mobile Number",
+      "Truck number",
+    ];
+    const rows = booking.shipments.map((shipment) => [
+      `${booking.booking_no} #${shipment.shipment_no}`,
+      shipment.container_size,
+      shipment.container_size_code,
+      shipment.container_no,
+      shipment.seal_no,
+      shipment.tare_weight,
+      shipment.driver_name,
+      shipment.driver_phone,
+      shipment.truck_plate,
+    ]);
+    const th = (label: string) =>
+      `<th style="background:#92D050;color:#000;font-weight:bold;border:1px solid #000;padding:4px 8px;text-align:center;">${label}</th>`;
+    const td = (value: string) =>
+      `<td style="font-weight:bold;border:1px solid #000;padding:4px 8px;text-align:center;">${value ?? ""}</td>`;
+    const html = `<table style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;">
+      <tr>${headers.map(th).join("")}</tr>
+      ${rows.map((cells) => `<tr>${cells.map((v) => td(String(v ?? ""))).join("")}</tr>`).join("")}
+    </table>`;
+    const text = [headers.join("\t"), ...rows.map((cells) => cells.join("\t"))].join("\n");
+
+    const doCopy = () => {
+      setCopiedId(booking._id);
+      setTimeout(() => setCopiedId(null), 2000);
+    };
+
+    if (typeof ClipboardItem !== "undefined") {
+      const item = new ClipboardItem({
+        "text/html": new Blob([html], { type: "text/html" }),
+        "text/plain": new Blob([text], { type: "text/plain" }),
+      });
+      navigator.clipboard.write([item]).then(doCopy).catch(() => {
+        navigator.clipboard.writeText(text).then(doCopy);
+      });
+    } else {
+      navigator.clipboard.writeText(text).then(doCopy);
+    }
+  }
+
   const set = (k: keyof ShipmentForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setFormState((prev) => ({ ...prev, [k]: e.target.value }));
 
@@ -671,6 +722,7 @@ export default function BookingsPage() {
                     onEditShipment={openEditShipment}
                     onDeleteShipment={(shipment, booking) => setDeleteTarget({ shipment, booking })}
                     onCopy={copyPickupInfo}
+                    onCopyBooking={copyBookingInfo}
                     onOpenImages={openImageModal}
                     onOpenSingleImage={openSingleImageModal}
                     onOpenGps={openLocationInGoogleMaps}

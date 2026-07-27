@@ -1,5 +1,5 @@
 "use client";
-import { ChevronRight, ChevronDown, Plus, Pencil } from "lucide-react";
+import { ChevronRight, ChevronDown, Plus, Pencil, Copy, Check } from "lucide-react";
 import type { BookingWithShipments, Shipment, Vendor } from "@/lib/types";
 import { toShortDate } from "../utils/booking-utils";
 import ShipmentSubRow from "./ShipmentSubRow";
@@ -16,6 +16,7 @@ interface BookingGroupRowProps {
   onEditShipment: (shipment: Shipment, booking: BookingWithShipments) => void;
   onDeleteShipment: (shipment: Shipment, booking: BookingWithShipments) => void;
   onCopy: (shipment: Shipment, booking: BookingWithShipments) => void;
+  onCopyBooking: (booking: BookingWithShipments) => void;
   onOpenImages: (eirUrl: string, containerUrl: string, shipment: Shipment, booking: BookingWithShipments) => void;
   onOpenSingleImage: (url: string, title: string, shipment: Shipment, booking: BookingWithShipments) => void;
   onOpenGps: (vendorCode: string, truckPlate: string) => void;
@@ -25,7 +26,7 @@ interface BookingGroupRowProps {
 export default function BookingGroupRow({
   booking, vendors, copiedId, openingGps, expanded, onToggleExpand,
   onEditBooking, onAddShipment, onEditShipment, onDeleteShipment,
-  onCopy, onOpenImages, onOpenSingleImage, onOpenGps, onDriverProfile,
+  onCopy, onCopyBooking, onOpenImages, onOpenSingleImage, onOpenGps, onDriverProfile,
 }: BookingGroupRowProps) {
   const shipmentCount = booking.shipments.length;
 
@@ -57,6 +58,14 @@ export default function BookingGroupRow({
                 title="Add shipment to this booking"
               >
                 <Plus size={12} /> Add shipment
+              </button>
+              <button
+                type="button"
+                onClick={() => onCopyBooking(booking)}
+                className={`p-1.5 transition-colors ${copiedId === booking._id ? "text-green-600" : "text-slate-400 hover:text-blue-600"}`}
+                title="Copy all shipments in this booking"
+              >
+                {copiedId === booking._id ? <Check size={14} /> : <Copy size={14} />}
               </button>
               <button
                 type="button"
