@@ -90,23 +90,32 @@ async function postDtc<T>(path: string, payload: Record<string, unknown>, useFal
   return data;
 }
 
+function formatTimeWithSeconds(timeStr: string, isEnd = false): string {
+  if (!timeStr) return isEnd ? "23:59:59" : "00:00:00";
+  const parts = timeStr.trim().split(":");
+  if (parts.length === 2) {
+    return isEnd ? `${parts[0]}:${parts[1]}:59` : `${parts[0]}:${parts[1]}:00`;
+  }
+  return timeStr;
+}
+
 export function fetchDtcRealtime(gpsId: string) {
   return postDtc<DtcRealtimePoint>("/getRealtimeData", { gps_list: [gpsId] });
 }
 
-export function fetchDtcStationReport(gpsId: string, date: string) {
+export function fetchDtcStationReport(gpsId: string, date: string, startTime = "00:00:00", endTime = "23:59:59") {
   return postDtc<DtcStationReport>("/getStationToStationReport", {
-    start_period: `${date} 00:00:00`,
-    end_period: `${date} 23:59:59`,
+    start_period: `${date} ${formatTimeWithSeconds(startTime, false)}`,
+    end_period: `${date} ${formatTimeWithSeconds(endTime, true)}`,
     gps_list: [gpsId],
   });
 }
 
-export function fetchDtcHistory(gpsId: string, date: string) {
+export function fetchDtcHistory(gpsId: string, date: string, startTime = "00:00:00", endTime = "23:59:59") {
   return postDtc<DtcHistoryPoint>("/getHistory", {
     gps_id: gpsId,
-    start_period: `${date} 00:00:00`,
-    end_period: `${date} 23:59:59`,
+    start_period: `${date} ${formatTimeWithSeconds(startTime, false)}`,
+    end_period: `${date} ${formatTimeWithSeconds(endTime, true)}`,
   });
 }
 

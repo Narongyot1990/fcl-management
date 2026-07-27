@@ -55,9 +55,12 @@ export default function VendorsPage() {
   const [stationVersion, setStationVersion] = useState<"v1" | "v2">("v2");
   const [stationDateMode, setStationDateMode] = useState<"today" | "custom">("today");
   const [stationDate, setStationDate] = useState(getTodayDate());
+  const [stationStartTime, setStationStartTime] = useState("00:00");
+  const [stationEndTime, setStationEndTime] = useState("23:59");
   const [stationData, setStationData] = useState<StationReportRow[]>([]);
   const [stationLoading, setStationLoading] = useState(false);
   const [stationError, setStationError] = useState("");
+
   // History (raw) modal
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyDateMode, setHistoryDateMode] = useState<"today" | "custom">("today");
@@ -90,13 +93,22 @@ export default function VendorsPage() {
     setStationVersion(version);
     setStationOpen(true);
     setStationDateMode("today");
-    setStationDate(getTodayDate());
+    const today = getTodayDate();
+    setStationDate(today);
+    setStationStartTime("00:00");
+    setStationEndTime("23:59");
     setStationData([]);
     setStationError("");
-    fetchStation(truck.gps_id, getTodayDate(), version);
+    fetchStation(truck.gps_id, today, version, "00:00", "23:59");
   }
 
-  async function fetchStation(gpsId: string, date: string, version: "v1" | "v2" = stationVersion) {
+  async function fetchStation(
+    gpsId: string,
+    date: string,
+    version: "v1" | "v2" = stationVersion,
+    sTime: string = stationStartTime,
+    eTime: string = stationEndTime
+  ) {
     setStationLoading(true);
     setStationError("");
     setStationData([]);
@@ -105,9 +117,14 @@ export default function VendorsPage() {
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ gps_id: gpsId, date }),
+        body: JSON.stringify({
+          gps_id: gpsId,
+          date,
+          start_time: sTime,
+          end_time: eTime,
+        }),
       });
-      const json = await res.json() as { error?: string; stations?: StationReportRow[] };
+      const json = (await res.json()) as { error?: string; stations?: StationReportRow[] };
       if (!res.ok) throw new Error(json.error || "ไม่สามารถดึงข้อมูลได้");
       setStationData(json.stations || []);
     } catch (err: unknown) {
@@ -362,11 +379,11 @@ export default function VendorsPage() {
                             </button>
                             <button type="button" onClick={() => handleOpenStation({ plate: t.plate, gps_id: t.gps_id! }, "v2")}
                               className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-amber-50 text-slate-700 hover:text-amber-700 transition-colors">
-                              <Zap size={11} className="text-amber-500 fill-amber-500" /> Station v2 (Realtime)
+                              <Zap size={11} className="text-amber-500 fill-amber-500" /> Station (Realtime)
                             </button>
                             <button type="button" onClick={() => handleOpenStation({ plate: t.plate, gps_id: t.gps_id! }, "v1")}
                               className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-violet-50 text-slate-700 hover:text-violet-700 transition-colors">
-                              <Route size={11} className="text-violet-500" /> Station Native (DTC)
+                              <Route size={11} className="text-violet-500" /> Station (Standard)
                             </button>
                             <button type="button" onClick={() => handleOpenHistory({ plate: t.plate, gps_id: t.gps_id! })}
                               className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 transition-colors">
@@ -467,11 +484,11 @@ export default function VendorsPage() {
                               </button>
                               <button type="button" onClick={() => handleOpenStation({ plate: t.plate, gps_id: t.gps_id! }, "v2")}
                                 className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-amber-50 text-slate-700 hover:text-amber-700 transition-colors">
-                                <Zap size={12} className="text-amber-500 fill-amber-500" /> Station v2 (Realtime)
+                                <Zap size={12} className="text-amber-500 fill-amber-500" /> Station (Realtime)
                               </button>
                               <button type="button" onClick={() => handleOpenStation({ plate: t.plate, gps_id: t.gps_id! }, "v1")}
                                 className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-violet-50 text-slate-700 hover:text-violet-700 transition-colors">
-                                <Route size={12} className="text-violet-500" /> Station Native (DTC)
+                                <Route size={12} className="text-violet-500" /> Station (Standard)
                               </button>
                               <button type="button" onClick={() => handleOpenHistory({ plate: t.plate, gps_id: t.gps_id! })}
                                 className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 transition-colors">
@@ -604,7 +621,7 @@ export default function VendorsPage() {
                 type="button"
                 onClick={() => {
                   setStationVersion("v2");
-                  if (gpsTruck) fetchStation(gpsTruck.gps_id, stationDate, "v2");
+                  if (gpsTruck) fetchStation(gpsTruck.gps_id, stationDate, "v2", stationStartTime, stationEndTime);
                 }}
                 className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold transition-all ${
                   stationVersion === "v2"
@@ -612,13 +629,13 @@ export default function VendorsPage() {
                     : "text-slate-600 hover:text-slate-900"
                 }`}
               >
-                <Zap size={12} className="fill-current" /> Station v2 (Realtime)
+                <Zap size={12} className="fill-current" /> Station Realtime
               </button>
               <button
                 type="button"
                 onClick={() => {
                   setStationVersion("v1");
-                  if (gpsTruck) fetchStation(gpsTruck.gps_id, stationDate, "v1");
+                  if (gpsTruck) fetchStation(gpsTruck.gps_id, stationDate, "v1", stationStartTime, stationEndTime);
                 }}
                 className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold transition-all ${
                   stationVersion === "v1"
@@ -626,12 +643,19 @@ export default function VendorsPage() {
                     : "text-slate-600 hover:text-slate-900"
                 }`}
               >
-                <Route size={12} /> DTC Native
+                <Route size={12} /> Standard Report
               </button>
             </div>
 
-            <div className="flex items-center gap-2">
-              <button type="button" onClick={() => { setStationDateMode("today"); fetchStation(gpsTruck!.gps_id, getTodayDate(), stationVersion); setStationDate(getTodayDate()); }}
+            <div className="flex items-center gap-2 flex-wrap">
+              <button type="button" onClick={() => {
+                setStationDateMode("today");
+                const today = getTodayDate();
+                setStationDate(today);
+                setStationStartTime("00:00");
+                setStationEndTime("23:59");
+                if (gpsTruck) fetchStation(gpsTruck.gps_id, today, stationVersion, "00:00", "23:59");
+              }}
                 className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors ${stationDateMode === "today" ? (stationVersion === "v2" ? "bg-amber-600 text-white" : "bg-violet-600 text-white") : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
                 <CalendarDays size={11} className="inline mr-1" />วันนี้
               </button>
@@ -640,17 +664,47 @@ export default function VendorsPage() {
                 <CalendarDays size={11} className="inline mr-1" />เลือกวันที่
               </button>
               {stationDateMode === "custom" && (
-                <input type="date" value={stationDate} onChange={(e) => { setStationDate(e.target.value); fetchStation(gpsTruck!.gps_id, e.target.value, stationVersion); }}
+                <input type="date" value={stationDate} onChange={(e) => {
+                  const newDate = e.target.value;
+                  setStationDate(newDate);
+                  if (gpsTruck) fetchStation(gpsTruck.gps_id, newDate, stationVersion, stationStartTime, stationEndTime);
+                }}
                   className="px-2 py-1 text-xs border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500" />
               )}
+
+              {/* Editable Time Range */}
+              <div className="flex items-center gap-1 px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                <span className="text-[10px] font-semibold text-slate-400">เวลา:</span>
+                <input
+                  type="time"
+                  value={stationStartTime}
+                  onChange={(e) => {
+                    const newStart = e.target.value;
+                    setStationStartTime(newStart);
+                    if (gpsTruck) fetchStation(gpsTruck.gps_id, stationDate, stationVersion, newStart, stationEndTime);
+                  }}
+                  className="bg-transparent font-mono text-xs text-slate-700 focus:outline-none cursor-pointer"
+                />
+                <span className="text-slate-400">–</span>
+                <input
+                  type="time"
+                  value={stationEndTime}
+                  onChange={(e) => {
+                    const newEnd = e.target.value;
+                    setStationEndTime(newEnd);
+                    if (gpsTruck) fetchStation(gpsTruck.gps_id, stationDate, stationVersion, stationStartTime, newEnd);
+                  }}
+                  className="bg-transparent font-mono text-xs text-slate-700 focus:outline-none cursor-pointer"
+                />
+              </div>
             </div>
           </div>
 
           <div className="flex items-center justify-between text-[11px] text-slate-400">
             <span>
-              {stationVersion === "v2" ? "⚡ คำนวณข้ามสถานีจาก Raw getHistoryแบบ Realtime" : "🐢 รายงานจากเครื่องเซิร์ฟเวอร์ DTC Native (อัพเดททุก 2-3 ชม.)"}
+              {stationVersion === "v2" ? "⚡ ข้อมูลอัปเดตแบบ Realtime" : "รายงานจากเซิร์ฟเวอร์หลัก"}
             </span>
-            <span>0:00 – 23:59</span>
+            <span>{stationStartTime} – {stationEndTime} น.</span>
           </div>
 
           {stationLoading ? (
