@@ -52,8 +52,21 @@ export async function fetchGpsHistory(gpsId: string, date: string): Promise<GpsH
   return data;
 }
 
+/** Fetch station-to-station v2 (realtime calculated from raw history) */
+export async function fetchGpsStationV2(gpsId: string, date: string): Promise<GpsHistoryResult> {
+  const response = await fetch("/api/gps/station-v2", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ gps_id: gpsId, date }),
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || "Failed to fetch Station v2 history");
+  return data;
+}
+
 /** Get today's date as YYYY-MM-DD */
 export function getTodayDate(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
+

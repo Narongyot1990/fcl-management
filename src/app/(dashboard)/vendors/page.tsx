@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { Pencil, Trash2, Search, Plus, X, MapPin, Loader2, History, CalendarDays, MoreVertical, Route, Truck, UsersRound, Satellite } from "lucide-react";
+import { Pencil, Trash2, Search, Plus, X, MapPin, Loader2, History, CalendarDays, MoreVertical, Route, Truck, UsersRound, Satellite, Zap } from "lucide-react";
 import dynamic from "next/dynamic";
 const GpsMap = dynamic(() => import("@/components/GpsMap"), { ssr: false });
 const DriverProfile = dynamic(() => import("@/components/DriverProfile"), { ssr: false });
@@ -52,6 +52,7 @@ export default function VendorsPage() {
   const [gpsMenuOpen, setGpsMenuOpen] = useState<string | null>(null); // plate of open ... menu
   // Station-to-station modal
   const [stationOpen, setStationOpen] = useState(false);
+  const [stationVersion, setStationVersion] = useState<"v1" | "v2">("v2");
   const [stationDateMode, setStationDateMode] = useState<"today" | "custom">("today");
   const [stationDate, setStationDate] = useState(getTodayDate());
   const [stationData, setStationData] = useState<StationReportRow[]>([]);
@@ -83,23 +84,25 @@ export default function VendorsPage() {
     }
   }
 
-  async function handleOpenStation(truck: { plate: string; gps_id: string }) {
+  async function handleOpenStation(truck: { plate: string; gps_id: string }, version: "v1" | "v2" = "v2") {
     setGpsMenuOpen(null);
     setGpsTruck(truck);
+    setStationVersion(version);
     setStationOpen(true);
     setStationDateMode("today");
     setStationDate(getTodayDate());
     setStationData([]);
     setStationError("");
-    fetchStation(truck.gps_id, getTodayDate());
+    fetchStation(truck.gps_id, getTodayDate(), version);
   }
 
-  async function fetchStation(gpsId: string, date: string) {
+  async function fetchStation(gpsId: string, date: string, version: "v1" | "v2" = stationVersion) {
     setStationLoading(true);
     setStationError("");
     setStationData([]);
     try {
-      const res = await fetch("/api/gps/history", {
+      const endpoint = version === "v2" ? "/api/gps/station-v2" : "/api/gps/history";
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ gps_id: gpsId, date }),
@@ -352,14 +355,18 @@ export default function VendorsPage() {
                           )}
                         </div>
                         {gpsMenuOpen === t.plate && t.gps_id && (
-                          <div className="absolute right-0 top-6 z-50 bg-white rounded-lg shadow-xl border border-slate-200 py-1 min-w-[150px]" onClick={(e) => e.stopPropagation()}>
+                          <div className="absolute right-0 top-6 z-50 bg-white rounded-lg shadow-xl border border-slate-200 py-1 min-w-[170px]" onClick={(e) => e.stopPropagation()}>
                             <button type="button" onClick={() => handleGpsCurrentLocation({ plate: t.plate, gps_id: t.gps_id! })}
                               className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-blue-50 text-slate-700 hover:text-blue-700 transition-colors">
                               <MapPin size={11} className="text-blue-500" /> ตำแหน่ง Realtime
                             </button>
-                            <button type="button" onClick={() => handleOpenStation({ plate: t.plate, gps_id: t.gps_id! })}
+                            <button type="button" onClick={() => handleOpenStation({ plate: t.plate, gps_id: t.gps_id! }, "v2")}
+                              className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-amber-50 text-slate-700 hover:text-amber-700 transition-colors">
+                              <Zap size={11} className="text-amber-500 fill-amber-500" /> Station v2 (Realtime)
+                            </button>
+                            <button type="button" onClick={() => handleOpenStation({ plate: t.plate, gps_id: t.gps_id! }, "v1")}
                               className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-violet-50 text-slate-700 hover:text-violet-700 transition-colors">
-                              <Route size={11} className="text-violet-500" /> Station to Station
+                              <Route size={11} className="text-violet-500" /> Station Native (DTC)
                             </button>
                             <button type="button" onClick={() => handleOpenHistory({ plate: t.plate, gps_id: t.gps_id! })}
                               className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 transition-colors">
@@ -453,14 +460,18 @@ export default function VendorsPage() {
                             )}
                           </div>
                           {gpsMenuOpen === t.plate && t.gps_id && (
-                            <div className="absolute left-0 top-7 z-50 bg-white rounded-lg shadow-xl border border-slate-200 py-1.5 min-w-[160px]" onClick={(e) => e.stopPropagation()}>
+                            <div className="absolute left-0 top-7 z-50 bg-white rounded-lg shadow-xl border border-slate-200 py-1.5 min-w-[180px]" onClick={(e) => e.stopPropagation()}>
                               <button type="button" onClick={() => handleGpsCurrentLocation({ plate: t.plate, gps_id: t.gps_id! })}
                                 className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-blue-50 text-slate-700 hover:text-blue-700 transition-colors">
                                 <MapPin size={12} className="text-blue-500" /> ตำแหน่ง Realtime
                               </button>
-                              <button type="button" onClick={() => handleOpenStation({ plate: t.plate, gps_id: t.gps_id! })}
+                              <button type="button" onClick={() => handleOpenStation({ plate: t.plate, gps_id: t.gps_id! }, "v2")}
+                                className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-amber-50 text-slate-700 hover:text-amber-700 transition-colors">
+                                <Zap size={12} className="text-amber-500 fill-amber-500" /> Station v2 (Realtime)
+                              </button>
+                              <button type="button" onClick={() => handleOpenStation({ plate: t.plate, gps_id: t.gps_id! }, "v1")}
                                 className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-violet-50 text-slate-700 hover:text-violet-700 transition-colors">
-                                <Route size={12} className="text-violet-500" /> Station to Station
+                                <Route size={12} className="text-violet-500" /> Station Native (DTC)
                               </button>
                               <button type="button" onClick={() => handleOpenHistory({ plate: t.plate, gps_id: t.gps_id! })}
                                 className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 transition-colors">
@@ -587,33 +598,72 @@ export default function VendorsPage() {
       {/* ── Station-to-Station Modal ── */}
       <Modal open={stationOpen} onClose={() => setStationOpen(false)} title={`Station to Station — ${gpsTruck?.plate || ""}`} size="lg">
         <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-2 flex-wrap">
-            <button type="button" onClick={() => { setStationDateMode("today"); fetchStation(gpsTruck!.gps_id, getTodayDate()); setStationDate(getTodayDate()); }}
-              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors ${stationDateMode === "today" ? "bg-violet-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
-              <CalendarDays size={11} className="inline mr-1" />วันนี้
-            </button>
-            <button type="button" onClick={() => setStationDateMode("custom")}
-              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors ${stationDateMode === "custom" ? "bg-violet-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
-              <CalendarDays size={11} className="inline mr-1" />เลือกวันที่
-            </button>
-            {stationDateMode === "custom" && (
-              <input type="date" value={stationDate} onChange={(e) => { setStationDate(e.target.value); fetchStation(gpsTruck!.gps_id, e.target.value); }}
-                className="px-2 py-1 text-xs border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500" />
-            )}
-            <span className="text-[10px] text-slate-400 ml-auto">0:00 – 23:59</span>
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3 flex-wrap gap-2">
+            <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-lg">
+              <button
+                type="button"
+                onClick={() => {
+                  setStationVersion("v2");
+                  if (gpsTruck) fetchStation(gpsTruck.gps_id, stationDate, "v2");
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold transition-all ${
+                  stationVersion === "v2"
+                    ? "bg-amber-500 text-white shadow-sm"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                <Zap size={12} className="fill-current" /> Station v2 (Realtime)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setStationVersion("v1");
+                  if (gpsTruck) fetchStation(gpsTruck.gps_id, stationDate, "v1");
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold transition-all ${
+                  stationVersion === "v1"
+                    ? "bg-violet-600 text-white shadow-sm"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                <Route size={12} /> DTC Native
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={() => { setStationDateMode("today"); fetchStation(gpsTruck!.gps_id, getTodayDate(), stationVersion); setStationDate(getTodayDate()); }}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors ${stationDateMode === "today" ? (stationVersion === "v2" ? "bg-amber-600 text-white" : "bg-violet-600 text-white") : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
+                <CalendarDays size={11} className="inline mr-1" />วันนี้
+              </button>
+              <button type="button" onClick={() => setStationDateMode("custom")}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors ${stationDateMode === "custom" ? (stationVersion === "v2" ? "bg-amber-600 text-white" : "bg-violet-600 text-white") : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
+                <CalendarDays size={11} className="inline mr-1" />เลือกวันที่
+              </button>
+              {stationDateMode === "custom" && (
+                <input type="date" value={stationDate} onChange={(e) => { setStationDate(e.target.value); fetchStation(gpsTruck!.gps_id, e.target.value, stationVersion); }}
+                  className="px-2 py-1 text-xs border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500" />
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between text-[11px] text-slate-400">
+            <span>
+              {stationVersion === "v2" ? "⚡ คำนวณข้ามสถานีจาก Raw getHistoryแบบ Realtime" : "🐢 รายงานจากเครื่องเซิร์ฟเวอร์ DTC Native (อัพเดททุก 2-3 ชม.)"}
+            </span>
+            <span>0:00 – 23:59</span>
           </div>
 
           {stationLoading ? (
-            <div className="flex items-center justify-center py-8"><Loader2 size={16} className="animate-spin mr-2 text-violet-500" /><span className="text-sm text-slate-500">กำลังโหลด…</span></div>
+            <div className="flex items-center justify-center py-8"><Loader2 size={16} className={`animate-spin mr-2 ${stationVersion === "v2" ? "text-amber-500" : "text-violet-500"}`} /><span className="text-sm text-slate-500">กำลังประมวลผลข้อมูล…</span></div>
           ) : stationError ? (
             <div className="py-4 text-sm text-red-500 text-center bg-red-50 rounded-lg">{stationError}</div>
           ) : stationData.length === 0 ? (
-            <div className="py-6 text-sm text-slate-400 text-center bg-slate-50 rounded-lg">ไม่พบข้อมูลสำหรับวันที่นี้</div>
+            <div className="py-6 text-sm text-slate-400 text-center bg-slate-50 rounded-lg">ไม่พบข้อมูลสลับสถานีสำหรับวันที่นี้</div>
           ) : (
             <div className="overflow-hidden rounded-xl border border-slate-200 shadow-sm">
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="bg-gradient-to-r from-violet-50 to-blue-50 border-b border-slate-200">
+                  <tr className={`border-b border-slate-200 ${stationVersion === "v2" ? "bg-gradient-to-r from-amber-50 to-orange-50" : "bg-gradient-to-r from-violet-50 to-blue-50"}`}>
                     <th className="text-left px-3 py-2.5 font-semibold text-slate-500">#</th>
                     <th className="text-left px-3 py-2.5 font-semibold text-slate-500">ต้นทาง</th>
                     <th className="text-left px-3 py-2.5 font-semibold text-slate-500 whitespace-nowrap">เวลาออก</th>
@@ -624,7 +674,7 @@ export default function VendorsPage() {
                 </thead>
                 <tbody>
                   {stationData.map((s, i) => (
-                    <tr key={i} className="border-b border-slate-100 last:border-0 hover:bg-violet-50/30 transition-colors">
+                    <tr key={i} className="border-b border-slate-100 last:border-0 hover:bg-amber-50/20 transition-colors">
                       <td className="px-3 py-2 text-slate-400">{i + 1}</td>
                       <td className="px-3 py-2"><div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" /><span className="font-medium text-slate-700">{s.station_f || "—"}</span></div></td>
                       <td className="px-3 py-2 text-slate-500 whitespace-nowrap">{s.start_date} {s.start_time}</td>

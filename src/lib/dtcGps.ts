@@ -25,6 +25,7 @@ export interface DtcHistoryPoint {
   lat?: number;
   lon?: number;
   gps_speed?: number;
+  mileage?: number | string;
   status_name_th?: string;
   station_name?: string;
   station_id?: string;
@@ -108,3 +109,63 @@ export function fetchDtcHistory(gpsId: string, date: string) {
     end_period: `${date} 23:59:59`,
   });
 }
+
+/**
+ * Aggregates raw DTC history points into Station-to-Station report rows (v2)
+ */
+export function processHistoryToStationReport(points: DtcHistoryPoint[]): DtcStationReport[] {
+  if (!points || points.length === 0) return [];
+
+  const legs: DtcStationReport[] = [];
+  let currentStation: string | null = null;
+  let currentStationDepTime: string | null = null;
+  let currentStationDepMileage = 0;
+  let hasLeftCurrentStation = false;
+
+  for (let i = 0; i < points.length; i++) {
+    const pt = points[i];
+    const sName = (pt.station_name || "").trim();
+    const mileage = typeof pt.mileage === "number" ? pt.mileage : parseFloat(pt.mileage || "0");
+
+    if (sName) {
+      if (!currentStation) {
+        currentStation = sName;
+        currentStationDepTime = pt.time || null;
+        currentStationDepMileage = mileage;
+        hasLeftCurrentStation = false;
+      } else if (sName !== currentStation || hasLeftCurrentStation) {
+        const arrTime = pt.time || "";
+        const distNum = mileage - currentStationDepMileage;
+        const distStr = distNum > 0 ? distNum.toFixed(2) : "0.00";
+
+        const [depDate = "", depT = ""] = (currentStationDepTime || "").split(" ");
+        const [arrDate = "", arrT = ""] = arrTime.split(" ");
+
+        legs.push({
+          station_f: currentStation,
+          start_date: depDate,
+          start_time: depT,
+          station_n: sName,
+          end_date: arrDate,
+          end_time: arrT,
+          distance: distStr,
+        });
+
+        currentStation = sName;
+        currentStationDepTime = pt.time || null;
+        currentStationDepMileage = mileage;
+        hasLeftCurrentStation = false;
+      } else {
+        // Same station continuously -> update departure timestamp
+        currentStationDepTime = pt.time || null;
+      }
+    } else {
+      if (currentStation) {
+        hasLeftCurrentStation = true;
+      }
+    }
+  }
+
+  return legs;
+}
+
