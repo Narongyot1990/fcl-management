@@ -14,8 +14,9 @@ export interface StationReportRow {
 
 interface TimelineVisualizerProps {
   stations: StationReportRow[];
-  startTimeStr: string; // "06:00" or "00:00"
-  endTimeStr: string;   // "23:59"
+  startTimeStr: string; // "06:00" or "18:00"
+  endTimeStr: string;   // "18:00" or "06:00"
+  latestGpsTime?: string | null;
 }
 
 interface Segment {
@@ -33,7 +34,6 @@ interface Segment {
 
 function timeToMinutes(timeStr?: string): number {
   if (!timeStr) return 0;
-  // Handles "YYYY-MM-DD HH:mm:ss" or "HH:mm:ss" or "HH:mm"
   const t = timeStr.includes(" ") ? timeStr.split(" ")[1] : timeStr;
   const parts = t.split(":");
   if (parts.length < 2) return 0;
@@ -42,43 +42,39 @@ function timeToMinutes(timeStr?: string): number {
   return hours * 60 + minutes;
 }
 
-function formatMinutes(min: number): string {
+function formatDuration(min: number): string {
   const h = Math.floor(min / 60);
   const m = Math.round(min % 60);
-  if (h === 0) return `${m} นาที`;
-  if (m === 0) return `${h} ชม.`;
-  return `${h} ชม. ${m} นาที`;
+  if (h === 0) return `${m}m`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}m`;
 }
 
 function isDepotStation(name?: string): boolean {
   if (!name) return false;
   const upper = name.toUpperCase();
-  return upper.includes("FSCC") || upper.includes("DEPOT") || upper.includes("YARD") || upper.includes("HUB") || upper.includes("PARK");
+  return upper.includes("FSCC") || upper.includes("DEPOT") || upper.includes("YARD") || upper.includes("HUB") || upper.includes("PARK") || upper.includes("FLS");
 }
 
-export default function TimelineVisualizer({ stations, startTimeStr, endTimeStr }: TimelineVisualizerProps) {
+export default function TimelineVisualizer({ stations, startTimeStr, endTimeStr, latestGpsTime }: TimelineVisualizerProps) {
   const rangeStartMin = useMemo(() => timeToMinutes(startTimeStr), [startTimeStr]);
   const rangeEndMin = useMemo(() => {
-    const min = timeToMinutes(endTimeStr);
-    return min === 0 ? 1439 : min;
-  }, [endTimeStr]);
+    let min = timeToMinutes(endTimeStr);
+    if (min === 0) min = 1439;
+    // Handle overnight shift e.g. 18:00 to 06:00 (next day)
+    if (min <= rangeStartMin) min += 1440;
+    return min;
+  }, [startTimeStr, endTimeStr, rangeStartMin]);
 
   const totalRangeMin = Math.max(1, rangeEndMin - rangeStartMin);
 
-  const { segments, summary } = useMemo(() => {
+  const { segments } = useMemo(() => {
     if (!stations || stations.length === 0) {
-      return {
-        segments: [],
-        summary: { totalTravelMin: 0, totalGroundMin: 0, totalDistKm: 0, legsCount: 0 }
-      };
+      return { segments: [] };
     }
 
     const segs: Segment[] = [];
-    let totalTravelMin = 0;
-    let totalGroundMin = 0;
-    let totalDistKm = 0;
 
-    // Helper to add segment
     const addSeg = (
       type: "travel" | "depot" | "customer" | "idle",
       label: string,
@@ -89,8 +85,12 @@ export default function TimelineVisualizer({ stations, startTimeStr, endTimeStr 
       eTime: string,
       dist?: string
     ) => {
+      // Adjust endMin if before startMin (overnight wrap)
+      let adjustedEndMin = endMin;
+      if (adjustedEndMin < startMin) adjustedEndMin += 1440;
+
       const clampedStart = Math.max(rangeStartMin, Math.min(rangeEndMin, startMin));
-      const clampedEnd = Math.max(rangeStartMin, Math.min(rangeEndMin, endMin));
+      const clampedEnd = Math.max(rangeStartMin, Math.min(rangeEndMin, adjustedEndMin));
       const dur = Math.max(1, clampedEnd - clampedStart);
 
       const leftPercent = ((clampedStart - rangeStartMin) / totalRangeMin) * 100;
@@ -112,39 +112,35 @@ export default function TimelineVisualizer({ stations, startTimeStr, endTimeStr 
       }
     };
 
-    // Initial gap before first leg
+    // 1. Initial gap before first leg
     const firstLegStartMin = timeToMinutes(stations[0].start_time);
     if (firstLegStartMin > rangeStartMin) {
-      const stName = stations[0].station_f || "จุดเริ่มต้น";
+      const stName = stations[0].station_f || "Start";
       const type = isDepotStation(stName) ? "depot" : "idle";
       addSeg(
         type,
-        `จอดพักที่ ${stName}`,
-        "สแตนบายด์ก่อนออกเดินทาง",
+        `Dwell @ ${stName}`,
+        "Standby before departure",
         rangeStartMin,
         firstLegStartMin,
         startTimeStr,
         stations[0].start_time || startTimeStr
       );
-      if (type !== "idle") totalGroundMin += (firstLegStartMin - rangeStartMin);
     }
 
-    // Iterate through legs
+    // 2. Iterate through legs
     for (let i = 0; i < stations.length; i++) {
       const leg = stations[i];
-      const legStartMin = timeToMinutes(leg.start_time);
-      const legEndMin = timeToMinutes(leg.end_time);
-      const legDur = Math.max(1, legEndMin - legStartMin);
+      let legStartMin = timeToMinutes(leg.start_time);
+      let legEndMin = timeToMinutes(leg.end_time);
+      if (legEndMin < legStartMin) legEndMin += 1440;
+
       const distVal = parseFloat(String(leg.distance || 0)) || 0;
 
-      totalTravelMin += legDur;
-      totalDistKm += distVal;
-
-      // 1. Travel segment for current leg
       addSeg(
         "travel",
         `${leg.station_f || "—"} → ${leg.station_n || "—"}`,
-        `ระยะทาง ${distVal.toFixed(2)} km`,
+        `Driving (${distVal.toFixed(2)} km)`,
         legStartMin,
         legEndMin,
         leg.start_time || "",
@@ -152,23 +148,21 @@ export default function TimelineVisualizer({ stations, startTimeStr, endTimeStr 
         `${distVal.toFixed(2)} km`
       );
 
-      // 2. Ground stay segment between current leg and next leg
+      // Ground stay segment between legs
       if (i < stations.length - 1) {
         const nextLeg = stations[i + 1];
-        const nextLegStartMin = timeToMinutes(nextLeg.start_time);
+        let nextLegStartMin = timeToMinutes(nextLeg.start_time);
+        if (nextLegStartMin < legEndMin) nextLegStartMin += 1440;
 
         if (nextLegStartMin > legEndMin) {
-          const groundMin = nextLegStartMin - legEndMin;
-          totalGroundMin += groundMin;
-
-          const groundStation = leg.station_n || "สถานี";
+          const groundStation = leg.station_n || "Station";
           const isDep = isDepotStation(groundStation);
           const type = isDep ? "depot" : "customer";
 
           addSeg(
             type,
-            `จอดที่ ${groundStation}`,
-            isDep ? "พักคลัง / รอดำเนินการ" : "โหลดสินค้า / ทำงาน ณ จุดลูกค้า",
+            `Dwell @ ${groundStation}`,
+            isDep ? "Depot Dwell / Operations" : "Customer Dwell / Loading",
             legEndMin,
             nextLegStartMin,
             leg.end_time || "",
@@ -178,42 +172,43 @@ export default function TimelineVisualizer({ stations, startTimeStr, endTimeStr 
       }
     }
 
-    // Final gap after last leg
+    // 3. Final ground stay after last leg (CLAMPED TO LATEST GPS TIME OR RANGE END)
     const lastLegEndMin = timeToMinutes(stations[stations.length - 1].end_time);
-    if (lastLegEndMin < rangeEndMin) {
-      const lastStation = stations[stations.length - 1].station_n || "สถานี";
+    let actualLastMin = rangeEndMin;
+
+    if (latestGpsTime) {
+      const parsedLatestMin = timeToMinutes(latestGpsTime);
+      if (parsedLatestMin > 0) {
+        actualLastMin = Math.min(rangeEndMin, parsedLatestMin);
+      }
+    }
+
+    if (lastLegEndMin < actualLastMin) {
+      const lastStation = stations[stations.length - 1].station_n || "Station";
       const isDep = isDepotStation(lastStation);
       const type = isDep ? "depot" : "customer";
 
       addSeg(
         type,
-        `จอดที่ ${lastStation}`,
-        "เสร็จสิ้นภารกิจประจำวัน",
+        `Dwell @ ${lastStation}`,
+        "Current Dwell Location",
         lastLegEndMin,
-        rangeEndMin,
+        actualLastMin,
         stations[stations.length - 1].end_time || "",
-        endTimeStr
+        latestGpsTime ? latestGpsTime.split(" ")[1] || endTimeStr : endTimeStr
       );
-      totalGroundMin += (rangeEndMin - lastLegEndMin);
     }
 
-    return {
-      segments: segs,
-      summary: {
-        totalTravelMin,
-        totalGroundMin,
-        totalDistKm,
-        legsCount: stations.length,
-      }
-    };
-  }, [stations, rangeStartMin, rangeEndMin, totalRangeMin, startTimeStr, endTimeStr]);
+    return { segments: segs };
+  }, [stations, rangeStartMin, rangeEndMin, totalRangeMin, startTimeStr, endTimeStr, latestGpsTime]);
 
   // Generate 6 time ticks for timeline axis
   const timeTicks = useMemo(() => {
     const ticks: { label: string; leftPercent: number }[] = [];
     const count = 6;
     for (let i = 0; i < count; i++) {
-      const min = rangeStartMin + Math.round((totalRangeMin * i) / (count - 1));
+      let min = rangeStartMin + Math.round((totalRangeMin * i) / (count - 1));
+      min = min % 1440;
       const h = Math.floor(min / 60);
       const m = min % 60;
       const label = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
@@ -226,68 +221,47 @@ export default function TimelineVisualizer({ stations, startTimeStr, endTimeStr 
   if (!stations || stations.length === 0) return null;
 
   return (
-    <div className="bg-slate-900/95 text-white rounded-xl p-4 shadow-lg border border-slate-800 space-y-3 my-1">
-      {/* Top Bar: Title & Summary */}
-      <div className="flex items-center justify-between flex-wrap gap-2 text-xs">
-        <div className="flex items-center gap-2">
-          <span className="font-bold text-amber-400 tracking-wide uppercase text-[11px]">Timeline Visualizer</span>
-          <span className="bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full font-mono text-[10px] border border-slate-700">
-            {summary.legsCount} Legs
-          </span>
-        </div>
+    <div className="bg-slate-900/95 text-white rounded-xl p-3.5 shadow-lg border border-slate-800 space-y-2.5 my-1">
+      {/* Legend Header */}
+      <div className="flex items-center justify-between gap-3 text-[11px] text-slate-300 flex-wrap">
+        <span className="font-bold text-amber-400 uppercase tracking-wider text-[10px]">
+          SHIFT TIMELINE ({stations.length} LEGS)
+        </span>
 
-        <div className="flex items-center gap-3 text-[11px] text-slate-300">
-          <div>
-            <span className="text-slate-400">เคลื่อนที่:</span>{" "}
-            <span className="font-bold text-emerald-400">{formatMinutes(summary.totalTravelMin)}</span>
+        <div className="flex items-center gap-4 flex-wrap text-[10px]">
+          <div className="flex items-center gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-sm bg-emerald-500 shadow-sm" />
+            <span className="text-slate-200">Driving / In Transit</span>
           </div>
-          <span className="text-slate-700">•</span>
-          <div>
-            <span className="text-slate-400">จอดพัก:</span>{" "}
-            <span className="font-bold text-indigo-300">{formatMinutes(summary.totalGroundMin)}</span>
+          <div className="flex items-center gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-sm bg-indigo-500 shadow-sm" />
+            <span className="text-slate-200">Depot Dwell</span>
           </div>
-          <span className="text-slate-700">•</span>
-          <div>
-            <span className="text-slate-400">ระยะทาง:</span>{" "}
-            <span className="font-bold text-amber-300">{summary.totalDistKm.toFixed(2)} km</span>
+          <div className="flex items-center gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-sm bg-amber-500 shadow-sm" />
+            <span className="text-slate-200">Customer Dwell</span>
           </div>
-        </div>
-      </div>
-
-      {/* Legend */}
-      <div className="flex items-center gap-4 text-[10px] text-slate-400 pt-1 flex-wrap">
-        <div className="flex items-center gap-1.5">
-          <div className="w-2.5 h-2.5 rounded bg-emerald-500 shadow-sm shadow-emerald-500/50" />
-          <span className="text-slate-200">เคลื่อนที่ (Travel Leg)</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-2.5 h-2.5 rounded bg-indigo-500 shadow-sm shadow-indigo-500/50" />
-          <span className="text-slate-200">จอดพัก คลัง/CY (FSCC/Yard)</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-2.5 h-2.5 rounded bg-amber-500 shadow-sm shadow-amber-500/50" />
-          <span className="text-slate-200">จอดพัก โรงงาน/ลูกค้า</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-2.5 h-2.5 rounded bg-slate-600" />
-          <span className="text-slate-400">สแตนบายด์</span>
+          <div className="flex items-center gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-sm bg-slate-600" />
+            <span className="text-slate-400">Idle / Standby</span>
+          </div>
         </div>
       </div>
 
       {/* Main Timeline Bar */}
       <div className="relative w-full">
-        <div className="relative w-full h-9 bg-slate-950/80 rounded-lg overflow-hidden border border-slate-800 flex items-center shadow-inner">
+        <div className="relative w-full h-8 bg-slate-950/90 rounded-lg overflow-hidden border border-slate-800 flex items-center shadow-inner">
           {segments.map((seg) => {
             let bgClass = "bg-slate-700 hover:bg-slate-600";
             let borderClass = "border-slate-600";
             if (seg.type === "travel") {
-              bgClass = "bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400";
+              bgClass = "bg-emerald-500 hover:bg-emerald-400";
               borderClass = "border-emerald-400/30";
             } else if (seg.type === "depot") {
-              bgClass = "bg-indigo-600/90 hover:bg-indigo-500";
+              bgClass = "bg-indigo-600 hover:bg-indigo-500";
               borderClass = "border-indigo-400/30";
             } else if (seg.type === "customer") {
-              bgClass = "bg-amber-600/90 hover:bg-amber-500";
+              bgClass = "bg-amber-600 hover:bg-amber-500";
               borderClass = "border-amber-400/30";
             }
 
@@ -301,14 +275,14 @@ export default function TimelineVisualizer({ stations, startTimeStr, endTimeStr 
                 className={`absolute h-full transition-all cursor-pointer group border-r ${bgClass} ${borderClass} flex items-center justify-center overflow-hidden px-1`}
               >
                 {/* Text inside bar if wide enough */}
-                {seg.widthPercent > 6 && (
+                {seg.widthPercent > 7 && (
                   <span className="text-[9px] font-bold text-white truncate drop-shadow-md select-none">
                     {seg.label}
                   </span>
                 )}
 
-                {/* Rich Hover Tooltip */}
-                <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:flex flex-col gap-1 z-50 bg-slate-950 text-white text-xs p-2.5 rounded-lg shadow-2xl border border-slate-700 whitespace-nowrap pointer-events-none min-w-[160px]">
+                {/* Minimal Hover Tooltip */}
+                <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:flex flex-col gap-0.5 z-50 bg-slate-950 text-white text-xs p-2 rounded-lg shadow-xl border border-slate-700 whitespace-nowrap pointer-events-none min-w-[150px]">
                   <div className="font-bold text-amber-400 border-b border-slate-800 pb-1">
                     {seg.label}
                   </div>
@@ -316,16 +290,13 @@ export default function TimelineVisualizer({ stations, startTimeStr, endTimeStr 
                     ⏱️ {seg.startTime.includes(" ") ? seg.startTime.split(" ")[1] : seg.startTime} – {seg.endTime.includes(" ") ? seg.endTime.split(" ")[1] : seg.endTime}
                   </div>
                   <div className="text-[11px] text-slate-400">
-                    ⏳ ระยะเวลา: <span className="text-white font-semibold">{formatMinutes(seg.durationMinutes)}</span>
+                    ⏳ Duration: <span className="text-white font-semibold">{formatDuration(seg.durationMinutes)}</span>
                   </div>
                   {seg.distance && (
                     <div className="text-[11px] text-emerald-400 font-semibold">
-                      🛣️ ระยะทาง: {seg.distance}
+                      🛣️ Distance: {seg.distance}
                     </div>
                   )}
-                  <div className="text-[10px] text-slate-400 italic pt-0.5">
-                    {seg.subLabel}
-                  </div>
                 </div>
               </div>
             );
@@ -333,7 +304,7 @@ export default function TimelineVisualizer({ stations, startTimeStr, endTimeStr 
         </div>
 
         {/* Time Axis Ticks */}
-        <div className="relative w-full h-4 mt-1 text-[10px] font-mono text-slate-400 select-none">
+        <div className="relative w-full h-3.5 mt-1 text-[10px] font-mono text-slate-400 select-none">
           {timeTicks.map((tick, idx) => (
             <div
               key={idx}

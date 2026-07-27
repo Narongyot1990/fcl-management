@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { Pencil, Trash2, Search, Plus, X, MapPin, Loader2, History, CalendarDays, MoreVertical, Route, Truck, UsersRound, Satellite, Zap } from "lucide-react";
+import { Pencil, Trash2, Search, Plus, X, MapPin, Loader2, History, CalendarDays, MoreVertical, Route, Truck, UsersRound, Satellite, Zap, ExternalLink } from "lucide-react";
 import dynamic from "next/dynamic";
 const GpsMap = dynamic(() => import("@/components/GpsMap"), { ssr: false });
 const DriverProfile = dynamic(() => import("@/components/DriverProfile"), { ssr: false });
@@ -390,6 +390,10 @@ export default function VendorsPage() {
                               className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 transition-colors">
                               <History size={11} className="text-emerald-500" /> ประวัติ GPS
                             </button>
+                            <a href={`/vendors/gps/station-realtime/${encodeURIComponent(t.plate)}`} target="_blank" rel="noopener noreferrer"
+                              className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-orange-50 text-slate-700 hover:text-orange-700 transition-colors border-t border-slate-100 mt-0.5 pt-1.5">
+                              <ExternalLink size={11} className="text-orange-500" /> หน้าติดตามรายกะ (Dedicated)
+                            </a>
                           </div>
                         )}
                       </div>
@@ -495,6 +499,10 @@ export default function VendorsPage() {
                                 className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 transition-colors">
                                 <History size={12} className="text-emerald-500" /> ประวัติ GPS
                               </button>
+                              <a href={`/vendors/gps/station-realtime/${encodeURIComponent(t.plate)}`} target="_blank" rel="noopener noreferrer"
+                                className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-orange-50 text-slate-700 hover:text-orange-700 transition-colors border-t border-slate-100 mt-1 pt-1.5 font-medium">
+                                <ExternalLink size={12} className="text-orange-500" /> หน้าติดตามรายกะ (Dedicated)
+                              </a>
                             </div>
                           )}
                         </div>

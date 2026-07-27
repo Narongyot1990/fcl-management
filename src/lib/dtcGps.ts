@@ -119,6 +119,14 @@ export function fetchDtcHistory(gpsId: string, date: string, startTime = "00:00:
   });
 }
 
+export function fetchDtcHistoryRange(gpsId: string, startPeriod: string, endPeriod: string) {
+  return postDtc<DtcHistoryPoint>("/getHistory", {
+    gps_id: gpsId,
+    start_period: startPeriod,
+    end_period: endPeriod,
+  });
+}
+
 /**
  * Aggregates raw DTC history points into Station-to-Station report rows (v2)
  */
