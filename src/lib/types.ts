@@ -48,6 +48,7 @@ export interface Container {
 
 export type LoadingStatus = "pending" | "loading" | "loaded";
 
+/** Booking header — shared info for one booking_no, may cover multiple shipments/containers. */
 export interface Booking {
   _id: string;
   booking_date: string;
@@ -55,6 +56,15 @@ export interface Booking {
   job_type: JobType;
   customer_code: string;
   vendor_code: string;
+  created_at?: string;
+}
+
+/** One container/shipment under a booking_no, numbered sequentially per booking (shipment_no). */
+export interface Shipment {
+  _id: string;
+  booking_no: string;
+  shipment_no: number;
+  vendor_code?: string;
   truck_plate: string;
   driver_name: string;
   driver_phone: string;
@@ -82,7 +92,11 @@ export interface Booking {
   created_at?: string;
 }
 
-export type Collection = "vendors" | "containers" | "bookings" | "customers" | "users";
+export interface BookingWithShipments extends Booking {
+  shipments: Shipment[];
+}
+
+export type Collection = "vendors" | "containers" | "bookings" | "shipments" | "customers" | "users";
 
 export interface ApiResponse<T> {
   count: number;

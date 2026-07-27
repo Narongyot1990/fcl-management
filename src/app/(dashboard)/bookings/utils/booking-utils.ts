@@ -28,7 +28,7 @@ export function toShortDateTime(iso: string | undefined): string {
 }
 
 import type { JobType } from "@/lib/types";
-import { EMPTY_BOOKING_FORM } from "../types/booking-form";
+import { EMPTY_HEADER_FORM, EMPTY_SHIPMENT_FORM } from "../types/booking-form";
 
 export const STEPS = ["Booking", "Assign", "Pickup", "Loading", "Return"] as const;
 export const STEP_MODAL_TITLES = ["Booking", "Assign Truck", "Pickup", "Loading", "Return"] as const;
@@ -36,7 +36,8 @@ export const JOB_TYPE_OPTIONS: { value: JobType; label: string }[] = [
   { value: "Export", label: "Export" },
   { value: "Import", label: "Import" },
 ];
-export const EMPTY_FORM = EMPTY_BOOKING_FORM;
+export const EMPTY_FORM = EMPTY_SHIPMENT_FORM;
+export const EMPTY_HEADER = EMPTY_HEADER_FORM;
 
 export const LOADING_SUB: Record<string, { label: string; dot: string; badge: string; color: string }> = {
   pending: { label: "Pending", dot: "border-2 border-amber-400 bg-white", badge: "bg-slate-50 text-slate-600 border-slate-200", color: "text-amber-600" },
@@ -44,24 +45,23 @@ export const LOADING_SUB: Record<string, { label: string; dot: string; badge: st
   loaded: { label: "Loaded", dot: "bg-emerald-500", badge: "bg-emerald-50 text-emerald-700 border-emerald-200", color: "text-emerald-700" },
 };
 
-export function getStepStatuses(b: { truck_plate?: unknown; driver_name?: unknown; container_no?: unknown; seal_no?: unknown; container_size?: unknown; tare_weight?: unknown; loaded_at?: unknown; return_completed?: unknown; return_date?: unknown }): boolean[] {
+/** Step 0 ("Booking") is always done — it's the parent booking header, not part of the shipment. */
+export function getStepStatuses(s: { truck_plate?: unknown; driver_name?: unknown; container_no?: unknown; seal_no?: unknown; container_size?: unknown; tare_weight?: unknown; loaded_at?: unknown; return_completed?: unknown; return_date?: unknown }): boolean[] {
   return [
     true,
-    !!(b.truck_plate && b.driver_name),
-    !!(b.container_no && b.seal_no && b.container_size && b.tare_weight),
-    !!b.loaded_at,
-    !!(b.return_completed || b.return_date),
+    !!(s.truck_plate && s.driver_name),
+    !!(s.container_no && s.seal_no && s.container_size && s.tare_weight),
+    !!s.loaded_at,
+    !!(s.return_completed || s.return_date),
   ];
 }
 
-export function getStepDate(b: Record<string, unknown>, idx: number): string | undefined {
-  const val = b.booking_date ?? b.plan_pickup_date ?? b.loaded_at ?? b.plan_loading_date ?? b.return_date ?? b.plan_return_date;
-  if (typeof val !== "string" || !val) return undefined;
+export function getStepDate(bookingDate: string, s: Record<string, unknown>, idx: number): string | undefined {
   switch (idx) {
-    case 0: return b.booking_date as string;
-    case 2: return b.plan_pickup_date as string;
-    case 3: return (b.loaded_at as string) || (b.plan_loading_date as string);
-    case 4: return (b.return_date as string) || (b.plan_return_date as string);
+    case 0: return bookingDate || undefined;
+    case 2: return s.plan_pickup_date as string;
+    case 3: return (s.loaded_at as string) || (s.plan_loading_date as string);
+    case 4: return (s.return_date as string) || (s.plan_return_date as string);
     default: return undefined;
   }
 }

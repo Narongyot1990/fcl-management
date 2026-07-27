@@ -1,10 +1,15 @@
-import type { Booking, JobType, LoadingStatus, Driver } from "@/lib/types";
+import type { Booking, Shipment, JobType, LoadingStatus, Driver } from "@/lib/types";
 
-export interface BookingForm {
+/** Shared booking-header fields, editable from the create/edit form. */
+export interface BookingHeaderForm {
   booking_date: string;
-  booking_no: string;
   job_type: JobType;
   customer_code: string;
+  vendor_code: string;
+}
+
+/** Everything specific to one container/shipment. */
+export interface ShipmentForm {
   vendor_code: string;
   truck_plate: string;
   driver_name: string;
@@ -32,11 +37,14 @@ export interface BookingForm {
   return_completed: boolean;
 }
 
-export const EMPTY_BOOKING_FORM: BookingForm = {
+export const EMPTY_HEADER_FORM: BookingHeaderForm = {
   booking_date: "",
-  booking_no: "",
   job_type: "Export",
   customer_code: "",
+  vendor_code: "",
+};
+
+export const EMPTY_SHIPMENT_FORM: ShipmentForm = {
   vendor_code: "",
   truck_plate: "",
   driver_name: "",
@@ -64,4 +72,4 @@ export const EMPTY_BOOKING_FORM: BookingForm = {
   return_completed: false,
 };
 
-export type { Booking, Driver };
+export type { Booking, Shipment, Driver };

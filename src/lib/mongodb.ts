@@ -43,29 +43,57 @@ async function ensureCollectionIndexes(name: string, collection: MongoCollection
   }
 
   const promise = (async () => {
-    if (name !== "bookings") return;
+    if (name === "bookings") {
+      await Promise.all([
+        collection.createIndex({ booking_date: -1, created_at: -1 }, { name: "booking_date_created_at_desc" }),
+        collection.createIndex({ created_at: -1 }, { name: "created_at_desc" }),
+      ]);
 
-    await Promise.all([
-      collection.createIndex({ booking_date: -1, created_at: -1 }, { name: "booking_date_created_at_desc" }),
-      collection.createIndex({ created_at: -1 }, { name: "created_at_desc" }),
-      collection.createIndex({ container_no: 1 }, { name: "container_no" }),
-    ]);
-
-    try {
-      await collection.createIndex(
-        { booking_no: 1 },
-        {
-          name: "booking_no_unique",
-          unique: true,
-          partialFilterExpression: { booking_no: { $type: "string" } },
+      try {
+        await collection.createIndex(
+          { booking_no: 1 },
+          {
+            name: "booking_no_unique",
+            unique: true,
+            partialFilterExpression: { booking_no: { $type: "string" } },
+          }
+        );
+      } catch (error) {
+        if (error instanceof MongoServerError && error.code === 11000) {
+          console.warn("Could not create unique bookings.booking_no index because duplicate booking numbers already exist.");
+          return;
         }
-      );
-    } catch (error) {
-      if (error instanceof MongoServerError && error.code === 11000) {
-        console.warn("Could not create unique bookings.booking_no index because duplicate booking numbers already exist.");
-        return;
+        throw error;
       }
-      throw error;
+      return;
+    }
+
+    if (name === "shipments") {
+      await Promise.all([
+        collection.createIndex({ booking_no: 1 }, { name: "booking_no_lookup" }),
+        collection.createIndex({ container_no: 1 }, { name: "container_no" }),
+        collection.createIndex({ created_at: -1 }, { name: "created_at_desc" }),
+      ]);
+
+      try {
+        await collection.createIndex(
+          { booking_no: 1, shipment_no: 1 },
+          {
+            name: "booking_no_shipment_no_unique",
+            unique: true,
+            partialFilterExpression: {
+              booking_no: { $type: "string" },
+              shipment_no: { $type: "number" },
+            },
+          }
+        );
+      } catch (error) {
+        if (error instanceof MongoServerError && error.code === 11000) {
+          console.warn("Could not create unique shipments.(booking_no,shipment_no) index because duplicates already exist.");
+          return;
+        }
+        throw error;
+      }
     }
   })();
 
@@ -78,9 +106,10 @@ export { MongoServerError, ObjectId };
 export const DEDUP_KEYS: Record<string, string[]> = {
   vendors: ["code"],
   bookings: ["booking_no"],
+  shipments: ["booking_no", "shipment_no"],
   customers: ["code"],
   users: ["username"],
 };
 
-export const ALLOWED = ["vendors", "containers", "bookings", "customers", "users"] as const;
+export const ALLOWED = ["vendors", "containers", "bookings", "shipments", "customers", "users"] as const;
 export type AllowedCollection = (typeof ALLOWED)[number];

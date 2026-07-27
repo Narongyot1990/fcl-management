@@ -1,15 +1,17 @@
 "use client";
 import { FormField, Input, Select } from "@/components/FormField";
 import Toggle from "./Toggle";
-import { type BookingForm } from "../types/booking-form";
+import { type BookingHeaderForm, type ShipmentForm } from "../types/booking-form";
 import type { Vendor } from "@/lib/types";
 import { containerNoMessage } from "@/lib/containerValidation";
 import { JOB_TYPE_OPTIONS } from "../utils/booking-utils";
 
 interface ProcessModalProps {
   step: number;
-  form: BookingForm;
-  set: (k: keyof BookingForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
+  headerForm: BookingHeaderForm;
+  setHeader: (k: keyof BookingHeaderForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
+  form: ShipmentForm;
+  set: (k: keyof ShipmentForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
   vendors: Vendor[];
   customers: { code: string; name: string }[];
   selectedVendor: Vendor | undefined;
@@ -22,27 +24,26 @@ interface ProcessModalProps {
   codeOptions: { value: string; label: string }[];
   handleSizeChange: (size: string) => void;
   handleCodeChange: (code: string) => void;
-  setFormField: (key: keyof BookingForm, value: unknown) => void;
+  setFormField: (key: keyof ShipmentForm, value: unknown) => void;
 }
 
 export default function ProcessModalFields({
-  step, form, set, vendors, customers, selectedVendor,
+  step, headerForm, setHeader, form, set, vendors, customers, selectedVendor,
   truckPlateOptions, driverOptions, handleVendorChange, handleDriverChange, handleReturnDriverChange,
   sizeOptions, codeOptions, handleSizeChange, handleCodeChange, setFormField,
 }: ProcessModalProps) {
   if (step === 0) return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-      <FormField label="วันที่จอง"><Input type="date" value={form.booking_date} onChange={set("booking_date")} required /></FormField>
-      <FormField label="Booking No."><Input value={form.booking_no} onChange={set("booking_no")} required /></FormField>
-      <FormField label="Job Type"><Select value={form.job_type} onChange={set("job_type")} options={JOB_TYPE_OPTIONS} /></FormField>
-      <FormField label="Customer"><Select value={form.customer_code} onChange={set("customer_code")} options={customers.map(c => ({ value: c.code, label: `${c.code} - ${c.name}` }))} placeholder="เลือก Customer..." /></FormField>
-      <div className="sm:col-span-2"><FormField label="Vendor"><Select value={form.vendor_code} onChange={(e) => handleVendorChange(e.target.value)} options={vendors.map(v => ({ value: v.code, label: `${v.code} - ${v.name}` }))} placeholder="เลือก Vendor..." /></FormField></div>
+      <FormField label="วันที่จอง"><Input type="date" value={headerForm.booking_date} onChange={setHeader("booking_date")} required /></FormField>
+      <FormField label="Job Type"><Select value={headerForm.job_type} onChange={setHeader("job_type")} options={JOB_TYPE_OPTIONS} /></FormField>
+      <FormField label="Customer"><Select value={headerForm.customer_code} onChange={setHeader("customer_code")} options={customers.map(c => ({ value: c.code, label: `${c.code} - ${c.name}` }))} placeholder="เลือก Customer..." /></FormField>
+      <div className="sm:col-span-2"><FormField label="Vendor (default)"><Select value={headerForm.vendor_code} onChange={setHeader("vendor_code")} options={vendors.map(v => ({ value: v.code, label: `${v.code} - ${v.name}` }))} placeholder="เลือก Vendor..." /></FormField></div>
     </div>
   );
 
   if (step === 1) return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-      <div className="sm:col-span-2"><FormField label="Vendor"><Select value={form.vendor_code} onChange={(e) => handleVendorChange(e.target.value)} options={vendors.map(v => ({ value: v.code, label: `${v.code} - ${v.name}` }))} placeholder="เลือก Vendor..." /></FormField></div>
+      <div className="sm:col-span-2"><FormField label="Vendor (ของ shipment นี้)"><Select value={form.vendor_code} onChange={(e) => handleVendorChange(e.target.value)} options={vendors.map(v => ({ value: v.code, label: `${v.code} - ${v.name}` }))} placeholder="เลือก Vendor..." /></FormField></div>
       <FormField label="ทะเบียนรถ"><Select value={form.truck_plate} onChange={set("truck_plate")} options={truckPlateOptions} placeholder={selectedVendor ? "เลือกทะเบียน..." : "เลือก Vendor ก่อน"} disabled={!selectedVendor} /></FormField>
       <FormField label="คนขับ"><Select value={form.driver_name} onChange={(e) => handleDriverChange(e.target.value)} options={driverOptions} placeholder={selectedVendor ? "เลือกคนขับ..." : "เลือก Vendor ก่อน"} disabled={!selectedVendor} /></FormField>
       <FormField label="เบอร์โทร"><Input value={form.driver_phone} onChange={set("driver_phone")} readOnly /></FormField>

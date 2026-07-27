@@ -1,14 +1,29 @@
 "use client";
 import React from "react";
 import { X } from "lucide-react";
-import type { Booking } from "@/lib/types";
+
+export interface ImageModalInfo {
+  bookingNo: string;
+  containerNo?: string;
+  containerSize?: string;
+  containerSizeCode?: string;
+  sealNo?: string;
+  tareWeight?: string;
+  driverName?: string;
+  truckPlate?: string;
+  driverPhone?: string;
+  planPickupDate?: string;
+  returnDriverName?: string;
+  returnTruckPlate?: string;
+  returnCompleted?: boolean;
+}
 
 interface ImageFullscreenModalProps {
   open: boolean;
   eirImageUrl?: string;
   containerImageUrl?: string;
   title?: string;
-  booking: Booking | null;
+  info: ImageModalInfo | null;
   onClose: () => void;
 }
 
@@ -17,7 +32,7 @@ export default function ImageFullscreenModal({
   eirImageUrl,
   containerImageUrl,
   title,
-  booking,
+  info,
   onClose,
 }: ImageFullscreenModalProps) {
   if (!open) return null;
@@ -106,7 +121,7 @@ export default function ImageFullscreenModal({
       </div>
 
       {/* Bottom Dock: Combined Info */}
-      {booking && (
+      {info && (
         <div
           className="absolute bottom-4 left-4 right-4 max-w-6xl mx-auto bg-black/70 backdrop-blur-xl border border-white/10 rounded-2xl p-4 md:px-8 md:py-5 shadow-2xl pointer-events-auto overflow-auto max-h-[20vh]"
           onClick={(e) => e.stopPropagation()}
@@ -116,7 +131,7 @@ export default function ImageFullscreenModal({
             {/* Booking */}
             <div className="flex flex-col min-w-[100px]">
               <span className="text-white/50 text-[10px] uppercase font-bold tracking-widest mb-1">Booking No.</span>
-              <span className="text-white font-mono font-bold text-sm md:text-base">{booking.booking_no}</span>
+              <span className="text-white font-mono font-bold text-sm md:text-base">{info.bookingNo}</span>
             </div>
 
             {/* Container & Seal */}
@@ -124,12 +139,12 @@ export default function ImageFullscreenModal({
               <span className="text-white/50 text-[10px] uppercase font-bold tracking-widest mb-1">Container & Seal</span>
               <div className="flex flex-col gap-0.5">
                 <div className="flex items-baseline gap-1">
-                  <span className="text-amber-300 font-mono font-black text-sm md:text-base tracking-tight leading-none">{booking.container_no || "N/A"}</span>
+                  <span className="text-amber-300 font-mono font-black text-sm md:text-base tracking-tight leading-none">{info.containerNo || "N/A"}</span>
                 </div>
-                <span className="text-white/80 text-xs">{booking.container_size || "—"} {booking.container_size_code ? `/ ${booking.container_size_code}` : ""}</span>
+                <span className="text-white/80 text-xs">{info.containerSize || "—"} {info.containerSizeCode ? `/ ${info.containerSizeCode}` : ""}</span>
                 <div className="flex items-center gap-1">
                   <span className="text-white/50 text-[10px]">Seal:</span>
-                  <span className="text-emerald-400 font-mono font-bold text-xs">{booking.seal_no || "N/A"}</span>
+                  <span className="text-emerald-400 font-mono font-bold text-xs">{info.sealNo || "N/A"}</span>
                 </div>
               </div>
             </div>
@@ -137,17 +152,17 @@ export default function ImageFullscreenModal({
             {/* Tare Weight */}
             <div className="flex flex-col">
               <span className="text-white/50 text-[10px] uppercase font-bold tracking-widest mb-1">Tare</span>
-              <span className="text-white font-black text-sm md:text-base">{booking.tare_weight ? `${booking.tare_weight} kg` : "—"}</span>
+              <span className="text-white font-black text-sm md:text-base">{info.tareWeight ? `${info.tareWeight} kg` : "—"}</span>
             </div>
 
             {/* Driver Assignment */}
             <div className="flex flex-col">
               <span className="text-white/50 text-[10px] uppercase font-bold tracking-widest mb-1">Driver / Truck</span>
               <div className="flex flex-col gap-0.5">
-                <span className="text-white font-medium text-xs">{booking.driver_name || "—"}</span>
+                <span className="text-white font-medium text-xs">{info.driverName || "—"}</span>
                 <div className="flex items-center gap-1">
-                  <span className="text-blue-400 font-mono text-xs">{booking.truck_plate || "—"}</span>
-                  {booking.driver_phone && <span className="text-white/60 text-[10px]">{booking.driver_phone}</span>}
+                  <span className="text-blue-400 font-mono text-xs">{info.truckPlate || "—"}</span>
+                  {info.driverPhone && <span className="text-white/60 text-[10px]">{info.driverPhone}</span>}
                 </div>
               </div>
             </div>
@@ -155,17 +170,17 @@ export default function ImageFullscreenModal({
             {/* ETA */}
             <div className="flex flex-col">
               <span className="text-white/50 text-[10px] uppercase font-bold tracking-widest mb-1">Est. Pickup</span>
-              <span className="text-white font-medium text-xs">{booking.plan_pickup_date ? new Date(booking.plan_pickup_date).toLocaleString("th-TH", { dateStyle: "medium", timeStyle: "short" }) : "—"}</span>
+              <span className="text-white font-medium text-xs">{info.planPickupDate ? new Date(info.planPickupDate).toLocaleString("th-TH", { dateStyle: "medium", timeStyle: "short" }) : "—"}</span>
             </div>
 
             {/* Return */}
             <div className="flex flex-col">
               <span className="text-white/50 text-[10px] uppercase font-bold tracking-widest mb-1">Return</span>
               <div className="flex flex-col gap-0.5">
-                <span className="text-white font-medium text-xs">{booking.return_driver_name || "—"}</span>
+                <span className="text-white font-medium text-xs">{info.returnDriverName || "—"}</span>
                 <div className="flex items-center gap-1">
-                  <span className="text-emerald-400 font-mono text-xs">{booking.return_truck_plate || "—"}</span>
-                  {booking.return_completed && <span className="px-1 py-0.5 bg-emerald-500/20 text-emerald-400 text-[10px] rounded">Done</span>}
+                  <span className="text-emerald-400 font-mono text-xs">{info.returnTruckPlate || "—"}</span>
+                  {info.returnCompleted && <span className="px-1 py-0.5 bg-emerald-500/20 text-emerald-400 text-[10px] rounded">Done</span>}
                 </div>
               </div>
             </div>

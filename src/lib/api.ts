@@ -80,3 +80,43 @@ export async function deleteRecord(
   });
   return handleRes(res);
 }
+
+export interface CreateShipmentResult<TBooking, TShipment> {
+  created?: boolean;
+  booking?: TBooking;
+  shipment?: TShipment;
+  needsConfirmation?: boolean;
+  booking_no?: string;
+  existingShipmentCount?: number;
+  nextShipmentNo?: number;
+}
+
+export async function createShipment<TBooking, TShipment>(
+  payload: Record<string, unknown>
+): Promise<CreateShipmentResult<TBooking, TShipment>> {
+  const res = await fetch(`/api/bookings/create-shipment`, {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify(payload),
+  });
+  return handleRes(res);
+}
+
+export async function listBookingsGrouped<T>(
+  filters: Record<string, ListValue> = {},
+  options: Record<string, ListValue> = {}
+): Promise<ApiResponse<T>> {
+  const params = new URLSearchParams(
+    Object.entries({ ...filters, ...options }).reduce<Record<string, string>>(
+      (acc, [key, value]) => {
+        if (value !== undefined && value !== null && value !== "") {
+          acc[key] = String(value);
+        }
+        return acc;
+      },
+      {}
+    )
+  );
+  const res = await fetch(`/api/bookings/list${params.size ? `?${params}` : ""}`, { headers: headers() });
+  return handleRes<ApiResponse<T>>(res);
+}
