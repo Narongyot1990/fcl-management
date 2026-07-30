@@ -102,6 +102,17 @@ export default function TimelineVisualizer({ stations, startTimeStr, endTimeStr,
       const leftPercent = ((clampedStart - rangeStartMin) / totalRangeMin) * 100;
       const widthPercent = (dur / totalRangeMin) * 100;
 
+      if (type === "travel") {
+        travelSum += dur;
+        travelCount++;
+      } else if (type === "depot") {
+        depotSum += dur;
+        depotCount++;
+      } else if (type === "customer") {
+        custSum += dur;
+        custCount++;
+      }
+
       if (widthPercent > 0.05) {
         segs.push({
           id: `${type}-${startMin}-${endMin}-${label}`,
@@ -115,17 +126,6 @@ export default function TimelineVisualizer({ stations, startTimeStr, endTimeStr,
           leftPercent,
           widthPercent,
         });
-
-        if (type === "travel") {
-          travelSum += dur;
-          travelCount++;
-        } else if (type === "depot") {
-          depotSum += dur;
-          depotCount++;
-        } else if (type === "customer") {
-          custSum += dur;
-          custCount++;
-        }
       }
     };
 
