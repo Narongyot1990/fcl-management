@@ -59,6 +59,7 @@ export default function VendorsPage() {
   const [stationStartTime, setStationStartTime] = useState("00:00");
   const [stationEndTime, setStationEndTime] = useState("23:59");
   const [stationData, setStationData] = useState<StationReportRow[]>([]);
+  const [stationLatestGpsTime, setStationLatestGpsTime] = useState<string | null>(null);
   const [stationLoading, setStationLoading] = useState(false);
   const [stationError, setStationError] = useState("");
 
@@ -113,6 +114,7 @@ export default function VendorsPage() {
     setStationLoading(true);
     setStationError("");
     setStationData([]);
+    setStationLatestGpsTime(null);
     try {
       const endpoint = version === "v2" ? "/api/gps/station-v2" : "/api/gps/history";
       const res = await fetch(endpoint, {
@@ -125,9 +127,10 @@ export default function VendorsPage() {
           end_time: eTime,
         }),
       });
-      const json = (await res.json()) as { error?: string; stations?: StationReportRow[] };
+      const json = (await res.json()) as { error?: string; stations?: StationReportRow[]; latest_gps_time?: string };
       if (!res.ok) throw new Error(json.error || "ไม่สามารถดึงข้อมูลได้");
       setStationData(json.stations || []);
+      setStationLatestGpsTime(json.latest_gps_time || null);
     } catch (err: unknown) {
       setStationError(err instanceof Error ? err.message : "ไม่สามารถดึงข้อมูลประวัติได้");
     } finally {
@@ -666,11 +669,11 @@ export default function VendorsPage() {
                 if (gpsTruck) fetchStation(gpsTruck.gps_id, today, stationVersion, "00:00", "23:59");
               }}
                 className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors ${stationDateMode === "today" ? (stationVersion === "v2" ? "bg-amber-600 text-white" : "bg-violet-600 text-white") : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
-                <CalendarDays size={11} className="inline mr-1" />วันนี้
+                <CalendarDays size={11} className="inline mr-1" />Today
               </button>
               <button type="button" onClick={() => setStationDateMode("custom")}
                 className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors ${stationDateMode === "custom" ? (stationVersion === "v2" ? "bg-amber-600 text-white" : "bg-violet-600 text-white") : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
-                <CalendarDays size={11} className="inline mr-1" />เลือกวันที่
+                <CalendarDays size={11} className="inline mr-1" />Select Date
               </button>
               {stationDateMode === "custom" && (
                 <input type="date" value={stationDate} onChange={(e) => {
@@ -681,11 +684,12 @@ export default function VendorsPage() {
                   className="px-2 py-1 text-xs border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500" />
               )}
 
-              {/* Editable Time Range */}
+              {/* Editable Time Range (24H Format) */}
               <div className="flex items-center gap-1 px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs">
-                <span className="text-[10px] font-semibold text-slate-400">เวลา:</span>
+                <span className="text-[10px] font-semibold text-slate-400">Time:</span>
                 <input
                   type="time"
+                  step="60"
                   value={stationStartTime}
                   onChange={(e) => {
                     const newStart = e.target.value;
@@ -697,6 +701,7 @@ export default function VendorsPage() {
                 <span className="text-slate-400">–</span>
                 <input
                   type="time"
+                  step="60"
                   value={stationEndTime}
                   onChange={(e) => {
                     const newEnd = e.target.value;
@@ -711,17 +716,17 @@ export default function VendorsPage() {
 
           <div className="flex items-center justify-between text-[11px] text-slate-400">
             <span>
-              {stationVersion === "v2" ? "⚡ ข้อมูลอัปเดตแบบ Realtime" : "รายงานจากเซิร์ฟเวอร์หลัก"}
+              {stationVersion === "v2" ? "⚡ Realtime Telemetry Data" : "Standard Server Report"}
             </span>
-            <span>{stationStartTime} – {stationEndTime} น.</span>
+            <span className="font-mono">{stationStartTime} – {stationEndTime}</span>
           </div>
 
           {stationLoading ? (
-            <div className="flex items-center justify-center py-8"><Loader2 size={16} className={`animate-spin mr-2 ${stationVersion === "v2" ? "text-amber-500" : "text-violet-500"}`} /><span className="text-sm text-slate-500">กำลังประมวลผลข้อมูล…</span></div>
+            <div className="flex items-center justify-center py-8"><Loader2 size={16} className={`animate-spin mr-2 ${stationVersion === "v2" ? "text-amber-500" : "text-violet-500"}`} /><span className="text-sm text-slate-500">Processing telemetry data…</span></div>
           ) : stationError ? (
             <div className="py-4 text-sm text-red-500 text-center bg-red-50 rounded-lg">{stationError}</div>
           ) : stationData.length === 0 ? (
-            <div className="py-6 text-sm text-slate-400 text-center bg-slate-50 rounded-lg">ไม่พบข้อมูลสลับสถานีสำหรับวันที่นี้</div>
+            <div className="py-6 text-sm text-slate-400 text-center bg-slate-50 rounded-lg">No station records found for this date.</div>
           ) : (
             <>
               {/* Timeline Visualizer */}
@@ -729,6 +734,7 @@ export default function VendorsPage() {
                 stations={stationData}
                 startTimeStr={stationStartTime}
                 endTimeStr={stationEndTime}
+                latestGpsTime={stationLatestGpsTime}
               />
 
               <div className="overflow-hidden rounded-xl border border-slate-200 shadow-sm mt-2">
@@ -736,21 +742,22 @@ export default function VendorsPage() {
                 <thead>
                   <tr className={`border-b border-slate-200 ${stationVersion === "v2" ? "bg-gradient-to-r from-amber-50 to-orange-50" : "bg-gradient-to-r from-violet-50 to-blue-50"}`}>
                     <th className="text-left px-3 py-2.5 font-semibold text-slate-500">#</th>
-                    <th className="text-left px-3 py-2.5 font-semibold text-slate-500">ต้นทาง</th>
-                    <th className="text-left px-3 py-2.5 font-semibold text-slate-500 whitespace-nowrap">เวลาออก</th>
-                    <th className="text-left px-3 py-2.5 font-semibold text-slate-500">ปลายทาง</th>
-                    <th className="text-left px-3 py-2.5 font-semibold text-slate-500 whitespace-nowrap">เวลาถึง</th>
-                    <th className="text-right px-3 py-2.5 font-semibold text-slate-500">km</th>
+                    <th className="text-left px-3 py-2.5 font-semibold text-slate-500">Origin</th>
+                    <th className="text-left px-3 py-2.5 font-semibold text-slate-500 whitespace-nowrap">Departed</th>
+                    <th className="text-left px-3 py-2.5 font-semibold text-slate-500">Destination</th>
+                    <th className="text-left px-3 py-2.5 font-semibold text-slate-500 whitespace-nowrap">Arrived</th>
+                    <th className="text-right px-3 py-2.5 font-semibold text-slate-500">Dist (km)</th>
                   </tr>
                 </thead>
                 <tbody>
                   {stationData.map((s, i) => (
                     <tr key={i} className="border-b border-slate-100 last:border-0 hover:bg-amber-50/20 transition-colors">
-                      <td className="px-3 py-2 text-slate-400">{i + 1}</td>
+                      <td className="px-3 py-2 text-slate-400 font-mono">{i + 1}</td>
                       <td className="px-3 py-2"><div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" /><span className="font-medium text-slate-700">{s.station_f || "—"}</span></div></td>
-                      <td className="px-3 py-2 text-slate-500 whitespace-nowrap">{s.start_date} {s.start_time}</td>
+                      <td className="px-3 py-2 text-slate-500 whitespace-nowrap font-mono">{s.start_date} {s.start_time}</td>
                       <td className="px-3 py-2"><div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" /><span className="font-medium text-slate-700">{s.station_n || "—"}</span></div></td>
-                      <td className="px-3 py-2 text-right font-bold text-emerald-600">{s.distance || "—"}</td>
+                      <td className="px-3 py-2 text-slate-500 whitespace-nowrap font-mono">{s.end_date} {s.end_time}</td>
+                      <td className="px-3 py-2 text-right font-bold text-emerald-600 font-mono">{s.distance || "—"}</td>
                     </tr>
                   ))}
                 </tbody>

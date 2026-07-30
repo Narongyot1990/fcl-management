@@ -14,8 +14,8 @@ export interface StationReportRow {
 
 interface TimelineVisualizerProps {
   stations: StationReportRow[];
-  startTimeStr: string; // "06:00" or "18:00"
-  endTimeStr: string;   // "18:00" or "06:00"
+  startTimeStr: string; // "00:00"
+  endTimeStr: string;   // "23:59"
   latestGpsTime?: string | null;
 }
 
@@ -43,6 +43,7 @@ function timeToMinutes(timeStr?: string): number {
 }
 
 function formatDuration(min: number): string {
+  if (min <= 0) return "0m";
   const h = Math.floor(min / 60);
   const m = Math.round(min % 60);
   if (h === 0) return `${m}m`;
@@ -61,19 +62,25 @@ export default function TimelineVisualizer({ stations, startTimeStr, endTimeStr,
   const rangeEndMin = useMemo(() => {
     let min = timeToMinutes(endTimeStr);
     if (min === 0) min = 1439;
-    // Handle overnight shift e.g. 18:00 to 06:00 (next day)
     if (min <= rangeStartMin) min += 1440;
     return min;
   }, [startTimeStr, endTimeStr, rangeStartMin]);
 
   const totalRangeMin = Math.max(1, rangeEndMin - rangeStartMin);
 
-  const { segments } = useMemo(() => {
+  const { segments, stats } = useMemo(() => {
     if (!stations || stations.length === 0) {
-      return { segments: [] };
+      return {
+        segments: [],
+        stats: { avgTravelMin: 0, avgDepotMin: 0, avgCustMin: 0, totalDistKm: 0 }
+      };
     }
 
     const segs: Segment[] = [];
+    let travelSum = 0, travelCount = 0;
+    let depotSum = 0, depotCount = 0;
+    let custSum = 0, custCount = 0;
+    let totalDistKm = 0;
 
     const addSeg = (
       type: "travel" | "depot" | "customer" | "idle",
@@ -85,7 +92,6 @@ export default function TimelineVisualizer({ stations, startTimeStr, endTimeStr,
       eTime: string,
       dist?: string
     ) => {
-      // Adjust endMin if before startMin (overnight wrap)
       let adjustedEndMin = endMin;
       if (adjustedEndMin < startMin) adjustedEndMin += 1440;
 
@@ -109,6 +115,17 @@ export default function TimelineVisualizer({ stations, startTimeStr, endTimeStr,
           leftPercent,
           widthPercent,
         });
+
+        if (type === "travel") {
+          travelSum += dur;
+          travelCount++;
+        } else if (type === "depot") {
+          depotSum += dur;
+          depotCount++;
+        } else if (type === "customer") {
+          custSum += dur;
+          custCount++;
+        }
       }
     };
 
@@ -136,6 +153,7 @@ export default function TimelineVisualizer({ stations, startTimeStr, endTimeStr,
       if (legEndMin < legStartMin) legEndMin += 1440;
 
       const distVal = parseFloat(String(leg.distance || 0)) || 0;
+      totalDistKm += distVal;
 
       addSeg(
         "travel",
@@ -162,7 +180,7 @@ export default function TimelineVisualizer({ stations, startTimeStr, endTimeStr,
           addSeg(
             type,
             `Dwell @ ${groundStation}`,
-            isDep ? "Depot Dwell / Operations" : "Customer Dwell / Loading",
+            isDep ? "Depot Dwell" : "Customer Dwell",
             legEndMin,
             nextLegStartMin,
             leg.end_time || "",
@@ -172,7 +190,7 @@ export default function TimelineVisualizer({ stations, startTimeStr, endTimeStr,
       }
     }
 
-    // 3. Final ground stay after last leg (CLAMPED TO LATEST GPS TIME OR RANGE END)
+    // 3. Final ground stay (clamped to latest GPS time or range end)
     const lastLegEndMin = timeToMinutes(stations[stations.length - 1].end_time);
     let actualLastMin = rangeEndMin;
 
@@ -191,7 +209,7 @@ export default function TimelineVisualizer({ stations, startTimeStr, endTimeStr,
       addSeg(
         type,
         `Dwell @ ${lastStation}`,
-        "Current Dwell Location",
+        "Current Location",
         lastLegEndMin,
         actualLastMin,
         stations[stations.length - 1].end_time || "",
@@ -199,10 +217,18 @@ export default function TimelineVisualizer({ stations, startTimeStr, endTimeStr,
       );
     }
 
-    return { segments: segs };
+    return {
+      segments: segs,
+      stats: {
+        avgTravelMin: travelCount > 0 ? Math.round(travelSum / travelCount) : 0,
+        avgDepotMin: depotCount > 0 ? Math.round(depotSum / depotCount) : 0,
+        avgCustMin: custCount > 0 ? Math.round(custSum / custCount) : 0,
+        totalDistKm,
+      }
+    };
   }, [stations, rangeStartMin, rangeEndMin, totalRangeMin, startTimeStr, endTimeStr, latestGpsTime]);
 
-  // Generate 6 time ticks for timeline axis
+  // Generate 6 time ticks for timeline axis (24H format)
   const timeTicks = useMemo(() => {
     const ticks: { label: string; leftPercent: number }[] = [];
     const count = 6;
@@ -221,36 +247,52 @@ export default function TimelineVisualizer({ stations, startTimeStr, endTimeStr,
   if (!stations || stations.length === 0) return null;
 
   return (
-    <div className="bg-slate-900/95 text-white rounded-xl p-3.5 shadow-lg border border-slate-800 space-y-2.5 my-1">
-      {/* Legend Header */}
-      <div className="flex items-center justify-between gap-3 text-[11px] text-slate-300 flex-wrap">
-        <span className="font-bold text-amber-400 uppercase tracking-wider text-[10px]">
-          SHIFT TIMELINE ({stations.length} LEGS)
-        </span>
-
-        <div className="flex items-center gap-4 flex-wrap text-[10px]">
-          <div className="flex items-center gap-1.5">
-            <div className="w-2.5 h-2.5 rounded-sm bg-emerald-500 shadow-sm" />
-            <span className="text-slate-200">Driving / In Transit</span>
+    <div className="bg-slate-900/95 text-white rounded-xl p-3 shadow-lg border border-slate-800 space-y-2 my-1">
+      {/* Legend & Concise Averages Header */}
+      <div className="flex items-center justify-between gap-2 text-[10px] text-slate-300 flex-wrap">
+        {/* Color Legend */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-1">
+            <div className="w-2 h-2 rounded-sm bg-emerald-500" />
+            <span className="text-slate-200">Driving</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-2.5 h-2.5 rounded-sm bg-indigo-500 shadow-sm" />
+          <div className="flex items-center gap-1">
+            <div className="w-2 h-2 rounded-sm bg-indigo-500" />
             <span className="text-slate-200">Depot Dwell</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-2.5 h-2.5 rounded-sm bg-amber-500 shadow-sm" />
+          <div className="flex items-center gap-1">
+            <div className="w-2 h-2 rounded-sm bg-amber-500" />
             <span className="text-slate-200">Customer Dwell</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-2.5 h-2.5 rounded-sm bg-slate-600" />
-            <span className="text-slate-400">Idle / Standby</span>
+          <div className="flex items-center gap-1">
+            <div className="w-2 h-2 rounded-sm bg-slate-600" />
+            <span className="text-slate-400">Idle</span>
           </div>
+        </div>
+
+        {/* Concise Average Stats */}
+        <div className="flex items-center gap-2 font-mono text-[10px] text-slate-400">
+          {stats.avgTravelMin > 0 && (
+            <span>
+              Avg Driving: <strong className="text-emerald-400">{formatDuration(stats.avgTravelMin)}</strong>
+            </span>
+          )}
+          {stats.avgDepotMin > 0 && (
+            <span>
+              • Depot: <strong className="text-indigo-300">{formatDuration(stats.avgDepotMin)}</strong>
+            </span>
+          )}
+          {stats.avgCustMin > 0 && (
+            <span>
+              • Customer: <strong className="text-amber-300">{formatDuration(stats.avgCustMin)}</strong>
+            </span>
+          )}
         </div>
       </div>
 
-      {/* Main Timeline Bar */}
+      {/* Main Clean Bar (No Text Inside Segments) */}
       <div className="relative w-full">
-        <div className="relative w-full h-8 bg-slate-950/90 rounded-lg overflow-hidden border border-slate-800 flex items-center shadow-inner">
+        <div className="relative w-full h-6 bg-slate-950/90 rounded-md overflow-hidden border border-slate-800 flex items-center shadow-inner">
           {segments.map((seg) => {
             let bgClass = "bg-slate-700 hover:bg-slate-600";
             let borderClass = "border-slate-600";
@@ -272,28 +314,21 @@ export default function TimelineVisualizer({ stations, startTimeStr, endTimeStr,
                   left: `${seg.leftPercent}%`,
                   width: `${seg.widthPercent}%`,
                 }}
-                className={`absolute h-full transition-all cursor-pointer group border-r ${bgClass} ${borderClass} flex items-center justify-center overflow-hidden px-1`}
+                className={`absolute h-full transition-all cursor-pointer group border-r ${bgClass} ${borderClass}`}
               >
-                {/* Text inside bar if wide enough */}
-                {seg.widthPercent > 7 && (
-                  <span className="text-[9px] font-bold text-white truncate drop-shadow-md select-none">
-                    {seg.label}
-                  </span>
-                )}
-
                 {/* Minimal Hover Tooltip */}
-                <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:flex flex-col gap-0.5 z-50 bg-slate-950 text-white text-xs p-2 rounded-lg shadow-xl border border-slate-700 whitespace-nowrap pointer-events-none min-w-[150px]">
-                  <div className="font-bold text-amber-400 border-b border-slate-800 pb-1">
+                <div className="absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 hidden group-hover:flex flex-col gap-0.5 z-50 bg-slate-950 text-white text-[11px] p-2 rounded-lg shadow-xl border border-slate-700 whitespace-nowrap pointer-events-none min-w-[140px]">
+                  <div className="font-bold text-amber-400 border-b border-slate-800 pb-0.5">
                     {seg.label}
                   </div>
-                  <div className="text-[11px] text-slate-300">
+                  <div className="text-slate-300">
                     ⏱️ {seg.startTime.includes(" ") ? seg.startTime.split(" ")[1] : seg.startTime} – {seg.endTime.includes(" ") ? seg.endTime.split(" ")[1] : seg.endTime}
                   </div>
-                  <div className="text-[11px] text-slate-400">
+                  <div className="text-slate-400">
                     ⏳ Duration: <span className="text-white font-semibold">{formatDuration(seg.durationMinutes)}</span>
                   </div>
                   {seg.distance && (
-                    <div className="text-[11px] text-emerald-400 font-semibold">
+                    <div className="text-emerald-400 font-semibold">
                       🛣️ Distance: {seg.distance}
                     </div>
                   )}
@@ -303,8 +338,8 @@ export default function TimelineVisualizer({ stations, startTimeStr, endTimeStr,
           })}
         </div>
 
-        {/* Time Axis Ticks */}
-        <div className="relative w-full h-3.5 mt-1 text-[10px] font-mono text-slate-400 select-none">
+        {/* 24H Time Axis Ticks */}
+        <div className="relative w-full h-3 mt-0.5 text-[9px] font-mono text-slate-400 select-none">
           {timeTicks.map((tick, idx) => (
             <div
               key={idx}
