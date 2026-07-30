@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, use } from "react";
-import { Loader2, RefreshCw, Sun, Moon, Clock, Satellite, MapPin, Truck, ChevronRight } from "lucide-react";
+import { Loader2, RefreshCw, Sun, Moon, Clock, Satellite, Truck } from "lucide-react";
 import TimelineVisualizer, { StationReportRow } from "@/components/TimelineVisualizer";
 import { listRecords } from "@/lib/api";
 import type { Vendor } from "@/lib/types";
@@ -154,7 +154,7 @@ export default function StandaloneStationRealtimePage({ params }: { params: Prom
 
         setStationData(json.stations || []);
         setLatestGpsTime(json.latest_gps_time || null);
-        
+
         const now = new Date();
         setLastRefreshedAt(`${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`);
       } catch (err: unknown) {
@@ -193,106 +193,110 @@ export default function StandaloneStationRealtimePage({ params }: { params: Prom
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 selection:bg-amber-500 selection:text-white font-sans pb-12">
-      {/* Mobile Sticky Header */}
-      <header className="sticky top-0 z-50 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 py-3 shadow-md">
-        <div className="max-w-3xl mx-auto flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center text-white shrink-0 shadow-lg shadow-amber-500/20">
-              <Truck size={18} />
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-6">
+      {/* Sleek Compact Header */}
+      <header className="sticky top-0 z-50 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-3 py-2.5 shadow-md">
+        <div className="max-w-2xl mx-auto flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center text-slate-950 shrink-0 font-bold">
+              <Truck size={16} />
             </div>
             <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <h1 className="font-mono font-extrabold text-lg text-white tracking-tight truncate">{rawPlate}</h1>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold">
-                  <Satellite size={10} className="animate-pulse" /> LIVE
+              <div className="flex items-center gap-1.5">
+                <h1 className="font-mono font-bold text-base text-white tracking-tight truncate">{rawPlate}</h1>
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold">
+                  <Satellite size={9} className="animate-pulse" /> LIVE
                 </span>
               </div>
-              {vendor && <p className="text-xs text-slate-400 truncate">{vendor.name}</p>}
+              {vendor && <p className="text-[10px] text-slate-400 truncate">{vendor.name}</p>}
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => gpsId && fetchData(gpsId, selectedDate, startTime, endTime, shiftType)}
-            disabled={loading || !gpsId}
-            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors shrink-0 disabled:opacity-50 border border-slate-700/60"
-            title="Refresh Data"
-          >
-            <RefreshCw size={16} className={loading ? "animate-spin text-amber-400" : ""} />
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            {lastRefreshedAt && <span className="text-[10px] font-mono text-slate-400 hidden sm:inline">Updated: {lastRefreshedAt}</span>}
+            <button
+              type="button"
+              onClick={() => gpsId && fetchData(gpsId, selectedDate, startTime, endTime, shiftType)}
+              disabled={loading || !gpsId}
+              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors disabled:opacity-50 border border-slate-700/60"
+              title="Refresh Data"
+            >
+              <RefreshCw size={14} className={loading ? "animate-spin text-amber-400" : ""} />
+            </button>
+          </div>
         </div>
       </header>
 
-      {/* Main Content Area */}
-      <main className="max-w-3xl mx-auto px-4 pt-4 space-y-4">
+      {/* Main Content Area (Compact Layout) */}
+      <main className="max-w-2xl mx-auto px-3 pt-3 space-y-2.5">
         {loadingVendor ? (
-          <div className="bg-slate-900/60 rounded-2xl p-8 text-center text-slate-400 text-sm border border-slate-800">
+          <div className="bg-slate-900/60 rounded-xl p-6 text-center text-slate-400 text-xs border border-slate-800">
             Loading vehicle details…
           </div>
         ) : !gpsId ? (
-          <div className="bg-red-950/40 border border-red-800/60 text-red-300 rounded-2xl p-6 text-center text-sm">
+          <div className="bg-red-950/40 border border-red-800/60 text-red-300 rounded-xl p-4 text-center text-xs">
             GPS telemetry is not available for truck <span className="font-mono font-bold text-white">{rawPlate}</span>.
           </div>
         ) : (
           <>
-            {/* Shift Pill Selector */}
-            <div className="bg-slate-900/90 rounded-2xl border border-slate-800 p-2.5 shadow-sm space-y-2.5">
-              <div className="flex items-center justify-between text-xs px-1 text-slate-400">
-                <span className="font-semibold text-slate-300">SHIFT MONITORING</span>
-                {lastRefreshedAt && <span className="text-[10px] font-mono text-slate-400">Updated: {lastRefreshedAt}</span>}
-              </div>
-
-              <div className="grid grid-cols-3 gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800/80">
+            {/* Inline Shift Pill Switcher */}
+            <div className="flex items-center justify-between gap-2 flex-wrap text-xs">
+              <div className="inline-flex bg-slate-900 p-1 rounded-lg border border-slate-800 shadow-sm w-full sm:w-auto">
                 <button
                   type="button"
                   onClick={() => selectShift("day")}
-                  className={`flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-all ${
+                  className={`flex-1 sm:flex-none flex items-center justify-center gap-1 px-3 py-1 rounded-md text-[11px] font-bold transition-all ${
                     shiftType === "day"
-                      ? "bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20"
-                      : "text-slate-400 hover:text-white hover:bg-slate-900"
+                      ? "bg-amber-500 text-slate-950 shadow-sm"
+                      : "text-slate-400 hover:text-white"
                   }`}
                 >
-                  <Sun size={13} /> Day Shift
+                  <Sun size={12} /> Day Shift
                 </button>
 
                 <button
                   type="button"
                   onClick={() => selectShift("night")}
-                  className={`flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-all ${
+                  className={`flex-1 sm:flex-none flex items-center justify-center gap-1 px-3 py-1 rounded-md text-[11px] font-bold transition-all ${
                     shiftType === "night"
-                      ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20"
-                      : "text-slate-400 hover:text-white hover:bg-slate-900"
+                      ? "bg-indigo-600 text-white shadow-sm"
+                      : "text-slate-400 hover:text-white"
                   }`}
                 >
-                  <Moon size={13} /> Night Shift
+                  <Moon size={12} /> Night Shift
                 </button>
 
                 <button
                   type="button"
                   onClick={() => selectShift("full")}
-                  className={`flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-all ${
+                  className={`flex-1 sm:flex-none flex items-center justify-center gap-1 px-3 py-1 rounded-md text-[11px] font-bold transition-all ${
                     shiftType === "full"
-                      ? "bg-slate-800 text-white shadow-md"
-                      : "text-slate-400 hover:text-white hover:bg-slate-900"
+                      ? "bg-slate-800 text-white shadow-sm"
+                      : "text-slate-400 hover:text-white"
                   }`}
                 >
-                  <Clock size={13} /> 24 Hours
+                  <Clock size={12} /> 24 Hours
                 </button>
               </div>
+
+              {latestGpsTime && (
+                <span className="font-mono text-[10px] text-slate-400 ml-auto">
+                  GPS: {latestGpsTime.includes(" ") ? latestGpsTime.split(" ")[1] : latestGpsTime}
+                </span>
+              )}
             </div>
 
             {/* Error Message */}
             {error && (
-              <div className="bg-red-950/40 border border-red-800/60 text-red-300 rounded-2xl p-4 text-xs text-center">
+              <div className="bg-red-950/40 border border-red-800/60 text-red-300 rounded-xl p-3 text-xs text-center">
                 {error}
               </div>
             )}
 
             {/* Timeline Visualizer Component */}
             {loading ? (
-              <div className="bg-slate-900/90 rounded-2xl p-10 flex flex-col items-center justify-center text-slate-400 space-y-2 border border-slate-800">
-                <Loader2 size={24} className="animate-spin text-amber-500" />
+              <div className="bg-slate-900/90 rounded-xl p-6 flex flex-col items-center justify-center text-slate-400 space-y-2 border border-slate-800">
+                <Loader2 size={20} className="animate-spin text-amber-500" />
                 <span className="text-xs">Fetching Telemetry Data…</span>
               </div>
             ) : (
@@ -304,54 +308,42 @@ export default function StandaloneStationRealtimePage({ params }: { params: Prom
                   latestGpsTime={latestGpsTime}
                 />
 
-                {/* Mobile Cards / List View */}
-                <div className="space-y-2.5">
-                  <div className="flex items-center justify-between px-1 text-xs font-bold text-slate-400">
-                    <span>STATION TRANSITIONS ({stationData.length})</span>
-                    {latestGpsTime && (
-                      <span className="font-mono text-[10px] text-slate-400">
-                        GPS Time: {latestGpsTime.includes(" ") ? latestGpsTime.split(" ")[1] : latestGpsTime}
-                      </span>
-                    )}
+                {/* Ultra-Compact Station Legs Table */}
+                <div className="bg-slate-900/90 rounded-xl border border-slate-800 shadow-sm overflow-hidden">
+                  <div className="px-3 py-2 bg-slate-950 border-b border-slate-800/80 flex items-center justify-between text-[11px] font-bold text-slate-400">
+                    <span>TRANSITIONS ({stationData.length})</span>
                   </div>
 
                   {stationData.length === 0 ? (
-                    <div className="bg-slate-900/60 rounded-2xl p-8 text-center text-slate-400 text-xs border border-slate-800">
-                      No station transitions recorded during this shift period.
+                    <div className="p-6 text-center text-slate-400 text-xs">
+                      No transitions recorded for this shift.
                     </div>
                   ) : (
-                    <div className="flex flex-col gap-2">
-                      {stationData.map((s, i) => (
-                        <div
-                          key={i}
-                          className="bg-slate-900/90 rounded-xl border border-slate-800 p-3.5 shadow-sm space-y-2"
-                        >
-                          <div className="flex items-center justify-between text-xs font-bold">
-                            <div className="flex items-center gap-1.5 min-w-0">
-                              <span className="w-5 h-5 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-[10px] font-mono shrink-0">
-                                {i + 1}
-                              </span>
-                              <span className="text-blue-400 font-semibold truncate">{s.station_f || "—"}</span>
-                              <ChevronRight size={12} className="text-slate-600 shrink-0" />
-                              <span className="text-emerald-400 font-semibold truncate">{s.station_n || "—"}</span>
-                            </div>
-                            <span className="font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 shrink-0 text-[11px]">
-                              {s.distance || "0.00"} km
-                            </span>
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-2 text-[11px] bg-slate-950/60 p-2 rounded-lg border border-slate-800/60 font-mono text-slate-400">
-                            <div>
-                              <span className="text-[9px] text-slate-400 uppercase tracking-wider block font-sans">Departed</span>
-                              <span className="text-slate-200">{s.start_time || "—"}</span>
-                            </div>
-                            <div>
-                              <span className="text-[9px] text-slate-400 uppercase tracking-wider block font-sans">Arrived</span>
-                              <span className="text-slate-200">{s.end_time || "—"}</span>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs font-mono">
+                        <thead>
+                          <tr className="border-b border-slate-800 text-[10px] font-sans uppercase tracking-wider text-slate-400 bg-slate-950/40">
+                            <th className="px-2.5 py-1.5 font-semibold">#</th>
+                            <th className="px-2.5 py-1.5 font-semibold">Origin</th>
+                            <th className="px-2.5 py-1.5 font-semibold">Depart</th>
+                            <th className="px-2.5 py-1.5 font-semibold">Destination</th>
+                            <th className="px-2.5 py-1.5 font-semibold">Arrive</th>
+                            <th className="px-2.5 py-1.5 font-semibold text-right">km</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-800/60">
+                          {stationData.map((s, i) => (
+                            <tr key={i} className="hover:bg-slate-800/40 transition-colors">
+                              <td className="px-2.5 py-1.5 text-slate-400 text-[11px]">{i + 1}</td>
+                              <td className="px-2.5 py-1.5 font-semibold text-blue-400 truncate max-w-[90px]">{s.station_f || "—"}</td>
+                              <td className="px-2.5 py-1.5 text-slate-300 text-[11px]">{s.start_time || "—"}</td>
+                              <td className="px-2.5 py-1.5 font-semibold text-emerald-400 truncate max-w-[90px]">{s.station_n || "—"}</td>
+                              <td className="px-2.5 py-1.5 text-slate-300 text-[11px]">{s.end_time || "—"}</td>
+                              <td className="px-2.5 py-1.5 text-right font-bold text-amber-400 text-[11px]">{s.distance || "—"}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   )}
                 </div>
@@ -360,11 +352,6 @@ export default function StandaloneStationRealtimePage({ params }: { params: Prom
           </>
         )}
       </main>
-
-      {/* Footer Branding */}
-      <footer className="max-w-3xl mx-auto px-4 mt-8 text-center text-[10px] text-slate-400 font-mono">
-        FCL Realtime Fleet Monitor System
-      </footer>
     </div>
   );
 }
