@@ -684,32 +684,40 @@ export default function VendorsPage() {
                   className="px-2 py-1 text-xs border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500" />
               )}
 
-              {/* Editable Time Range (24H Format) */}
+              {/* Editable Time Range (Guaranteed 24H Format) */}
               <div className="flex items-center gap-1 px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs">
                 <span className="text-[10px] font-semibold text-slate-400">Time:</span>
-                <input
-                  type="time"
-                  step="60"
+                <select
                   value={stationStartTime}
                   onChange={(e) => {
                     const newStart = e.target.value;
                     setStationStartTime(newStart);
                     if (gpsTruck) fetchStation(gpsTruck.gps_id, stationDate, stationVersion, newStart, stationEndTime);
                   }}
-                  className="bg-transparent font-mono text-xs text-slate-700 focus:outline-none cursor-pointer"
-                />
+                  className="bg-transparent font-mono text-xs font-bold text-slate-700 focus:outline-none cursor-pointer"
+                >
+                  {["00:00", "01:00", "02:00", "03:00", "04:00", "05:00", "06:00", "07:00", "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00", "22:00", "23:00", "23:59"]
+                    .concat(!["00:00", "01:00", "02:00", "03:00", "04:00", "05:00", "06:00", "07:00", "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00", "22:00", "23:00", "23:59"].includes(stationStartTime) ? [stationStartTime] : [])
+                    .map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                </select>
                 <span className="text-slate-400">–</span>
-                <input
-                  type="time"
-                  step="60"
+                <select
                   value={stationEndTime}
                   onChange={(e) => {
                     const newEnd = e.target.value;
                     setStationEndTime(newEnd);
                     if (gpsTruck) fetchStation(gpsTruck.gps_id, stationDate, stationVersion, stationStartTime, newEnd);
                   }}
-                  className="bg-transparent font-mono text-xs text-slate-700 focus:outline-none cursor-pointer"
-                />
+                  className="bg-transparent font-mono text-xs font-bold text-slate-700 focus:outline-none cursor-pointer"
+                >
+                  {["00:00", "01:00", "02:00", "03:00", "04:00", "05:00", "06:00", "07:00", "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00", "22:00", "23:00", "23:59"]
+                    .concat(!["00:00", "01:00", "02:00", "03:00", "04:00", "05:00", "06:00", "07:00", "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00", "22:00", "23:00", "23:59"].includes(stationEndTime) ? [stationEndTime] : [])
+                    .map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                </select>
               </div>
             </div>
           </div>
