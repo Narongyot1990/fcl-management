@@ -17,6 +17,7 @@ interface TimelineVisualizerProps {
   startTimeStr: string; // "00:00"
   endTimeStr: string;   // "23:59"
   latestGpsTime?: string | null;
+  onSegmentClick?: (legIndex?: number) => void;
 }
 
 interface Segment {
@@ -30,6 +31,7 @@ interface Segment {
   distance?: string;
   leftPercent: number;
   widthPercent: number;
+  legIndex?: number;
 }
 
 function timeToMinutes(timeStr?: string): number {
@@ -57,7 +59,7 @@ function isDepotStation(name?: string): boolean {
   return upper.includes("FSCC") || upper.includes("DEPOT") || upper.includes("YARD") || upper.includes("HUB") || upper.includes("PARK") || upper.includes("FLS");
 }
 
-export default function TimelineVisualizer({ stations, startTimeStr, endTimeStr, latestGpsTime }: TimelineVisualizerProps) {
+export default function TimelineVisualizer({ stations, startTimeStr, endTimeStr, latestGpsTime, onSegmentClick }: TimelineVisualizerProps) {
   const rangeStartMin = useMemo(() => timeToMinutes(startTimeStr), [startTimeStr]);
   const rangeEndMin = useMemo(() => {
     let min = timeToMinutes(endTimeStr);
@@ -90,7 +92,8 @@ export default function TimelineVisualizer({ stations, startTimeStr, endTimeStr,
       endMin: number,
       sTime: string,
       eTime: string,
-      dist?: string
+      dist?: string,
+      legIdx?: number
     ) => {
       let adjustedEndMin = endMin;
       if (adjustedEndMin < startMin) adjustedEndMin += 1440;
@@ -125,6 +128,7 @@ export default function TimelineVisualizer({ stations, startTimeStr, endTimeStr,
           distance: dist,
           leftPercent,
           widthPercent,
+          legIndex: legIdx,
         });
       }
     };
@@ -163,7 +167,8 @@ export default function TimelineVisualizer({ stations, startTimeStr, endTimeStr,
         legEndMin,
         leg.start_time || "",
         leg.end_time || "",
-        `${distVal.toFixed(2)} km`
+        `${distVal.toFixed(2)} km`,
+        i
       );
 
       // Ground stay segment between legs
@@ -184,7 +189,9 @@ export default function TimelineVisualizer({ stations, startTimeStr, endTimeStr,
             legEndMin,
             nextLegStartMin,
             leg.end_time || "",
-            nextLeg.start_time || ""
+            nextLeg.start_time || "",
+            undefined,
+            i
           );
         }
       }
@@ -213,7 +220,9 @@ export default function TimelineVisualizer({ stations, startTimeStr, endTimeStr,
         lastLegEndMin,
         actualLastMin,
         stations[stations.length - 1].end_time || "",
-        latestGpsTime ? latestGpsTime.split(" ")[1] || endTimeStr : endTimeStr
+        latestGpsTime ? latestGpsTime.split(" ")[1] || endTimeStr : endTimeStr,
+        undefined,
+        stations.length - 1
       );
     }
 
@@ -290,7 +299,7 @@ export default function TimelineVisualizer({ stations, startTimeStr, endTimeStr,
         </div>
       </div>
 
-      {/* Main Clean Bar (No Text Inside Segments) */}
+      {/* Main Clean Bar */}
       <div className="relative w-full">
         <div className="relative w-full h-6 bg-slate-950/90 rounded-md overflow-hidden border border-slate-800 flex items-center shadow-inner">
           {segments.map((seg) => {
@@ -307,6 +316,9 @@ export default function TimelineVisualizer({ stations, startTimeStr, endTimeStr,
               borderClass = "border-amber-400/30";
             }
 
+            const sT = seg.startTime.includes(" ") ? seg.startTime.split(" ")[1] : seg.startTime;
+            const eT = seg.endTime.includes(" ") ? seg.endTime.split(" ")[1] : seg.endTime;
+
             return (
               <div
                 key={seg.id}
@@ -314,24 +326,31 @@ export default function TimelineVisualizer({ stations, startTimeStr, endTimeStr,
                   left: `${seg.leftPercent}%`,
                   width: `${seg.widthPercent}%`,
                 }}
+                onClick={() => onSegmentClick?.(seg.legIndex)}
                 className={`absolute h-full transition-all cursor-pointer group border-r ${bgClass} ${borderClass}`}
               >
-                {/* Minimal Hover Tooltip */}
-                <div className="absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 hidden group-hover:flex flex-col gap-0.5 z-50 bg-slate-950 text-white text-[11px] p-2 rounded-lg shadow-xl border border-slate-700 whitespace-nowrap pointer-events-none min-w-[140px]">
-                  <div className="font-bold text-amber-400 border-b border-slate-800 pb-0.5">
-                    {seg.label}
+                {/* Rich In/Out Hover Tooltip */}
+                <div className="absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 hidden group-hover:flex flex-col gap-1 z-50 bg-slate-950 text-white text-[11px] p-2.5 rounded-lg shadow-xl border border-slate-700 whitespace-nowrap pointer-events-none min-w-[160px]">
+                  <div className="font-bold text-amber-400 border-b border-slate-800 pb-1 flex items-center justify-between gap-2">
+                    <span>{seg.label}</span>
+                    <span className="text-[9px] text-slate-400 uppercase font-mono">({seg.type})</span>
                   </div>
-                  <div className="text-slate-300">
-                    ⏱️ {seg.startTime.includes(" ") ? seg.startTime.split(" ")[1] : seg.startTime} – {seg.endTime.includes(" ") ? seg.endTime.split(" ")[1] : seg.endTime}
-                  </div>
-                  <div className="text-slate-400">
-                    ⏳ Duration: <span className="text-white font-semibold">{formatDuration(seg.durationMinutes)}</span>
-                  </div>
-                  {seg.distance && (
-                    <div className="text-emerald-400 font-semibold">
-                      🛣️ Distance: {seg.distance}
+
+                  <div className="grid grid-cols-2 gap-2 text-[10px] font-mono bg-slate-900/80 p-1.5 rounded border border-slate-800">
+                    <div>
+                      <span className="text-slate-400 block text-[9px] font-sans">📥 IN (Start):</span>
+                      <span className="text-emerald-400 font-bold">{sT}</span>
                     </div>
-                  )}
+                    <div>
+                      <span className="text-slate-400 block text-[9px] font-sans">📤 OUT (End):</span>
+                      <span className="text-rose-400 font-bold">{eT}</span>
+                    </div>
+                  </div>
+
+                  <div className="text-slate-300 text-[10px] flex items-center justify-between pt-0.5">
+                    <span>⏳ Duration: <strong className="text-white">{formatDuration(seg.durationMinutes)}</strong></span>
+                    {seg.distance && <span className="text-emerald-400 font-bold">🛣️ {seg.distance}</span>}
+                  </div>
                 </div>
               </div>
             );

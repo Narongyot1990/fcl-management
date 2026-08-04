@@ -752,22 +752,50 @@ export default function VendorsPage() {
                     <th className="text-left px-3 py-2.5 font-semibold text-slate-500">#</th>
                     <th className="text-left px-3 py-2.5 font-semibold text-slate-500">Origin</th>
                     <th className="text-left px-3 py-2.5 font-semibold text-slate-500 whitespace-nowrap">Departed</th>
+                    <th className="text-left px-3 py-2.5 font-semibold text-amber-700 whitespace-nowrap bg-amber-50/50">Dwell at Origin</th>
                     <th className="text-left px-3 py-2.5 font-semibold text-slate-500">Destination</th>
                     <th className="text-left px-3 py-2.5 font-semibold text-slate-500 whitespace-nowrap">Arrived</th>
                     <th className="text-right px-3 py-2.5 font-semibold text-slate-500">Dist (km)</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {stationData.map((s, i) => (
-                    <tr key={i} className="border-b border-slate-100 last:border-0 hover:bg-amber-50/20 transition-colors">
-                      <td className="px-3 py-2 text-slate-400 font-mono">{i + 1}</td>
-                      <td className="px-3 py-2"><div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" /><span className="font-medium text-slate-700">{s.station_f || "—"}</span></div></td>
-                      <td className="px-3 py-2 text-slate-500 whitespace-nowrap font-mono">{s.start_date} {s.start_time}</td>
-                      <td className="px-3 py-2"><div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" /><span className="font-medium text-slate-700">{s.station_n || "—"}</span></div></td>
-                      <td className="px-3 py-2 text-slate-500 whitespace-nowrap font-mono">{s.end_date} {s.end_time}</td>
-                      <td className="px-3 py-2 text-right font-bold text-emerald-600 font-mono">{s.distance || "—"}</td>
-                    </tr>
-                  ))}
+                  {stationData.map((s, i) => {
+                    let dwellStr: string | null = null;
+                    if (i > 0 && stationData[i - 1]?.end_time && s.start_time) {
+                      const prevArr = stationData[i - 1].end_time!;
+                      const currDep = s.start_time!;
+                      const [ah, am, as = 0] = (prevArr.includes(" ") ? prevArr.split(" ")[1] : prevArr).split(":").map(Number);
+                      const [dh, dm, ds = 0] = (currDep.includes(" ") ? currDep.split(" ")[1] : currDep).split(":").map(Number);
+                      let diff = (dh * 3600 + dm * 60 + ds) - (ah * 3600 + am * 60 + as);
+                      if (diff < 0) diff += 86400;
+                      if (diff > 0) {
+                        const h = Math.floor(diff / 3600);
+                        const m = Math.floor((diff % 3600) / 60);
+                        const sec = diff % 60;
+                        dwellStr = h > 0 ? `${h}h ${m}m ${sec}s` : m > 0 ? `${m}m ${sec}s` : `${sec}s`;
+                      }
+                    }
+
+                    return (
+                      <tr key={i} className="border-b border-slate-100 last:border-0 hover:bg-amber-50/20 transition-colors">
+                        <td className="px-3 py-2 text-slate-400 font-mono">{i + 1}</td>
+                        <td className="px-3 py-2"><div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" /><span className="font-medium text-slate-700">{s.station_f || "—"}</span></div></td>
+                        <td className="px-3 py-2 text-slate-500 whitespace-nowrap font-mono">{s.start_date} {s.start_time}</td>
+                        <td className="px-3 py-2 whitespace-nowrap font-mono bg-amber-50/30">
+                          {dwellStr ? (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-100/80 text-amber-800 text-[11px] font-semibold border border-amber-200">
+                              ⏱️ {dwellStr}
+                            </span>
+                          ) : (
+                            <span className="text-slate-300">—</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2"><div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" /><span className="font-medium text-slate-700">{s.station_n || "—"}</span></div></td>
+                        <td className="px-3 py-2 text-slate-500 whitespace-nowrap font-mono">{s.end_date} {s.end_time}</td>
+                        <td className="px-3 py-2 text-right font-bold text-emerald-600 font-mono">{s.distance || "—"}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

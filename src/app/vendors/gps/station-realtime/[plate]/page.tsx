@@ -326,22 +326,44 @@ export default function StandaloneStationRealtimePage({ params }: { params: Prom
                             <th className="px-2.5 py-1.5 font-semibold">#</th>
                             <th className="px-2.5 py-1.5 font-semibold">Origin</th>
                             <th className="px-2.5 py-1.5 font-semibold">Depart</th>
+                            <th className="px-2.5 py-1.5 font-semibold text-amber-400">Dwell</th>
                             <th className="px-2.5 py-1.5 font-semibold">Destination</th>
                             <th className="px-2.5 py-1.5 font-semibold">Arrive</th>
                             <th className="px-2.5 py-1.5 font-semibold text-right">km</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-800/60">
-                          {stationData.map((s, i) => (
-                            <tr key={i} className="hover:bg-slate-800/40 transition-colors">
-                              <td className="px-2.5 py-1.5 text-slate-400 text-[11px]">{i + 1}</td>
-                              <td className="px-2.5 py-1.5 font-semibold text-blue-400 truncate max-w-[90px]">{s.station_f || "—"}</td>
-                              <td className="px-2.5 py-1.5 text-slate-300 text-[11px]">{s.start_time || "—"}</td>
-                              <td className="px-2.5 py-1.5 font-semibold text-emerald-400 truncate max-w-[90px]">{s.station_n || "—"}</td>
-                              <td className="px-2.5 py-1.5 text-slate-300 text-[11px]">{s.end_time || "—"}</td>
-                              <td className="px-2.5 py-1.5 text-right font-bold text-amber-400 text-[11px]">{s.distance || "—"}</td>
-                            </tr>
-                          ))}
+                          {stationData.map((s, i) => {
+                            let dwellStr: string | null = null;
+                            if (i > 0 && stationData[i - 1]?.end_time && s.start_time) {
+                              const prevArr = stationData[i - 1].end_time!;
+                              const currDep = s.start_time!;
+                              const [ah, am, as = 0] = (prevArr.includes(" ") ? prevArr.split(" ")[1] : prevArr).split(":").map(Number);
+                              const [dh, dm, ds = 0] = (currDep.includes(" ") ? currDep.split(" ")[1] : currDep).split(":").map(Number);
+                              let diff = (dh * 3600 + dm * 60 + ds) - (ah * 3600 + am * 60 + as);
+                              if (diff < 0) diff += 86400;
+                              if (diff > 0) {
+                                const h = Math.floor(diff / 3600);
+                                const m = Math.floor((diff % 3600) / 60);
+                                const sec = diff % 60;
+                                dwellStr = h > 0 ? `${h}h ${m}m` : m > 0 ? `${m}m ${sec}s` : `${sec}s`;
+                              }
+                            }
+
+                            return (
+                              <tr key={i} className="hover:bg-slate-800/40 transition-colors">
+                                <td className="px-2.5 py-1.5 text-slate-400 text-[11px]">{i + 1}</td>
+                                <td className="px-2.5 py-1.5 font-semibold text-blue-400 truncate max-w-[90px]">{s.station_f || "—"}</td>
+                                <td className="px-2.5 py-1.5 text-slate-300 text-[11px]">{s.start_time || "—"}</td>
+                                <td className="px-2.5 py-1.5 text-[10px] text-amber-400">
+                                  {dwellStr ? `⏱️ ${dwellStr}` : "—"}
+                                </td>
+                                <td className="px-2.5 py-1.5 font-semibold text-emerald-400 truncate max-w-[90px]">{s.station_n || "—"}</td>
+                                <td className="px-2.5 py-1.5 text-slate-300 text-[11px]">{s.end_time || "—"}</td>
+                                <td className="px-2.5 py-1.5 text-right font-bold text-amber-400 text-[11px]">{s.distance || "—"}</td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
