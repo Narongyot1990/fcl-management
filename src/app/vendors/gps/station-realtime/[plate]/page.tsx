@@ -76,6 +76,7 @@ export default function StandaloneStationRealtimePage({ params }: { params: Prom
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [lastRefreshedAt, setLastRefreshedAt] = useState<string>("");
+  const [viewMode, setViewMode] = useState<"stream" | "table">("stream");
 
   // Load Vendor and find truck gps_id
   useEffect(() => {
@@ -308,17 +309,125 @@ export default function StandaloneStationRealtimePage({ params }: { params: Prom
                   latestGpsTime={latestGpsTime}
                 />
 
-                {/* Ultra-Compact Station Legs Table */}
-                <div className="bg-slate-900/90 rounded-xl border border-slate-800 shadow-sm overflow-hidden">
-                  <div className="px-3 py-2 bg-slate-950 border-b border-slate-800/80 flex items-center justify-between text-[11px] font-bold text-slate-400">
-                    <span>TRANSITIONS ({stationData.length})</span>
+                {/* View Mode Switcher Header */}
+                <div className="bg-slate-900/90 rounded-xl border border-slate-800 shadow-sm overflow-hidden p-2 space-y-2">
+                  <div className="flex items-center justify-between px-1 text-xs">
+                    <span className="font-bold text-slate-400">OPERATIONS JOURNEY FEED ({stationData.length} LEGS)</span>
+                    <div className="flex items-center gap-1 bg-slate-950 p-0.5 rounded-lg border border-slate-800">
+                      <button
+                        type="button"
+                        onClick={() => setViewMode("stream")}
+                        className={`px-2.5 py-1 rounded text-[10px] font-bold transition-colors ${
+                          viewMode === "stream" ? "bg-amber-500 text-slate-950 shadow-sm" : "text-slate-400 hover:text-white"
+                        }`}
+                      >
+                        🛣️ Feed
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setViewMode("table")}
+                        className={`px-2.5 py-1 rounded text-[10px] font-bold transition-colors ${
+                          viewMode === "table" ? "bg-amber-500 text-slate-950 shadow-sm" : "text-slate-400 hover:text-white"
+                        }`}
+                      >
+                        📑 Table
+                      </button>
+                    </div>
                   </div>
 
                   {stationData.length === 0 ? (
                     <div className="p-6 text-center text-slate-400 text-xs">
                       No transitions recorded for this shift.
                     </div>
+                  ) : viewMode === "stream" ? (
+                    /* Linear Journey Stream Feed */
+                    <div className="space-y-2 pt-1 font-mono text-xs">
+                      {stationData.map((s, i) => {
+                        let dwellStr: string | null = null;
+                        if (i > 0 && stationData[i - 1]?.end_time && s.start_time) {
+                          const prevArr = stationData[i - 1].end_time!;
+                          const currDep = s.start_time!;
+                          const [ah, am, as = 0] = (prevArr.includes(" ") ? prevArr.split(" ")[1] : prevArr).split(":").map(Number);
+                          const [dh, dm, ds = 0] = (currDep.includes(" ") ? currDep.split(" ")[1] : currDep).split(":").map(Number);
+                          let diff = (dh * 3600 + dm * 60 + ds) - (ah * 3600 + am * 60 + as);
+                          if (diff < 0) diff += 86400;
+                          if (diff > 0) {
+                            const h = Math.floor(diff / 3600);
+                            const m = Math.floor((diff % 3600) / 60);
+                            const sec = diff % 60;
+                            dwellStr = h > 0 ? `${h}h ${m}m` : m > 0 ? `${m}m ${sec}s` : `${sec}s`;
+                          }
+                        }
+
+                        // Driving duration
+                        let driveStr: string | null = null;
+                        if (s.start_time && s.end_time) {
+                          const sT = s.start_time.includes(" ") ? s.start_time.split(" ")[1] : s.start_time;
+                          const eT = s.end_time.includes(" ") ? s.end_time.split(" ")[1] : s.end_time;
+                          const [sh, sm, ss = 0] = sT.split(":").map(Number);
+                          const [eh, em, es = 0] = eT.split(":").map(Number);
+                          let diff = (eh * 3600 + em * 60 + es) - (sh * 3600 + sm * 60 + ss);
+                          if (diff < 0) diff += 86400;
+                          if (diff > 0) {
+                            const h = Math.floor(diff / 3600);
+                            const m = Math.floor((diff % 3600) / 60);
+                            const sec = diff % 60;
+                            driveStr = h > 0 ? `${h}h ${m}m` : m > 0 ? `${m}m ${sec}s` : `${sec}s`;
+                          }
+                        }
+
+                        return (
+                          <div key={i} className="space-y-2">
+                            {/* Dwell Stay Card before this leg */}
+                            {dwellStr && (
+                              <div className="bg-amber-950/20 border border-amber-500/20 rounded-lg p-2 flex items-center justify-between text-[11px] text-amber-300">
+                                <div className="flex items-center gap-1.5 font-sans">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+                                  <span>Dwell @ <strong className="text-white">{s.station_f}</strong></span>
+                                </div>
+                                <span className="font-mono text-amber-400 font-bold bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30">
+                                  ⏱️ Dwell: {dwellStr}
+                                </span>
+                              </div>
+                            )}
+
+                            {/* Driving Leg Card */}
+                            <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 space-y-1.5 hover:border-slate-700 transition-colors">
+                              <div className="flex items-center justify-between text-xs font-bold font-sans">
+                                <div className="flex items-center gap-2">
+                                  <span className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center text-[10px] font-mono shrink-0">
+                                    {i + 1}
+                                  </span>
+                                  <span className="text-blue-400">{s.station_f || "—"}</span>
+                                  <span className="text-slate-600">➔</span>
+                                  <span className="text-emerald-400">{s.station_n || "—"}</span>
+                                </div>
+                                <span className="text-amber-400 font-mono text-[11px]">{s.distance || "0.00"} km</span>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-2 text-[10px] bg-slate-900/60 p-2 rounded-lg border border-slate-800 text-slate-300 font-mono">
+                                <div>
+                                  <span className="text-[9px] text-slate-400 block font-sans">📤 Depart:</span>
+                                  <span className="text-slate-200 font-bold">{s.start_time || "—"}</span>
+                                </div>
+                                <div>
+                                  <span className="text-[9px] text-slate-400 block font-sans">📥 Arrive:</span>
+                                  <span className="text-slate-200 font-bold">{s.end_time || "—"}</span>
+                                </div>
+                              </div>
+
+                              {driveStr && (
+                                <div className="text-[10px] text-emerald-400 text-right font-sans font-semibold pt-0.5">
+                                  🚚 Driving Duration: {driveStr}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   ) : (
+                    /* Table View */
                     <div className="overflow-x-auto">
                       <table className="w-full text-left text-xs font-mono">
                         <thead>

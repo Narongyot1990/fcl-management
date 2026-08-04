@@ -229,6 +229,9 @@ export default function TimelineVisualizer({ stations, startTimeStr, endTimeStr,
     return {
       segments: segs,
       stats: {
+        totalTravelSum: travelSum,
+        totalDepotSum: depotSum,
+        totalCustSum: custSum,
         avgTravelMin: travelCount > 0 ? Math.round(travelSum / travelCount) : 0,
         avgDepotMin: depotCount > 0 ? Math.round(depotSum / depotCount) : 0,
         avgCustMin: custCount > 0 ? Math.round(custSum / custCount) : 0,
@@ -257,8 +260,28 @@ export default function TimelineVisualizer({ stations, startTimeStr, endTimeStr,
 
   return (
     <div className="bg-slate-900/95 text-white rounded-xl p-3 shadow-lg border border-slate-800 space-y-2 my-1">
-      {/* Legend & Concise Averages Header */}
-      <div className="flex items-center justify-between gap-2 text-[10px] text-slate-300 flex-wrap">
+      {/* Top Executive KPI Cards */}
+      <div className="grid grid-cols-4 gap-1.5 text-center text-xs font-mono">
+        <div className="bg-slate-950/80 p-1.5 rounded-lg border border-slate-800">
+          <span className="text-[9px] font-sans text-slate-400 block uppercase">Driving</span>
+          <span className="font-bold text-emerald-400 text-xs">{formatDuration(stats.totalTravelSum || 0)}</span>
+        </div>
+        <div className="bg-slate-950/80 p-1.5 rounded-lg border border-slate-800">
+          <span className="text-[9px] font-sans text-slate-400 block uppercase">Customer</span>
+          <span className="font-bold text-amber-400 text-xs">{formatDuration(stats.totalCustSum || 0)}</span>
+        </div>
+        <div className="bg-slate-950/80 p-1.5 rounded-lg border border-slate-800">
+          <span className="text-[9px] font-sans text-slate-400 block uppercase">Depot</span>
+          <span className="font-bold text-indigo-300 text-xs">{formatDuration(stats.totalDepotSum || 0)}</span>
+        </div>
+        <div className="bg-slate-950/80 p-1.5 rounded-lg border border-slate-800">
+          <span className="text-[9px] font-sans text-slate-400 block uppercase">Distance</span>
+          <span className="font-bold text-amber-300 text-xs">{stats.totalDistKm.toFixed(1)} km</span>
+        </div>
+      </div>
+
+      {/* Legend & Averages Header */}
+      <div className="flex items-center justify-between gap-2 text-[10px] text-slate-300 flex-wrap pt-0.5">
         {/* Color Legend */}
         <div className="flex items-center gap-3 flex-wrap">
           <div className="flex items-center gap-1">
