@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
 import { fetchDtcStationReport } from "@/lib/dtcGps";
+import { requirePermission } from "@/lib/auth/guard";
+
+export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   try {
+    const auth = await requirePermission(req, "gps:read");
+    if (!auth.ok) return auth.response;
+
     const body = (await req.json()) as { gps_id?: string; date?: string; start_time?: string; end_time?: string };
     const { gps_id, date, start_time = "00:00:00", end_time = "23:59:59" } = body;
 

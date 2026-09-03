@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requirePermission } from "@/lib/auth/guard";
 
 export const runtime = "nodejs";
 
@@ -38,6 +39,9 @@ interface ImageData {
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = await requirePermission(request, "ocr:use");
+    if (!auth.ok) return auth.response;
+
     // Client sends base64-encoded images directly (no server-side blob resolution needed)
     const { containerImage, eirImage } = await request.json() as {
       containerImage: ImageData;

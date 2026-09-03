@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Boxes, Pencil, Ruler, Search, Trash2 } from "lucide-react";
 import { listRecords, createRecord, updateRecord, deleteRecord } from "@/lib/api";
+import { useAuth } from "@/lib/auth/context";
 import type { Container } from "@/lib/types";
 import PageHeader from "@/components/PageHeader";
 import Modal from "@/components/Modal";
@@ -11,6 +12,8 @@ import { FormField, Input } from "@/components/FormField";
 const EMPTY = { code: "", size: "" };
 
 export default function ContainersPage() {
+  const { can } = useAuth();
+  const canWrite = can("containers:write");
   const [records, setRecords] = useState<Container[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -71,7 +74,7 @@ export default function ContainersPage() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="Containers" subtitle="Container ISO code and size master data" onAdd={openCreate}>
+      <PageHeader title="Containers" subtitle="Container ISO code and size master data" onAdd={canWrite ? openCreate : undefined}>
         <div className="relative w-full sm:w-72">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
           <input
@@ -112,10 +115,12 @@ export default function ContainersPage() {
                 <div className="font-mono text-base font-bold text-emerald-700">{c.code}</div>
                 <div className="mt-1 inline-flex border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-800">{c.size}</div>
               </div>
-              <div className="flex shrink-0 items-center gap-1">
-                <button type="button" onClick={() => openEdit(c)} className="p-1.5 text-slate-400 hover:text-blue-600" title="Edit"><Pencil size={15} /></button>
-                <button type="button" onClick={() => setDeleteTarget(c)} className="p-1.5 text-slate-400 hover:text-red-600" title="Delete"><Trash2 size={15} /></button>
-              </div>
+              {canWrite && (
+                <div className="flex shrink-0 items-center gap-1">
+                  <button type="button" onClick={() => openEdit(c)} className="p-1.5 text-slate-400 hover:text-blue-600" title="Edit"><Pencil size={15} /></button>
+                  <button type="button" onClick={() => setDeleteTarget(c)} className="p-1.5 text-slate-400 hover:text-red-600" title="Delete"><Trash2 size={15} /></button>
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -145,10 +150,12 @@ export default function ContainersPage() {
                   </td>
                   <td className="px-4 py-3 text-xs text-slate-500">{c.created_at ? new Date(c.created_at).toLocaleDateString() : "-"}</td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-1">
-                      <button type="button" onClick={() => openEdit(c)} className="p-1.5 text-slate-400 hover:text-blue-600" title="Edit"><Pencil size={15} /></button>
-                      <button type="button" onClick={() => setDeleteTarget(c)} className="p-1.5 text-slate-400 hover:text-red-600" title="Delete"><Trash2 size={15} /></button>
-                    </div>
+                    {canWrite && (
+                      <div className="flex items-center justify-end gap-1">
+                        <button type="button" onClick={() => openEdit(c)} className="p-1.5 text-slate-400 hover:text-blue-600" title="Edit"><Pencil size={15} /></button>
+                        <button type="button" onClick={() => setDeleteTarget(c)} className="p-1.5 text-slate-400 hover:text-red-600" title="Delete"><Trash2 size={15} /></button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))

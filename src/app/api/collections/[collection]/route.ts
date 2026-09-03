@@ -1,6 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { Sort } from "mongodb";
 import { getCollection, DEDUP_KEYS, ALLOWED, MongoServerError } from "@/lib/mongodb";
+import { requirePermission } from "@/lib/auth/guard";
+import { collectionPermission } from "@/lib/auth/permissions";
+
+export const runtime = "nodejs";
+
+/** `users` is served only by /api/users (password hashing + projection). */
+function guardCollection(collection: string): NextResponse | null {
+  if (collection === "users") {
+    return NextResponse.json({ error: "Use /api/users for user management" }, { status: 403 });
+  }
+  return null;
+}
 
 const CONTROL_PARAMS = new Set([
   "page",
@@ -41,6 +53,14 @@ export async function GET(
     const { collection } = await params;
     if (!(ALLOWED as readonly string[]).includes(collection)) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    const blocked = guardCollection(collection);
+    if (blocked) return blocked;
+
+    const perm = collectionPermission(collection, "read");
+    if (perm) {
+      const auth = await requirePermission(req, perm);
+      if (!auth.ok) return auth.response;
     }
 
     const col = await getCollection(collection);
@@ -123,6 +143,14 @@ export async function POST(
     const { collection } = await params;
     if (!(ALLOWED as readonly string[]).includes(collection)) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    const blocked = guardCollection(collection);
+    if (blocked) return blocked;
+
+    const perm = collectionPermission(collection, "write");
+    if (perm) {
+      const auth = await requirePermission(req, perm);
+      if (!auth.ok) return auth.response;
     }
 
     const data = await req.json();

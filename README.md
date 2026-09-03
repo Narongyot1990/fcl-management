@@ -72,6 +72,7 @@ Minimum commonly used variables:
 ```env
 MONGODB_URI=
 MONGODB_DB=eir_scanner
+AUTH_SECRET=
 OCR_API_SECRET=
 GEMINI_API_KEY=
 DTC_GPS_API_BASE_URL=https://gps.dtc.co.th:8099
@@ -100,8 +101,8 @@ Open `http://localhost:3000`.
 ## Important Notes
 
 - The Next.js app appears to be the main active application.
-- There is no active login screen in the current Next.js tree.
-- Some API routes currently bypass real authentication checks.
+- Auth is implemented: a JWT session cookie plus a role/permission model. `src/proxy.ts` requires a valid session for every route except `/login` and `/api/auth/login`; each sensitive API route also checks a specific permission. See `AGENTS.md` section 6.
+- Set `AUTH_SECRET` (>= 32 chars) and seed an admin with `node --env-file=.env.local scripts/create-admin.mjs <user> <pass> "Name"`.
 - Integration credentials should be kept in environment variables. DTC GPS uses `DTC_GPS_API_TOKEN`.
 - Some older Thai text appears with encoding issues in legacy files; prefer the newer docs in `docs/` and `AGENTS.md` as the working reference.
 

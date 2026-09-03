@@ -4,19 +4,19 @@ const BASE = "/api/collections";
 
 type ListValue = string | number | boolean | undefined | null;
 
-function getKey(): string {
-  if (typeof window === "undefined") return "";
-  return sessionStorage.getItem("eir_api_key") ?? "";
-}
-
 function headers(): HeadersInit {
-  return {
-    "Content-Type": "application/json",
-    "X-API-Key": getKey(),
-  };
+  // Auth travels in the httpOnly `fcl_session` cookie, sent automatically on
+  // same-origin requests.
+  return { "Content-Type": "application/json" };
 }
 
 async function handleRes<T>(res: Response): Promise<T> {
+  if (res.status === 401 && typeof window !== "undefined") {
+    // Session expired or missing — bounce to login, preserving where we were.
+    const next = encodeURIComponent(window.location.pathname + window.location.search);
+    window.location.href = `/login?next=${next}`;
+    throw new Error("401: session expired");
+  }
   if (!res.ok) {
     const msg = await res.text().catch(() => res.statusText);
     throw new Error(`${res.status}: ${msg}`);
@@ -119,4 +119,37 @@ export async function listBookingsGrouped<T>(
   );
   const res = await fetch(`/api/bookings/list${params.size ? `?${params}` : ""}`, { headers: headers() });
   return handleRes<ApiResponse<T>>(res);
+}
+
+// ── User management (requires users:manage) ─────────────────────────────────
+
+export interface UserRecord {
+  _id: string;
+  username: string;
+  name: string;
+  role: string;
+  permissions: string[];
+  active: boolean;
+  last_login_at: string | null;
+  created_at: string | null;
+}
+
+export async function listUsers(): Promise<{ count: number; records: UserRecord[] }> {
+  const res = await fetch("/api/users", { headers: headers() });
+  return handleRes(res);
+}
+
+export async function createUser(data: Record<string, unknown>): Promise<{ created: boolean; record: UserRecord }> {
+  const res = await fetch("/api/users", { method: "POST", headers: headers(), body: JSON.stringify(data) });
+  return handleRes(res);
+}
+
+export async function updateUser(id: string, data: Record<string, unknown>): Promise<{ updated: boolean }> {
+  const res = await fetch(`/api/users/${id}`, { method: "PUT", headers: headers(), body: JSON.stringify(data) });
+  return handleRes(res);
+}
+
+export async function deleteUser(id: string): Promise<{ deleted: boolean }> {
+  const res = await fetch(`/api/users/${id}`, { method: "DELETE", headers: headers() });
+  return handleRes(res);
 }

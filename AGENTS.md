@@ -117,17 +117,29 @@ Use these files first when changing behavior:
 - The remaining LINE implementation is the legacy Flask server in `app.py`
 - Do not assume the LINE bot is fully active without checking code paths first
 
-## 6. Authentication And Authorization Reality
+## 6. Authentication And Authorization
 
-Current auth is not implemented in the active Next.js UI.
+Auth is implemented (Next.js). Session = signed JWT (HS256, `jose`) in the
+httpOnly `fcl_session` cookie. Passwords are scrypt-hashed via `node:crypto`.
 
-- Collection routes currently do not enforce real authentication.
-- Branch filtering is documented as a concept but is not active in the current generic collection route.
-
-Practical implication:
-
-- API-level auth is not fully enforced for generic collection routes
-- Do not describe this system as secure without first hardening it
+- `AUTH_SECRET` env var (>= 32 chars) signs sessions.
+- `src/proxy.ts` (Next 16 "proxy", formerly middleware) is the first gate: a
+  valid session cookie is required for every route except `/login` and
+  `/api/auth/login`. No session -> browsers redirect to `/login`, `/api/*`
+  returns `401`.
+- Per-permission checks live in the route handlers via
+  `requireAuth()` / `requirePermission(req, perm)` from `src/lib/auth/guard.ts`,
+  which re-loads the user from Mongo so role changes take effect immediately.
+- Model: each user has one `role` (`admin | manager | operator | viewer`) plus
+  an optional additive `permissions[]`. Rules live in
+  `src/lib/auth/permissions.ts` (`ROLE_PERMISSIONS`, `can()`). `admin` = `*`.
+- `users` collection is served only by `/api/users` (hashes passwords, strips
+  them from responses, requires `users:manage`). The generic
+  `/api/collections/users` path is blocked with `403`.
+- Client: `src/lib/auth/context.tsx` (`AuthProvider` / `useAuth`) exposes
+  `user` + `can()`; the dashboard layout gates on it and `Sidebar` hides nav
+  the user cannot access. UI gating is UX only — the API is the boundary.
+- Seed an admin: `node --env-file=.env.local scripts/create-admin.mjs <user> <pass> "Name"`.
 
 ## 7. Legacy Python Path
 
@@ -151,8 +163,8 @@ Python path responsibilities:
 ## 8. Known Risks And Technical Debt
 
 - Hardcoded credentials/tokens exist in the codebase
-- Login is mock and not backed by a real auth provider
-- Generic collection API auth is effectively disabled
+- The legacy Python path (`api/index.py`) still has no auth — only the Next.js
+  app is protected
 - There is duplicated business logic between Next.js and Python paths
 - Some legacy Thai strings have encoding issues
 - Secrets were previously stored in Markdown docs; new docs intentionally avoid that
@@ -175,6 +187,7 @@ Common variables used across the repo:
 
 - `MONGODB_URI`
 - `MONGODB_DB`
+- `AUTH_SECRET` (session JWT signing key, >= 32 chars)
 - `OCR_API_SECRET`
 - `OCR_API_URL`
 - `GEMINI_API_KEY`

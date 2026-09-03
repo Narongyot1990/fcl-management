@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { put } from "@vercel/blob";
+import { requirePermission } from "@/lib/auth/guard";
 
 export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = await requirePermission(request, "bookings:write");
+    if (!auth.ok) return auth.response;
+
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
     const type = formData.get("type") as string | null;

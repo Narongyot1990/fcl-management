@@ -13,17 +13,22 @@ The active user workflow appears to be centered on the Next.js dashboard.
 
 ```text
 src/
+  proxy.ts                     # auth gate (Next 16 "proxy", formerly middleware)
   app/
+    login/                     # sign-in page (outside the dashboard shell)
     (dashboard)/
       bookings/
       containers/
       customers/
       drivers/[id]/
       line/
+      users/                   # user + permission admin (needs users:manage)
       vendors/
-      layout.tsx
+      layout.tsx               # wraps children in AuthProvider + auth Gate
       page.tsx
     api/
+      auth/login/ | auth/logout/ | auth/me/
+      users/ | users/[id]/
       bookings/container/
       collections/[collection]/
       collections/[collection]/[id]/
@@ -39,6 +44,12 @@ src/
   documents/
     gps/
   lib/
+    auth/
+      permissions.ts           # roles, ROLE_PERMISSIONS, can()
+      password.ts              # scrypt hash/verify (node runtime)
+      session.ts               # JWT sign/verify + cookie opts (edge-safe)
+      guard.ts                 # requireAuth / requirePermission for routes
+      context.tsx              # client AuthProvider + useAuth
     api.ts
     containerValidation.ts
     gpsUtils.ts
@@ -134,17 +145,19 @@ The current tree does not contain an active Next.js LINE webhook route.
 
 The legacy Flask app in `app.py` contains the remaining LINE webhook flow.
 
-## Branch Model
+## Auth Model
 
-The app contains a simple branch-based access concept.
-
-- Users can have roles such as `admin`, `leader`, and `driver`
-- Collection routes read:
-  - `x-itl-role`
-  - `x-itl-branch`
-- Non-admin requests can be filtered or forced to a branch
-
-This is only partial enforcement because route-level auth checks are currently stubbed.
+- Session: signed JWT (HS256, `jose`) in the httpOnly `fcl_session` cookie,
+  signed with `AUTH_SECRET`. Passwords scrypt-hashed with `node:crypto`.
+- `src/proxy.ts` verifies the cookie for every route (cheap, no DB) and blocks
+  unauthenticated access. Per-permission checks run inside each route handler
+  (`src/lib/auth/guard.ts`), which re-loads the user from Mongo.
+- Authorization: one `role` per user (`admin | manager | operator | viewer`)
+  plus an additive `permissions[]`. `ROLE_PERMISSIONS` and `can()` in
+  `src/lib/auth/permissions.ts` are the single source of truth, shared by the
+  server guards and the client `AuthProvider` (`src/lib/auth/context.tsx`).
+- `users` CRUD is isolated in `/api/users` (hashing + password projection);
+  the generic `/api/collections/users` path is blocked.
 
 ## Legacy Python Services
 
@@ -173,6 +186,6 @@ Standalone Flask LINE webhook bridge that forwards requests to OpenClaw and repl
 ## Architectural Cautions
 
 - The repo has duplicated backend responsibilities in TypeScript and Python
-- Not all routes use the same auth strategy
+- The Next.js app enforces auth; the legacy Python API (`api/index.py`) does not
 - Integration tokens should be migrated to environment variables consistently
 - When fixing bugs, always confirm which runtime path is actually used first

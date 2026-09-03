@@ -2,19 +2,48 @@
 
 This document summarizes the active in-repo API surface that is most relevant to the current dashboard implementation.
 
-## Authentication Reality
+## Authentication
 
-There are two auth patterns in the codebase:
+Browser/API auth uses a signed JWT session in the httpOnly `fcl_session`
+cookie, set by `POST /api/auth/login`. `src/proxy.ts` rejects any request
+without a valid session (`401` for `/api/*`, redirect to `/login` for pages);
+`/login` and `/api/auth/login` are the only exceptions.
 
-- `X-API-Key` using `OCR_API_SECRET`
-- client session headers:
-  - `x-itl-role`
-  - `x-itl-branch`
+Each sensitive route also enforces a specific permission via
+`requirePermission()` (`src/lib/auth/guard.ts`) and returns `403` when the
+authenticated user lacks it. Permission per collection:
 
-Important:
+| Collection | read | write / delete |
+| --- | --- | --- |
+| `bookings`, `shipments` | `bookings:read` | `bookings:write` / `bookings:delete` |
+| `customers` | `customers:read` | `customers:write` |
+| `vendors` | `vendors:read` | `vendors:write` |
+| `containers` | `containers:read` | `containers:write` |
+| `users` | — (use `/api/users`, needs `users:manage`) | — |
 
-- Generic collection routes currently bypass real auth because `checkAuth()` returns `true`
-- Do not assume all endpoints are protected
+`POST /api/bookings/container` (legacy Python path) still authenticates with
+`X-API-Key: <OCR_API_SECRET>` for machine callers.
+
+### `POST /api/auth/login`
+
+Body `{ "username", "password" }`. On success sets the `fcl_session` cookie and
+returns `{ user: { id, username, name, role, permissions[] } }`. Bad
+credentials -> `401`; disabled account -> `403`.
+
+### `POST /api/auth/logout`
+
+Clears the session cookie. Always `{ "ok": true }`.
+
+### `GET /api/auth/me`
+
+Returns the current `{ user }` (id, username, name, role, effective
+`permissions[]`) or `401`.
+
+### `GET|POST /api/users`, `PUT|DELETE /api/users/[id]`
+
+User administration. Requires `users:manage`. Passwords are scrypt-hashed on
+write and never returned. You cannot delete, disable, or self-demote your own
+account.
 
 ## Active Next.js Routes
 

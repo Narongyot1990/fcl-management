@@ -1,15 +1,9 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getCollection, ObjectId, ALLOWED } from "@/lib/mongodb";
+import { requirePermission } from "@/lib/auth/guard";
+import { collectionPermission } from "@/lib/auth/permissions";
 
-function checkAuth(req: NextRequest): boolean {
-  void req;
-  // Authentication temporarily disabled
-  return true;
-}
-
-function authError() {
-  return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-}
+export const runtime = "nodejs";
 
 function routeError(error: unknown) {
   const message =
@@ -18,15 +12,29 @@ function routeError(error: unknown) {
   return NextResponse.json({ error: message }, { status });
 }
 
+function guardCollection(collection: string): NextResponse | null {
+  if (collection === "users") {
+    return NextResponse.json({ error: "Use /api/users for user management" }, { status: 403 });
+  }
+  return null;
+}
+
 export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ collection: string; id: string }> }
 ) {
   try {
-    if (!checkAuth(req)) return authError();
     const { collection, id } = await params;
     if (!(ALLOWED as readonly string[]).includes(collection)) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    const blocked = guardCollection(collection);
+    if (blocked) return blocked;
+
+    const perm = collectionPermission(collection, "write");
+    if (perm) {
+      const auth = await requirePermission(req, perm);
+      if (!auth.ok) return auth.response;
     }
 
     let oid: ObjectId;
@@ -58,10 +66,17 @@ export async function DELETE(
   { params }: { params: Promise<{ collection: string; id: string }> }
 ) {
   try {
-    if (!checkAuth(req)) return authError();
     const { collection, id } = await params;
     if (!(ALLOWED as readonly string[]).includes(collection)) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    const blocked = guardCollection(collection);
+    if (blocked) return blocked;
+
+    const perm = collectionPermission(collection, "delete");
+    if (perm) {
+      const auth = await requirePermission(req, perm);
+      if (!auth.ok) return auth.response;
     }
 
     let oid: ObjectId;

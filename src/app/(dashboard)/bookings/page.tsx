@@ -6,6 +6,7 @@ const DriverProfile = dynamic(() => import("@/components/DriverProfile"), { ssr:
 import ImageUpload from "@/components/ImageUpload";
 import GeminiOcrButton from "@/components/GeminiOcrButton";
 import { listRecords, updateRecord, deleteRecord, createShipment, listBookingsGrouped } from "@/lib/api";
+import { useAuth } from "@/lib/auth/context";
 import type { Booking, BookingWithShipments, Shipment, Vendor, Container, Customer, Driver } from "@/lib/types";
 import PageHeader from "@/components/PageHeader";
 import Modal from "@/components/Modal";
@@ -78,6 +79,8 @@ function parseBulkLine(line: string): { booking_no: string; shipment_no: number 
 
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function BookingsPage() {
+  const { can } = useAuth();
+  const canWrite = can("bookings:write");
   const [records, setRecords] = useState<BookingWithShipments[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -629,7 +632,7 @@ export default function BookingsPage() {
   // ── Render ──
   return (
     <div className="space-y-4">
-      <PageHeader title="Bookings" subtitle="Booking operations board" onAdd={openCreate} />
+      <PageHeader title="Bookings" subtitle="Booking operations board" onAdd={canWrite ? openCreate : undefined} />
       <div className="border border-slate-200 bg-white p-3 shadow-sm">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:items-center">

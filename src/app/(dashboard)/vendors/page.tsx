@@ -6,6 +6,7 @@ const GpsMap = dynamic(() => import("@/components/GpsMap"), { ssr: false });
 const DriverProfile = dynamic(() => import("@/components/DriverProfile"), { ssr: false });
 import TimelineVisualizer from "@/components/TimelineVisualizer";
 import { listRecords, createRecord, updateRecord, deleteRecord } from "@/lib/api";
+import { useAuth } from "@/lib/auth/context";
 import type { Vendor, Driver } from "@/lib/types";
 import { fetchGpsRealtime, getTodayDate } from "@/lib/gpsUtils";
 import type { GpsPoint } from "@/components/GpsMap";
@@ -36,6 +37,8 @@ const EMPTY: VendorForm = {
 };
 
 export default function VendorsPage() {
+  const { can } = useAuth();
+  const canWrite = can("vendors:write");
   const [records, setRecords] = useState<Vendor[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -283,7 +286,7 @@ export default function VendorsPage() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="Vendors" subtitle="จัดการข้อมูลผู้ขนส่ง ทะเบียนรถ และคนขับ" onAdd={openCreate}>
+      <PageHeader title="Vendors" subtitle="จัดการข้อมูลผู้ขนส่ง ทะเบียนรถ และคนขับ" onAdd={canWrite ? openCreate : undefined}>
         <div className="relative">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
           <input
@@ -352,10 +355,12 @@ export default function VendorsPage() {
                   <span className="font-mono font-bold text-blue-700 text-sm">{v.code}</span>
                   <p className="text-xs text-[var(--foreground)] truncate mt-0.5">{v.name}</p>
                 </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <button onClick={() => openEdit(v)} className="p-1.5 rounded-lg hover:bg-blue-50 text-[var(--muted)] hover:text-blue-600 transition-colors"><Pencil size={14} /></button>
-                  <button onClick={() => setDeleteTarget(v)} className="p-1.5 rounded-lg hover:bg-red-50 text-[var(--muted)] hover:text-red-600 transition-colors"><Trash2 size={14} /></button>
-                </div>
+                {canWrite && (
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button onClick={() => openEdit(v)} className="p-1.5 rounded-lg hover:bg-blue-50 text-[var(--muted)] hover:text-blue-600 transition-colors"><Pencil size={14} /></button>
+                    <button onClick={() => setDeleteTarget(v)} className="p-1.5 rounded-lg hover:bg-red-50 text-[var(--muted)] hover:text-red-600 transition-colors"><Trash2 size={14} /></button>
+                  </div>
+                )}
               </div>
               
               {/* Mobile Trucks */}
@@ -538,10 +543,12 @@ export default function VendorsPage() {
                   </div>
                 </div>
                 <div className="col-span-1">
-                  <div className="flex items-center gap-1 justify-end">
-                    <button onClick={() => openEdit(v)} className="p-1.5 rounded-lg hover:bg-blue-50 text-[var(--muted)] hover:text-blue-600 transition-colors"><Pencil size={14} /></button>
-                    <button onClick={() => setDeleteTarget(v)} className="p-1.5 rounded-lg hover:bg-red-50 text-[var(--muted)] hover:text-red-600 transition-colors"><Trash2 size={14} /></button>
-                  </div>
+                  {canWrite && (
+                    <div className="flex items-center gap-1 justify-end">
+                      <button onClick={() => openEdit(v)} className="p-1.5 rounded-lg hover:bg-blue-50 text-[var(--muted)] hover:text-blue-600 transition-colors"><Pencil size={14} /></button>
+                      <button onClick={() => setDeleteTarget(v)} className="p-1.5 rounded-lg hover:bg-red-50 text-[var(--muted)] hover:text-red-600 transition-colors"><Trash2 size={14} /></button>
+                    </div>
+                  )}
                 </div>
               </div>
             ))

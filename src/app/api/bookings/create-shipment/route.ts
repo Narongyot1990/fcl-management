@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCollection, MongoServerError } from "@/lib/mongodb";
+import { requirePermission } from "@/lib/auth/guard";
+
+export const runtime = "nodejs";
 
 function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -39,6 +42,9 @@ function routeError(error: unknown) {
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requirePermission(req, "bookings:write");
+    if (!auth.ok) return auth.response;
+
     const body = await req.json();
     const { input, confirmed, booking_date, job_type, customer_code, vendor_code, ...shipmentFields } = body ?? {};
 

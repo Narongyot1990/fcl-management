@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Building2, Pencil, Search, Trash2, UsersRound } from "lucide-react";
 import { listRecords, createRecord, updateRecord, deleteRecord } from "@/lib/api";
+import { useAuth } from "@/lib/auth/context";
 import type { Customer } from "@/lib/types";
 import PageHeader from "@/components/PageHeader";
 import Modal from "@/components/Modal";
@@ -12,6 +13,8 @@ interface CustomerForm { code: string; name: string; }
 const EMPTY: CustomerForm = { code: "", name: "" };
 
 export default function CustomersPage() {
+  const { can } = useAuth();
+  const canWrite = can("customers:write");
   const [records, setRecords] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -68,7 +71,7 @@ export default function CustomersPage() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="Customers" subtitle="Customer master data for booking operations" onAdd={openCreate}>
+      <PageHeader title="Customers" subtitle="Customer master data for booking operations" onAdd={canWrite ? openCreate : undefined}>
         <div className="relative w-full sm:w-72">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
           <input
@@ -109,10 +112,12 @@ export default function CustomersPage() {
                 <div className="font-mono text-sm font-bold text-blue-700">{c.code}</div>
                 <div className="mt-1 truncate text-sm font-semibold text-slate-900">{c.name}</div>
               </div>
-              <div className="flex shrink-0 items-center gap-1">
-                <button type="button" onClick={() => openEdit(c)} className="p-1.5 text-slate-400 hover:text-blue-600" title="Edit"><Pencil size={15} /></button>
-                <button type="button" onClick={() => setDeleteTarget(c)} className="p-1.5 text-slate-400 hover:text-red-600" title="Delete"><Trash2 size={15} /></button>
-              </div>
+              {canWrite && (
+                <div className="flex shrink-0 items-center gap-1">
+                  <button type="button" onClick={() => openEdit(c)} className="p-1.5 text-slate-400 hover:text-blue-600" title="Edit"><Pencil size={15} /></button>
+                  <button type="button" onClick={() => setDeleteTarget(c)} className="p-1.5 text-slate-400 hover:text-red-600" title="Delete"><Trash2 size={15} /></button>
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -139,10 +144,12 @@ export default function CustomersPage() {
                 <td className="px-4 py-3 font-mono font-bold text-blue-700">{c.code}</td>
                 <td className="px-4 py-3 font-medium text-slate-900">{c.name}</td>
                 <td className="px-4 py-3">
-                  <div className="flex items-center justify-end gap-1">
-                    <button type="button" onClick={() => openEdit(c)} className="p-1.5 text-slate-400 hover:text-blue-600" title="Edit"><Pencil size={15} /></button>
-                    <button type="button" onClick={() => setDeleteTarget(c)} className="p-1.5 text-slate-400 hover:text-red-600" title="Delete"><Trash2 size={15} /></button>
-                  </div>
+                  {canWrite && (
+                    <div className="flex items-center justify-end gap-1">
+                      <button type="button" onClick={() => openEdit(c)} className="p-1.5 text-slate-400 hover:text-blue-600" title="Edit"><Pencil size={15} /></button>
+                      <button type="button" onClick={() => setDeleteTarget(c)} className="p-1.5 text-slate-400 hover:text-red-600" title="Delete"><Trash2 size={15} /></button>
+                    </div>
+                  )}
                 </td>
               </tr>
             ))}

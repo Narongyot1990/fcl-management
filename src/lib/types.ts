@@ -5,12 +5,29 @@
   created_at?: string;
 }
 
+export type Role = "admin" | "manager" | "operator" | "viewer";
+
 export interface User {
   _id: string;
   username: string;
+  /** Hashed (scrypt) — server-only, never sent to the client. */
   password?: string;
   name: string;
+  role: Role;
+  /** Extra permissions granted on top of the role bundle. */
+  permissions?: string[];
+  active?: boolean;
+  last_login_at?: string;
   created_at?: string;
+}
+
+/** Shape returned by `/api/auth/me`. */
+export interface AuthMe {
+  id: string;
+  username: string;
+  name: string;
+  role: Role;
+  permissions: string[];
 }
 
 export type JobType = "Import" | "Export";

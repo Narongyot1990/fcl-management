@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import type { Document } from "mongodb";
 import { getCollection } from "@/lib/mongodb";
 import { buildGroupedWorkflowMatch } from "@/lib/bookingWorkflow";
+import { requirePermission } from "@/lib/auth/guard";
+
+export const runtime = "nodejs";
 
 function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -21,6 +24,9 @@ function routeError(error: unknown) {
 
 export async function GET(req: NextRequest) {
   try {
+    const auth = await requirePermission(req, "bookings:read");
+    if (!auth.ok) return auth.response;
+
     const search = req.nextUrl.searchParams;
     const bookings = await getCollection("bookings");
     // Ensure the shipments collection's indexes get created too, even though
