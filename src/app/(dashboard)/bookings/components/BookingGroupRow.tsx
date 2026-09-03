@@ -1,5 +1,5 @@
 "use client";
-import { ChevronRight, ChevronDown, Plus, Pencil, Copy, Check } from "lucide-react";
+import { ChevronRight, ChevronDown, Plus, Pencil, Trash2, Copy, Check } from "lucide-react";
 import type { BookingWithShipments, Shipment, Vendor } from "@/lib/types";
 import { toShortDate } from "../utils/booking-utils";
 import ShipmentSubRow from "./ShipmentSubRow";
@@ -12,6 +12,7 @@ interface BookingGroupRowProps {
   expanded: boolean;
   onToggleExpand: () => void;
   onEditBooking: (booking: BookingWithShipments) => void;
+  onDeleteBooking: (booking: BookingWithShipments) => void;
   onAddShipment: (booking: BookingWithShipments) => void;
   onEditShipment: (shipment: Shipment, booking: BookingWithShipments) => void;
   onDeleteShipment: (shipment: Shipment, booking: BookingWithShipments) => void;
@@ -25,7 +26,7 @@ interface BookingGroupRowProps {
 
 export default function BookingGroupRow({
   booking, vendors, copiedId, openingGps, expanded, onToggleExpand,
-  onEditBooking, onAddShipment, onEditShipment, onDeleteShipment,
+  onEditBooking, onDeleteBooking, onAddShipment, onEditShipment, onDeleteShipment,
   onCopy, onCopyBooking, onOpenImages, onOpenSingleImage, onOpenGps, onDriverProfile,
 }: BookingGroupRowProps) {
   const shipmentCount = booking.shipments.length;
@@ -71,9 +72,17 @@ export default function BookingGroupRow({
                 type="button"
                 onClick={() => onEditBooking(booking)}
                 className="p-1.5 text-slate-400 hover:text-blue-600 transition-colors"
-                title="Edit booking info"
+                title="Edit booking"
               >
                 <Pencil size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={() => onDeleteBooking(booking)}
+                className="p-1.5 text-slate-400 hover:text-red-600 transition-colors"
+                title="Delete booking"
+              >
+                <Trash2 size={14} />
               </button>
             </div>
           </div>

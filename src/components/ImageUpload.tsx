@@ -191,19 +191,7 @@ export default function ImageUpload({ label, value, type, onChange }: Props) {
       )}
 
       <div className="flex flex-col gap-1.5">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-slate-700">{label}</span>
-          <button
-            type="button"
-            onClick={handleClipboardPasteClick}
-            disabled={uploading}
-            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-colors cursor-pointer"
-            title="Paste image copied from LINE, Snipping Tool, or clipboard (Ctrl+V)"
-          >
-            <Clipboard size={10} />
-            <span>Paste (Ctrl+V)</span>
-          </button>
-        </div>
+        <span className="text-xs font-semibold text-slate-700">{label}</span>
 
         <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={onInputChange} />
 
@@ -227,7 +215,7 @@ export default function ImageUpload({ label, value, type, onChange }: Props) {
                 type="button"
                 onClick={() => inputRef.current?.click()}
                 className="px-2.5 py-1.5 rounded-lg bg-white/95 text-slate-800 text-xs font-semibold hover:bg-white transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
-                title="Choose new file from device"
+                title="Choose new file"
               >
                 <Crop size={12} /> Change
               </button>
@@ -235,7 +223,7 @@ export default function ImageUpload({ label, value, type, onChange }: Props) {
                 type="button"
                 onClick={handleClipboardPasteClick}
                 className="px-2.5 py-1.5 rounded-lg bg-blue-600/95 text-white text-xs font-semibold hover:bg-blue-600 transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
-                title="Paste image from clipboard"
+                title="Paste new image from clipboard"
               >
                 <Clipboard size={12} /> Paste
               </button>
@@ -280,27 +268,16 @@ export default function ImageUpload({ label, value, type, onChange }: Props) {
               </>
             ) : isDragOver ? (
               <>
-                <ArrowUpRight size={22} className="text-blue-600 animate-bounce" />
+                <ArrowUpRight size={20} className="text-blue-600 animate-bounce" />
                 <span className="text-xs text-blue-700 font-semibold">Drop image to upload</span>
               </>
             ) : (
               <>
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-lg bg-white border border-slate-200 shadow-2xs text-slate-400 group-hover:text-blue-500 group-hover:border-blue-200 transition-colors">
-                    <ImageIcon size={16} />
-                  </div>
-                  <div className="p-1.5 rounded-lg bg-white border border-slate-200 shadow-2xs text-slate-400 group-hover:text-blue-500 group-hover:border-blue-200 transition-colors">
-                    <Clipboard size={16} />
-                  </div>
-                </div>
-                <div className="text-center px-2">
-                  <p className="text-xs font-semibold text-slate-600 group-hover:text-blue-600 transition-colors">
-                    Click, Drag file, or <span className="text-blue-600 underline decoration-blue-300 underline-offset-2">Paste (Ctrl+V)</span>
-                  </p>
-                  <p className="text-[10px] text-slate-400 mt-0.5">
-                    Copy from LINE / Screenshot & Paste here
-                  </p>
-                </div>
+                <ImageIcon size={20} className="text-slate-300 group-hover:text-blue-500 transition-colors" />
+                <span className="text-xs text-slate-500 group-hover:text-slate-700 transition-colors text-center leading-snug">
+                  Drop, paste (Ctrl+V), or click to upload
+                </span>
+                <span className="text-[10px] text-slate-400">JPG, PNG, WEBP</span>
               </>
             )}
           </div>

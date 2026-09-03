@@ -109,7 +109,11 @@ export default function BookingsPage() {
   const [bulkText, setBulkText] = useState("");
   const [bulkLines, setBulkLines] = useState<{ raw: string; parsed: { booking_no: string; shipment_no: number } | null }[]>([]);
 
-  const [deleteTarget, setDeleteTarget] = useState<{ shipment: Shipment; booking: BookingWithShipments } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<
+    | { type: "shipment"; shipment: Shipment; booking: BookingWithShipments }
+    | { type: "booking"; booking: BookingWithShipments }
+    | null
+  >(null);
   const [deleting, setDeleting] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [imageModalOpen, setImageModalOpen] = useState(false);
@@ -148,13 +152,16 @@ export default function BookingsPage() {
       returnDriverName: shipment.return_driver_name,
       returnTruckPlate: shipment.return_truck_plate,
       returnCompleted: shipment.return_completed,
+      vendorCode: shipment.vendor_code || booking.vendor_code,
+      jobType: booking.job_type,
+      customerCode: booking.customer_code,
     };
   }
 
   function openImageModal(eirUrl: string, containerUrl: string, shipment: Shipment, booking: BookingWithShipments) {
     setImageModalEirUrl(eirUrl);
     setImageModalContainerUrl(containerUrl);
-    setImageModalTitle(booking.booking_no);
+    setImageModalTitle(`${booking.booking_no} #${shipment.shipment_no}`);
     setImageModalInfo(buildImageInfo(shipment, booking));
     setImageModalOpen(true);
   }
@@ -214,6 +221,8 @@ export default function BookingsPage() {
       setRecords(res.records);
       setTotalRecords(res.total ?? res.count);
       setTotalPages(res.totalPages ?? 1);
+      // Auto-expand all loaded bookings by default so all shipment rows, containers, edit & delete buttons are immediately visible
+      setExpandedIds(new Set(res.records.map((b) => b._id)));
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to load bookings");
     } finally {
@@ -356,10 +365,15 @@ export default function BookingsPage() {
   }
 
   function openEditBooking(booking: BookingWithShipments) {
-    setEditTarget({ mode: "header", booking });
-    setCreateError(null);
-    setHeaderFormState(bookingHeaderToForm(booking));
-    setModalOpen(true);
+    if (booking.shipments.length === 1) {
+      // Single shipment: edit both booking header AND shipment details so all container fields are visible & editable!
+      openEditShipment(booking.shipments[0], booking);
+    } else {
+      setEditTarget({ mode: "header", booking });
+      setCreateError(null);
+      setHeaderFormState(bookingHeaderToForm(booking));
+      setModalOpen(true);
+    }
   }
 
   // ── Save Handlers ──
@@ -389,14 +403,17 @@ export default function BookingsPage() {
 
   async function handleConfirmCreate() {
     if (!confirmCreate) return;
+    setCreateError(null);
     setSaving(true);
     try {
-      await createShipment<Booking, Shipment>({ ...confirmCreate.payload, confirmed: true });
+      await createShipment<Booking, Shipment>({
+        ...confirmCreate.payload,
+        confirm_append: true,
+      });
       setConfirmCreate(null);
       setModalOpen(false);
       load();
     } catch (e: unknown) {
-      setConfirmCreate(null);
       setCreateError(extractErrorMessage(e));
     } finally {
       setSaving(false);
@@ -486,7 +503,15 @@ export default function BookingsPage() {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      await deleteRecord("shipments", deleteTarget.shipment._id);
+      if (deleteTarget.type === "shipment") {
+        await deleteRecord("shipments", deleteTarget.shipment._id);
+      } else {
+        // Delete all shipments under this booking first
+        for (const s of deleteTarget.booking.shipments) {
+          await deleteRecord("shipments", s._id).catch(() => {});
+        }
+        await deleteRecord("bookings", deleteTarget.booking._id);
+      }
       setDeleteTarget(null);
       load();
     } catch (e: unknown) { alert(e instanceof Error ? e.message : "Delete failed"); }
@@ -669,24 +694,39 @@ export default function BookingsPage() {
             </select>
           </div>
         </div>
-        <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-slate-100 pt-3">
-          <span className="inline-flex items-center gap-1.5 pr-1 text-xs font-medium text-slate-500">
-            <Filter size={13} /> Workflow
-          </span>
-          {WORKFLOW_FILTERS.map((filter) => (
-            <button
-              key={filter.value}
-              type="button"
-              onClick={() => setWorkflowFilter(filter.value)}
-              className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                workflowFilter === filter.value
-                  ? "border-blue-600 bg-blue-600 text-white"
-                  : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-              }`}
-            >
-              {filter.label}
-            </button>
-          ))}
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="inline-flex items-center gap-1.5 pr-1 text-xs font-medium text-slate-500">
+              <Filter size={13} /> Workflow
+            </span>
+            {WORKFLOW_FILTERS.map((filter) => (
+              <button
+                key={filter.value}
+                type="button"
+                onClick={() => setWorkflowFilter(filter.value)}
+                className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                  workflowFilter === filter.value
+                    ? "border-blue-600 bg-blue-600 text-white"
+                    : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                }`}
+              >
+                {filter.label}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (expandedIds.size === records.length && records.length > 0) {
+                setExpandedIds(new Set());
+              } else {
+                setExpandedIds(new Set(records.map((b) => b._id)));
+              }
+            }}
+            className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+          >
+            {expandedIds.size === records.length && records.length > 0 ? "Collapse All" : "Expand All"}
+          </button>
         </div>
       </div>
 
@@ -721,9 +761,10 @@ export default function BookingsPage() {
                     expanded={expandedIds.has(b._id)}
                     onToggleExpand={() => toggleExpand(b._id)}
                     onEditBooking={openEditBooking}
+                    onDeleteBooking={(booking) => setDeleteTarget({ type: "booking", booking })}
                     onAddShipment={openAddShipment}
                     onEditShipment={openEditShipment}
-                    onDeleteShipment={(shipment, booking) => setDeleteTarget({ shipment, booking })}
+                    onDeleteShipment={(shipment, booking) => setDeleteTarget({ type: "shipment", shipment, booking })}
                     onCopy={copyPickupInfo}
                     onCopyBooking={copyBookingInfo}
                     onOpenImages={openImageModal}
@@ -984,9 +1025,18 @@ export default function BookingsPage() {
         </form>
       </Modal>
 
-      <ConfirmDialog open={!!deleteTarget} title="Delete Shipment"
-        message={`Are you sure you want to delete shipment "${deleteTarget?.booking.booking_no} #${deleteTarget?.shipment.shipment_no}"?`}
-        onConfirm={handleDelete} onCancel={() => setDeleteTarget(null)} loading={deleting} />
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title={deleteTarget?.type === "booking" ? "Delete Booking" : "Delete Shipment"}
+        message={
+          deleteTarget?.type === "booking"
+            ? `Are you sure you want to delete booking "${deleteTarget.booking.booking_no}" and its ${deleteTarget.booking.shipments.length} shipment(s)? This action cannot be undone.`
+            : `Are you sure you want to delete shipment #${deleteTarget?.shipment.shipment_no} from booking "${deleteTarget?.booking.booking_no}"? This action cannot be undone.`
+        }
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+        loading={deleting}
+      />
 
       {/* ── Image Fullscreen Modal ── */}
       <ImageFullscreenModal

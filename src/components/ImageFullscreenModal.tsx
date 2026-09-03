@@ -25,6 +25,9 @@ export interface ImageModalInfo {
   returnDriverName?: string;
   returnTruckPlate?: string;
   returnCompleted?: boolean;
+  vendorCode?: string;
+  jobType?: string;
+  customerCode?: string;
 }
 
 interface ImageFullscreenModalProps {
