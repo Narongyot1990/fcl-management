@@ -17,17 +17,36 @@ interface Props {
 
 type Status = "idle" | "loading" | "success" | "error" | "low_confidence";
 
-/** Fetch an image URL in the browser and return { base64, contentType } */
-async function imageToBase64(url: string): Promise<{ base64: string; contentType: string }> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Failed to load image: ${res.status}`);
-  const blob = await res.blob();
-  const contentType = blob.type || "image/jpeg";
-  const buffer = await blob.arrayBuffer();
-  const base64 = btoa(
-    new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
-  );
-  return { base64, contentType };
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Fetch an image URL in the browser and return { base64, contentType }.
+ * Retries on transient failures (e.g. a just-uploaded blob that the proxy
+ * hasn't resolved yet) with a short backoff.
+ */
+async function imageToBase64(
+  url: string,
+  attempts = 4
+): Promise<{ base64: string; contentType: string }> {
+  let lastErr: unknown;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const res = await fetch(url, { cache: "no-store" });
+      if (!res.ok) throw new Error(`Failed to load image: ${res.status}`);
+      const blob = await res.blob();
+      if (blob.size === 0) throw new Error("Image is empty (not ready yet)");
+      const contentType = blob.type || "image/jpeg";
+      const buffer = await blob.arrayBuffer();
+      const base64 = btoa(
+        new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
+      );
+      return { base64, contentType };
+    } catch (e) {
+      lastErr = e;
+      if (i < attempts - 1) await sleep(800 * (i + 1));
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error("Failed to load image");
 }
 
 export default function GeminiOcrButton({ containerImageUrl, eirImageUrl, onResult }: Props) {
