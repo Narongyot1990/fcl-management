@@ -9,9 +9,24 @@ interface Props {
   value: string;
   type: "eir" | "container";
   onChange: (url: string) => void;
+  /**
+   * Fires with a base64 data URL of the freshly picked/pasted image (after
+   * compression) so callers can run OCR on the bytes directly, without waiting
+   * for the blob upload + proxy round-trip. Fires with null when cleared.
+   */
+  onImageData?: (dataUrl: string | null) => void;
 }
 
-export default function ImageUpload({ label, value, type, onChange }: Props) {
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error ?? new Error("Failed to read image"));
+    reader.readAsDataURL(blob);
+  });
+}
+
+export default function ImageUpload({ label, value, type, onChange, onImageData }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -27,6 +42,12 @@ export default function ImageUpload({ label, value, type, onChange }: Props) {
       const options = { maxSizeMB: 2, maxWidthOrHeight: 2560, useWebWorker: true, fileType: "image/jpeg" };
       const file = new File([blob], filename, { type: blob.type || "image/jpeg" });
       const compressed = await imageCompression(file, options);
+
+      // Hand the bytes to the parent immediately so OCR can run on them without
+      // depending on the blob upload / proxy being consistent yet.
+      if (onImageData) {
+        blobToDataUrl(compressed).then(onImageData).catch(() => {});
+      }
 
       const fd = new FormData();
       fd.append("file", compressed);
@@ -229,7 +250,7 @@ export default function ImageUpload({ label, value, type, onChange }: Props) {
               </button>
               <button
                 type="button"
-                onClick={() => onChange("")}
+                onClick={() => { onChange(""); onImageData?.(null); }}
                 className="p-1.5 rounded-lg bg-red-500/95 text-white hover:bg-red-600 transition-colors shadow-sm cursor-pointer"
                 title="Remove photo"
               >

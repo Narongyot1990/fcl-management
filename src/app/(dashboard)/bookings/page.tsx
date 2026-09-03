@@ -100,6 +100,8 @@ export default function BookingsPage() {
   const [editTarget, setEditTarget] = useState<EditTarget>(null);
   const [headerForm, setHeaderFormState] = useState<BookingHeaderForm>(EMPTY_HEADER);
   const [form, setFormState] = useState<ShipmentForm>(EMPTY_FORM);
+  // Base64 data URLs of freshly picked images, for OCR without a blob round-trip.
+  const [ocrImageData, setOcrImageData] = useState<{ eir: string | null; container: string | null }>({ eir: null, container: null });
   const [bookingInput, setBookingInput] = useState("");
   const [saving, setSaving] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
@@ -340,6 +342,7 @@ export default function BookingsPage() {
       vendor_code: vendors.find((v) => v.code === DEFAULT_VENDOR_CODE)?.code ?? "",
     });
     setFormState(EMPTY_FORM);
+    setOcrImageData({ eir: null, container: null });
     setModalOpen(true);
   }
 
@@ -353,6 +356,7 @@ export default function BookingsPage() {
     setBookingInput(booking.booking_no);
     setHeaderFormState(bookingHeaderToForm(booking));
     setFormState(EMPTY_FORM);
+    setOcrImageData({ eir: null, container: null });
     setModalOpen(true);
   }
 
@@ -361,6 +365,7 @@ export default function BookingsPage() {
     setCreateError(null);
     setHeaderFormState(bookingHeaderToForm(booking));
     setFormState(shipmentToForm(shipment));
+    setOcrImageData({ eir: null, container: null });
     setModalOpen(true);
   }
 
@@ -372,6 +377,7 @@ export default function BookingsPage() {
       setEditTarget({ mode: "header", booking });
       setCreateError(null);
       setHeaderFormState(bookingHeaderToForm(booking));
+      setOcrImageData({ eir: null, container: null });
       setModalOpen(true);
     }
   }
@@ -882,13 +888,15 @@ export default function BookingsPage() {
                     <div />
                     <div className="col-span-2 flex flex-col gap-3">
                       <div className="grid grid-cols-2 gap-3">
-                        <ImageUpload label="EIR Photo" value={form.eir_image_url} type="eir" onChange={(url) => setFormField("eir_image_url", url)} />
-                        <ImageUpload label="Container Photo" value={form.container_image_url} type="container" onChange={(url) => setFormField("container_image_url", url)} />
+                        <ImageUpload label="EIR Photo" value={form.eir_image_url} type="eir" onChange={(url) => setFormField("eir_image_url", url)} onImageData={(d) => setOcrImageData((p) => ({ ...p, eir: d }))} />
+                        <ImageUpload label="Container Photo" value={form.container_image_url} type="container" onChange={(url) => setFormField("container_image_url", url)} onImageData={(d) => setOcrImageData((p) => ({ ...p, container: d }))} />
                       </div>
                       <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-slate-100">
                         <GeminiOcrButton
                           containerImageUrl={form.container_image_url}
                           eirImageUrl={form.eir_image_url}
+                          containerImageData={ocrImageData.container}
+                          eirImageData={ocrImageData.eir}
                           onResult={(r) => setFormState((f) => {
                             const sizeMatch = r.container_size_code ? containers.find((c) => c.code === r.container_size_code) : undefined;
                             return {

@@ -12,7 +12,24 @@ interface OcrResult {
 interface Props {
   containerImageUrl: string;
   eirImageUrl: string;
+  /** Optional base64 data URLs of the freshly picked images — used directly,
+   *  bypassing the URL fetch / blob-proxy round-trip when available. */
+  containerImageData?: string | null;
+  eirImageData?: string | null;
   onResult: (result: OcrResult) => void;
+}
+
+/** Split a `data:<mime>;base64,<data>` URL into the OCR payload shape. */
+function dataUrlToPayload(dataUrl: string): { base64: string; contentType: string } {
+  const comma = dataUrl.indexOf(",");
+  const header = comma >= 0 ? dataUrl.slice(5, comma) : "";
+  if (!dataUrl.startsWith("data:") || comma < 0 || !header.includes("base64")) {
+    throw new Error("Invalid image data");
+  }
+  return {
+    contentType: header.split(";")[0] || "image/jpeg",
+    base64: dataUrl.slice(comma + 1),
+  };
 }
 
 type Status = "idle" | "loading" | "success" | "error" | "low_confidence";
@@ -49,21 +66,33 @@ async function imageToBase64(
   throw lastErr instanceof Error ? lastErr : new Error("Failed to load image");
 }
 
-export default function GeminiOcrButton({ containerImageUrl, eirImageUrl, onResult }: Props) {
+export default function GeminiOcrButton({
+  containerImageUrl,
+  eirImageUrl,
+  containerImageData,
+  eirImageData,
+  onResult,
+}: Props) {
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState("");
 
+  const hasContainer = !!(containerImageUrl || containerImageData);
+  const hasEir = !!(eirImageUrl || eirImageData);
+
   async function handleScan() {
-    if (!containerImageUrl || !eirImageUrl || status === "loading") return;
+    if (!hasContainer || !hasEir || status === "loading") return;
     setStatus("loading");
     setMessage("");
 
     try {
-      // Fetch both images client-side and convert to base64
-      // This works for all URL types (proxy, direct blob, external)
+      // Prefer the in-memory data URL (freshly picked/pasted) — no network,
+      // no dependency on the blob upload/proxy being consistent yet.
+      // Fall back to fetching the stored URL (e.g. editing an existing record).
+      const resolve = (data: string | null | undefined, url: string) =>
+        data ? Promise.resolve(dataUrlToPayload(data)) : imageToBase64(url);
       const [containerImg, eirImg] = await Promise.all([
-        imageToBase64(containerImageUrl),
-        imageToBase64(eirImageUrl),
+        resolve(containerImageData, containerImageUrl),
+        resolve(eirImageData, eirImageUrl),
       ]);
 
       const res = await fetch("/api/gemini-ocr", {
@@ -120,9 +149,9 @@ export default function GeminiOcrButton({ containerImageUrl, eirImageUrl, onResu
       <button
         type="button"
         onClick={handleScan}
-        disabled={!containerImageUrl || !eirImageUrl || status === "loading"}
+        disabled={!hasContainer || !hasEir || status === "loading"}
         className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all border shadow-sm
-          ${!containerImageUrl || !eirImageUrl
+          ${!hasContainer || !hasEir
             ? "bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed"
             : status === "loading"
             ? "bg-violet-50 text-violet-400 border-violet-100 cursor-wait"
@@ -132,7 +161,7 @@ export default function GeminiOcrButton({ containerImageUrl, eirImageUrl, onResu
             ? "bg-red-50 text-red-600 border-red-100 hover:bg-red-100"
             : "bg-violet-50 text-violet-700 border-violet-200 hover:bg-violet-100 hover:border-violet-300"
           }`}
-        title={!containerImageUrl || !eirImageUrl ? "Upload both Container and EIR images first" : "Scan both images with Gemini AI"}
+        title={!hasContainer || !hasEir ? "Upload both Container and EIR images first" : "Scan both images with Gemini AI"}
       >
         {status === "loading" ? (
           <Loader2 size={13} className="animate-spin shrink-0" />
