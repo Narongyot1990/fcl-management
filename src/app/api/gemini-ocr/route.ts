@@ -37,6 +37,23 @@ interface ImageData {
   contentType: string;
 }
 
+/** JSON schema handed to Gemini so it returns clean, parseable output. */
+const RESPONSE_SCHEMA = {
+  type: "OBJECT",
+  properties: {
+    container_size_code: { type: "STRING", nullable: true },
+    tare_weight: { type: "STRING", nullable: true },
+    container_no: { type: "STRING", nullable: true },
+    seal_no: { type: "STRING", nullable: true },
+  },
+  required: ["container_size_code", "tare_weight", "container_no", "seal_no"],
+};
+
+/** Gemini 2.5 / 3 are thinking models; older flash models reject thinkingConfig. */
+function supportsThinkingConfig(model: string): boolean {
+  return /gemini-(2\.5|3)/.test(model);
+}
+
 export async function POST(request: NextRequest) {
   try {
     const auth = await requirePermission(request, "ocr:use");
@@ -70,6 +87,22 @@ export async function POST(request: NextRequest) {
 
     console.log("[gemini-ocr] Received base64 images. Container:", containerImage.contentType, "EIR:", eirImage.contentType);
 
+    const generationConfig: Record<string, unknown> = {
+      temperature: 0,
+      // Gemini 3 Flash always "thinks"; real container photos can burn well over
+      // 2000 thinking tokens before any answer text, so keep plenty of headroom.
+      maxOutputTokens: 8192,
+      // Force a clean JSON object back (no ```json fences, no prose).
+      responseMimeType: "application/json",
+      responseSchema: RESPONSE_SCHEMA,
+    };
+    if (supportsThinkingConfig(model)) {
+      // This is deterministic field extraction — no reasoning needed. Disabling
+      // thinking removes the token-budget blowout that caused MAX_TOKENS
+      // truncation and "Could not parse response".
+      generationConfig.thinkingConfig = { thinkingBudget: 0 };
+    }
+
     const payload = {
       contents: [
         {
@@ -92,10 +125,7 @@ export async function POST(request: NextRequest) {
           ],
         },
       ],
-      generationConfig: {
-        temperature: 0,
-        maxOutputTokens: 2048,
-      },
+      generationConfig,
     };
 
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
@@ -114,23 +144,47 @@ export async function POST(request: NextRequest) {
     }
 
     const geminiData = await geminiRes.json();
-    // Thinking models return multiple parts: thought parts + text part
-    // Find the last non-thought text part which contains the actual answer
-    const parts = geminiData?.candidates?.[0]?.content?.parts ?? [];
-    const textParts = parts.filter((p: { text?: string; thought?: boolean }) => p.text && !p.thought);
-    const rawText = (textParts.length > 0 ? textParts[textParts.length - 1].text : parts[parts.length - 1]?.text ?? "").trim();
-    console.log("[gemini-ocr] Parts count:", parts.length, "Text parts:", textParts.length);
+    const candidate = geminiData?.candidates?.[0];
+    const finishReason: string | undefined = candidate?.finishReason;
+    // Thinking models return multiple parts (thought parts + answer). Join every
+    // non-thought text part so a split answer is not lost.
+    const parts: { text?: string; thought?: boolean }[] = candidate?.content?.parts ?? [];
+    const rawText = parts
+      .filter((p) => p.text && !p.thought)
+      .map((p) => p.text as string)
+      .join("")
+      .trim();
+    console.log(
+      "[gemini-ocr] finishReason:", finishReason,
+      "| parts:", parts.length,
+      "| usage:", JSON.stringify(geminiData?.usageMetadata ?? {})
+    );
     console.log("[gemini-ocr] Raw response:", rawText);
 
-    // Strip markdown fences if present
-    const cleaned = rawText.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
+    if (!rawText) {
+      const reason =
+        finishReason === "MAX_TOKENS"
+          ? "Model hit the output token limit before returning an answer (raise maxOutputTokens or lower thinking budget)."
+          : finishReason === "SAFETY" || finishReason === "PROHIBITED_CONTENT"
+          ? "Gemini blocked the response for safety reasons."
+          : `Gemini returned no text (finishReason: ${finishReason ?? "unknown"}).`;
+      console.error("[gemini-ocr] Empty response.", reason);
+      return NextResponse.json({ error: reason, finishReason }, { status: 502 });
+    }
+
+    // responseMimeType=application/json should already give clean JSON; strip
+    // fences defensively in case the config is ever changed.
+    const cleaned = rawText.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
 
     let parsed: { container_size_code: string | null; tare_weight: string | null; container_no: string | null; seal_no: string | null };
     try {
       parsed = JSON.parse(cleaned);
     } catch {
-      console.error("[gemini-ocr] Failed to parse:", rawText);
-      return NextResponse.json({ error: "Could not parse response", raw: rawText }, { status: 422 });
+      console.error("[gemini-ocr] Failed to parse:", rawText, "| finishReason:", finishReason);
+      return NextResponse.json(
+        { error: "Could not parse response", raw: rawText, finishReason },
+        { status: 422 }
+      );
     }
 
     // Validate container_size_code format: 2 digits + 1 letter + 1 digit
