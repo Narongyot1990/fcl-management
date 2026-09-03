@@ -1,114 +1,140 @@
-# AI Support / ITL FCL Management
+# ITL FCL Management (AI Support)
 
-This repository contains an internal logistics support system for FCL booking and container operations. The main user-facing app is a Next.js dashboard with CRUD screens, API routes, image upload, OCR-assisted data extraction, and GPS lookup.
+An internal Full Container Load (FCL) logistics operations dashboard built with Next.js 16, React 19, Tailwind CSS v4, and MongoDB. The system streamlines booking management, driver/truck assignment, EIR & container door photo capture, OCR-assisted data extraction via Google Gemini, realtime GPS truck tracking via DTC GPS, and Role-Based Access Control (RBAC) with branch data isolation.
 
-There are also Python services in the repo. Based on the current structure, those Python files look like legacy or auxiliary services rather than the primary runtime for the dashboard.
+---
 
-## Current Stack
+## Tech Stack
 
-- Frontend: Next.js App Router, React, TypeScript, Tailwind CSS
-- Primary backend in this repo: Next.js route handlers under `src/app/api`
-- Database: MongoDB
-- File storage: Vercel Blob
-- External integrations: Gemini OCR and DTC GPS API
-- Legacy/secondary backend code: FastAPI and Flask Python files
+- **Framework**: Next.js 16.1.6 (App Router)
+- **UI & Styling**: React 19.2.3, Tailwind CSS v4, Lucide React
+- **Authentication & Security**: `AuthGate` session wrapper (`sessionStorage`), RBAC (`admin`, `leader`, `driver`), and Header-based branch isolation (`x-itl-role`, `x-itl-branch`)
+- **Maps & Location**: Leaflet, React-Leaflet
+- **Image Processing**: `react-easy-crop`, `browser-image-compression`
+- **Database**: MongoDB (Node.js driver 6.11.0)
+- **File Storage**: Vercel Blob (private upload with local proxy)
+- **AI & Integrations**: Google Gemini API (OCR extraction), DTC GPS API
+- **Legacy Utilities**: FastAPI (`api/index.py`), Flask LINE webhook server (`app.py`)
 
-## What This App Does
+---
 
-- Manage master data for `vendors`, `containers`, `customers`, and `users`
-- Manage `bookings` across a 5-step operational lifecycle
-- Upload container and EIR images
-- Use OCR to extract container fields from uploaded images
-- Resolve GPS coordinates for trucks using vendor truck `gps_id`
+## Core Capabilities
 
-## Repo Map
+1. **Authentication & User Permissions (RBAC)**:
+   - Built-in Login screen at `/login`
+   - Role management:
+     - **`admin`**: Full visibility and control across all company branches.
+     - **`leader`**: Scoped operational management for their assigned branch.
+     - **`driver`**: Personal driver profile view (`/drivers/[id]?view=me`) vs admin inspection.
+   - Client-side `AuthGate` protection and HTTP header injection (`x-itl-role`, `x-itl-branch`).
+2. **5-Step Booking Lifecycle**:
+   - Step 1: Booking Information (Customer, Vendor, Job Type, Dates, Branch)
+   - Step 2: Assign Truck & Driver (with quick phone/status access)
+   - Step 3: Container & EIR (Upload photos, run Gemini OCR, validate ISO 6346 container numbers)
+   - Step 4: Loading Status (`pending` -> `loading` -> `loaded`)
+   - Step 5: Return Status (Return truck, return date, GCL received)
+3. **Master Data Management**:
+   - **Customers**: Code, name, branch
+   - **Vendors**: Code, name, branch, trucks with GPS IDs, drivers with profiles
+   - **Containers**: Container code, standard size, branch
+   - **Driver Profiles**: Rating, score, jobs count, license & national ID
+4. **Automated OCR Extraction**:
+   - Upload Container door and EIR ticket images
+   - Gemini extracts `container_no`, `seal_no`, `container_size_code`, and `tare_weight`
+   - Strict validation algorithms ensure data correctness
+5. **Realtime GPS Tracking**:
+   - Direct truck tracking at `/gps/track/[plate]`
+   - Direct Google Maps redirect from assigned trucks
+   - Historical DTC station reports
+
+---
+
+## Project Structure
 
 ```text
 .
-|-- src/
-|   |-- app/
-|   |   |-- (dashboard)/        # Main dashboard pages
-|   |   |-- api/                # Active Next.js API routes
-|   |-- components/             # Shared UI components
-|   `-- lib/                    # Types, MongoDB client, helpers
-|-- api/                        # FastAPI app for Vercel Python runtime
-|-- services/                   # Python data and integration services
-|-- handlers/                   # Python handlers
-|-- docs/                       # Project documentation
-|-- app.py                      # Legacy standalone Flask LINE webhook server
-`-- dashboard_html.py           # Standalone dashboard-related script
+├── AGENTS.md                          # Primary AI Coding Agent briefing
+├── README.md                          # Project overview & documentation
+├── package.json                       # Next.js dependencies & scripts
+├── docs/
+│   ├── ARCHITECTURE.md                # System design, auth/RBAC data flows, database schemas
+│   ├── API_REFERENCE.md               # Complete Next.js & Python API specification
+│   └── INTEGRATIONS.md                # MongoDB, Vercel Blob, Gemini OCR, DTC GPS, LINE
+├── src/
+│   ├── app/
+│   │   ├── page.tsx                   # Redirects to /bookings
+│   │   ├── layout.tsx                 # Root HTML shell
+│   │   ├── login/                     # Login authentication screen
+│   │   │   └── page.tsx
+│   │   ├── (dashboard)/
+│   │   │   ├── layout.tsx             # Responsive dashboard layout with Sidebar
+│   │   │   ├── bookings/              # Main FCL Operations Hub
+│   │   │   ├── customers/page.tsx     # Customer master data
+│   │   │   ├── vendors/page.tsx       # Vendor & truck/driver master data
+│   │   │   ├── containers/page.tsx    # Container master data
+│   │   │   └── drivers/[id]/page.tsx  # Driver profile page
+│   │   ├── gps/
+│   │   │   └── track/[plate]/page.tsx # Direct GPS tracking page
+│   │   └── api/                       # Next.js API Routes (CRUD, OCR, GPS, Upload)
+│   ├── components/                    # Shared components (Sidebar, AuthGate, GpsMap, etc.)
+│   └── lib/                           # Core utilities: types.ts, mongodb.ts, api.ts, dtcGps.ts, etc.
+├── api/                               # Secondary FastAPI endpoints
+└── services/                          # Python utilities for legacy services
 ```
 
-## Primary Entry Points
-
-- Dashboard home: `src/app/(dashboard)/page.tsx`
-- Booking management UI: `src/app/(dashboard)/bookings/page.tsx`
-- Generic CRUD API: `src/app/api/collections/[collection]/route.ts`
-- Record update/delete API: `src/app/api/collections/[collection]/[id]/route.ts`
-- Booking container patch API: `src/app/api/bookings/container/route.ts`
-- OCR API: `src/app/api/gemini-ocr/route.ts`
-- GPS API: `src/app/api/gps/route.ts`
+---
 
 ## Quick Start
 
-### 1. Install dependencies
+### 1. Install Dependencies
 
 ```bash
 npm install
 ```
 
-If you need the Python utilities:
-
+*(Optional: If running legacy Python scripts)*
 ```bash
 pip install -r requirements.txt
 ```
 
-### 2. Create `.env`
+### 2. Configure Environment Variables
 
-Use `.env.example` as a starting point and add the missing values required by the features you want to run.
-
-Minimum commonly used variables:
+Create a `.env.local` file in the root directory:
 
 ```env
-MONGODB_URI=
+# MongoDB Connection
+MONGODB_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/
 MONGODB_DB=eir_scanner
-AUTH_SECRET=
-OCR_API_SECRET=
-GEMINI_API_KEY=
+
+# Security & API Key
+OCR_API_SECRET=your_secret_api_key
+
+# Google Gemini API
+GEMINI_API_KEY=AIzaSy...
+GEMINI_MODEL=gemini-2.5-flash
+
+# DTC GPS Gateway
 DTC_GPS_API_BASE_URL=https://gps.dtc.co.th:8099
-DTC_GPS_API_TOKEN=
+DTC_GPS_API_TOKEN=E4QHL821CUE8ZF5...
+
+# Vercel Blob Storage
+BLOB_READ_WRITE_TOKEN=vercel_blob_rw_...
 ```
 
-Optional or integration-specific variables:
-
-```env
-GEMINI_MODEL=
-OCR_API_URL=
-OPENCLAW_WEBHOOK_URL=
-OPENCLAW_API_KEY=
-LINE_CHANNEL_SECRET=
-LINE_CHANNEL_ACCESS_TOKEN=
-```
-
-## Run Locally
+### 3. Run Locally
 
 ```bash
 npm run dev
 ```
 
-Open `http://localhost:3000`.
+Open [http://localhost:3000](http://localhost:3000) (unauthenticated sessions will redirect to `/login`).
 
-## Important Notes
+---
 
-- The Next.js app appears to be the main active application.
-- Auth is implemented: a JWT session cookie plus a role/permission model. `src/proxy.ts` requires a valid session for every route except `/login` and `/api/auth/login`; each sensitive API route also checks a specific permission. See `AGENTS.md` section 6.
-- Set `AUTH_SECRET` (>= 32 chars) and seed an admin with `node --env-file=.env.local scripts/create-admin.mjs <user> <pass> "Name"`.
-- Integration credentials should be kept in environment variables. DTC GPS uses `DTC_GPS_API_TOKEN`.
-- Some older Thai text appears with encoding issues in legacy files; prefer the newer docs in `docs/` and `AGENTS.md` as the working reference.
+## Documentation Index
 
-## Recommended Docs To Read Next
+- **[`AGENTS.md`](./AGENTS.md)**: AI agent rules, RBAC constraints, and source of truth references.
+- **[`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md)**: Deep dive into application architecture, auth flow, database schemas, and data pipelines.
+- **[`docs/API_REFERENCE.md`](./docs/API_REFERENCE.md)**: Detailed API endpoints documentation, query parameters, auth headers, and payloads.
+- **[`docs/INTEGRATIONS.md`](./docs/INTEGRATIONS.md)**: Configuration guide for MongoDB Atlas, Vercel Blob, Gemini OCR, and DTC GPS.
 
-- `AGENTS.md` for AI-oriented coding guidance
-- `docs/ARCHITECTURE.md` for runtime and structure details
-- `docs/API_REFERENCE.md` for active API routes
-- `docs/INTEGRATIONS.md` for MongoDB, Blob, Gemini, LINE, and GPS setup notes

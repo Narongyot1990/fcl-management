@@ -1,200 +1,202 @@
 # AGENTS.md
 
-This file is the fastest project briefing for coding agents working in this repository.
+This file is the primary briefing document for AI coding assistants working in this repository.
 
-## 1. Working Assumption
+## 1. System Overview & Core Assumptions
 
-Treat the Next.js application under `src/` as the primary system unless the task explicitly mentions the Python services.
+- **Primary Application**: Next.js 16.1.6 App Router (`src/`) with React 19, TypeScript 5, and Tailwind CSS v4.
+- **Backend Architecture**: Route handlers under `src/app/api/` serve as the main active backend.
+- **Database**: MongoDB using the official Node.js driver (`mongodb` v6.11.0).
+- **Authentication & RBAC**: Client-side `AuthGate` with session storage (`itl_user`), role-based access control (`admin`, `leader`, `driver`), and branch isolation via HTTP headers (`x-itl-role`, `x-itl-branch`).
+- **File Storage**: Vercel Blob for private image storage, proxied through `/api/image/[filename]`.
+- **Secondary / Legacy Track**: FastAPI (`api/index.py`), Flask LINE webhook (`app.py`), and Python utilities under `services/` & `handlers/`. **Only touch Python code when the user explicitly requests changes to the Python/FastAPI/LINE bot stack.**
 
-Why:
+---
 
-- `package.json` is configured for the main app workflow
-- `vercel.json` points to the Next.js build
-- The dashboard UI, CRUD flow, upload flow, OCR flow, and GPS flow exist in `src/app`
+## 2. Project Layout & Directory Structure
 
-The Python code is still relevant, but it looks like a parallel or older implementation:
+```text
+.
+├── AGENTS.md                          # Primary briefing for AI coding agents
+├── README.md                          # Repository overview & setup guide
+├── package.json                       # Dependencies (Next 16, React 19, Tailwind 4, Leaflet, etc.)
+├── docs/                              # Detailed system documentation
+│   ├── ARCHITECTURE.md                # System design, auth/RBAC architecture, data flows
+│   ├── API_REFERENCE.md               # Complete Next.js & Python API endpoints spec
+│   └── INTEGRATIONS.md                # MongoDB, Vercel Blob, Gemini OCR, DTC GPS, LINE setup
+├── src/
+│   ├── app/
+│   │   ├── page.tsx                   # Root redirect -> /bookings
+│   │   ├── layout.tsx                 # Root HTML & body shell
+│   │   ├── globals.css                # Tailwind CSS v4 styling rules
+│   │   ├── login/                     # Authentication
+│   │   │   └── page.tsx               # Login screen (username/password, demo accounts)
+│   │   ├── (dashboard)/               # Protected dashboard routes (wrapped in AppShellLayout)
+│   │   │   ├── layout.tsx             # Shell with responsive collapsible Sidebar
+│   │   │   ├── bookings/              # Main FCL Operations Hub
+│   │   │   │   ├── page.tsx           # Booking orchestration & filter management
+│   │   │   │   ├── components/        # BookingRow, StepBar, ProcessModalFields, Section, Toggle
+│   │   │   │   ├── hooks/             # useBookings custom hook
+│   │   │   │   ├── types/             # booking-form.ts
+│   │   │   │   └── utils/             # booking-utils.ts
+│   │   │   ├── customers/page.tsx     # Customer master data management (with branch)
+│   │   │   ├── vendors/page.tsx       # Vendor master data (trucks with gps_id, drivers, branch)
+│   │   │   ├── containers/page.tsx    # Container master data management (code, size, branch)
+│   │   │   └── drivers/[id]/page.tsx  # Driver profile page (personal view vs admin view)
+│   │   ├── gps/
+│   │   │   └── track/[plate]/page.tsx # Standalone GPS tracking page for truck plate
+│   │   └── api/                       # Next.js App Router API Route Handlers
+│   │       ├── collections/[collection]/        # Generic MongoDB GET (filtering/pagination/branch) & POST
+│   │       ├── collections/[collection]/[id]/   # Generic MongoDB PUT & DELETE by ObjectId
+│   │       ├── bookings/container/             # ISO 6346 validated container update patch
+│   │       ├── gemini-ocr/                      # Gemini multi-image extraction & validation
+│   │       ├── upload-image/                    # Private Vercel Blob uploader
+│   │       ├── image/[filename]/                # Private Blob image proxy
+│   │       ├── gps/                             # Realtime DTC GPS coordinates lookup
+│   │       ├── gps/history/                     # DTC Station-to-Station summary report
+│   │       └── gps/history-raw/                 # DTC Raw history point stream
+│   ├── components/                    # Reusable UI components (Sidebar, AuthGate, GpsMap, ImageUpload)
+│   └── lib/                           # Core utilities: types.ts, mongodb.ts, api.ts, dtcGps.ts, etc.
+```
 
-- `api/index.py` is a FastAPI app with generic CRUD and booking container update logic
-- `app.py` is a standalone Flask LINE webhook server
-- `services/*.py` and `handlers/*.py` support the Python path
+---
 
-## 2. What The Product Does
+## 3. Core Domain Models (`src/lib/types.ts`)
 
-This is an internal FCL operations dashboard for:
+### Authentication & Roles
+- **`UserRole`**: `"admin"` | `"leader"` | `"driver"`
+- **`User`**:
+  - `_id`: string
+  - `username`: string (unique key)
+  - `password`: optional string (server-side/mock)
+  - `role`: `UserRole`
+  - `branch`: optional string (`admin` sees all branches; `leader`/`driver` belong to a specific `branch`)
+  - `name`: string
 
-- Master data management: `vendors`, `containers`, `customers`, `users`
-- Booking lifecycle management
-- Image upload for EIR and container images
-- OCR-assisted extraction of container fields
-- GPS lookup by truck `gps_id`
-- LINE integration
+### Master Data Collections
+- **`vendors`**:
+  - `code` (unique key), `name`, `branch`
+  - `trucks`: Array of `{ plate: string, gps_id?: string }`
+  - `drivers`: Array of `Driver` (`name`, `phone`, `avatar_url`, `score`, `rating`, `status`, `id_card_no`, `license_no`, `joined_at`, `branch`)
+- **`containers`**: `code`, `size`, `branch`
+- **`customers`**: `code` (unique key), `name`, `branch`
 
-## 3. Core Domain Model
+### Main Operational Model: `Booking`
+Tracks container movements across a 5-step lifecycle:
+1. **Booking Info**: `booking_no` (unique), `booking_date` (`YYYY-MM-DD`), `job_type` (`"Import"` | `"Export"`), `customer_code`, `vendor_code`, `branch`
+2. **Assign Truck / Driver**: `truck_plate`, `driver_name`, `driver_phone`, `plan_pickup_date`, `eta`
+3. **Container & EIR**: `container_no`, `container_size`, `container_size_code`, `tare_weight`, `seal_no`, `eir_image_url`, `container_image_url`
+4. **Loading Process**: `loading_status` (`"pending"` | `"loading"` | `"loaded"`), `plan_loading_date`, `pending_at`, `loading_at`, `loaded_at`
+5. **Return Process**: `plan_return_date`, `return_truck_plate`, `return_driver_name`, `return_driver_phone`, `return_date`, `return_completed` (boolean), `gcl_received` (boolean)
 
-Main TypeScript types live in `src/lib/types.ts`.
+---
 
-High-value collections:
+## 4. Authentication, Authorization & User Permissions (RBAC)
 
-- `vendors`
-  - Key fields: `code`, `name`, `branch`
-  - Important nested data: `drivers[]`, `trucks[]`
-  - `trucks[]` may contain `{ plate, gps_id }`
-- `containers`
-  - Key fields: `code`, `size`, `branch`
-- `customers`
-  - Key fields: `code`, `name`, `branch`
-- `users`
-  - Key fields: `username`, `role`, `branch`
-- `bookings`
-  - Main operational record
-  - Tracks a 5-step lifecycle:
-    1. Booking
-    2. Assign truck
-    3. Pickup/container
-    4. Loading
-    5. Return
+### A. Login & Session Management
+- **Login Route**: `/login` (`src/app/login/page.tsx`).
+- **Session Storage**: User session is saved in `sessionStorage.getItem("itl_user")` as JSON:
+  ```json
+  {
+    "username": "administrator@fls.com",
+    "name": "ITL Administrator",
+    "role": "admin",
+    "branch": "Bangkok",
+    "isLoggedIn": true
+  }
+  ```
+- **Auth Guard**: `AuthGate` (`src/components/AuthGate.tsx`) checks session on route changes and redirects unauthenticated users to `/login`.
 
-Important booking fields:
+### B. Role-Based Permissions & Branch Isolation
+- **`admin`**: Full access to all branches, master data, operations, and system settings.
+- **`leader`**: Scoped to their assigned `branch`.
+  - Frontend automatically injects `x-itl-role` and `x-itl-branch` headers via `src/lib/api.ts`.
+  - Backend `/api/collections/[collection]` enforces data isolation by filtering queries with `{ branch }` and tagging created records with the user's `branch`.
+- **`driver`**: Personal profile view at `/drivers/[id]?view=me` vs Administrator view at `/drivers/[id]`.
 
-- Identity: `booking_no`, `booking_date`, `job_type`
-- Relationships: `customer_code`, `vendor_code`
-- Pickup: `truck_plate`, `driver_name`, `driver_phone`, `plan_pickup_date`
-- Container: `container_no`, `container_size`, `container_size_code`, `tare_weight`, `seal_no`
-- Images: `eir_image_url`, `container_image_url`
-- Loading: `loading_status`, `pending_at`, `loading_at`, `loaded_at`
-- Return: `plan_return_date`, `return_truck_plate`, `return_driver_name`, `return_driver_phone`, `return_date`, `return_completed`, `gcl_received`
+---
 
-## 4. Source Of Truth By Area
+## 5. Key Workflows & Data Flows
 
-Use these files first when changing behavior:
+### A. CRUD Operations & Header Propagation
+- Frontend calls `src/lib/api.ts` (`listRecords`, `createRecord`, `updateRecord`, `deleteRecord`).
+- Automatically attaches `x-itl-role` and `x-itl-branch` headers from `sessionStorage.getItem("itl_user")`.
+- Requests route to `/api/collections/[collection]`.
+- Deduplication is enforced on creation using `DEDUP_KEYS` (`vendors.code`, `bookings.booking_no`, `customers.code`, `users.username`).
 
-- Data types: `src/lib/types.ts`
-- MongoDB client and allowed collections: `src/lib/mongodb.ts`
-- Frontend API wrapper: `src/lib/api.ts`
-- Dashboard shell: `src/app/(dashboard)/layout.tsx`
-- Dashboard home: `src/app/(dashboard)/page.tsx`
-- Booking page: `src/app/(dashboard)/bookings/page.tsx`
-- Generic CRUD routes: `src/app/api/collections/[collection]/route.ts`
-- Update/delete routes: `src/app/api/collections/[collection]/[id]/route.ts`
-- Booking container patch route: `src/app/api/bookings/container/route.ts`
-- OCR route: `src/app/api/gemini-ocr/route.ts`
-- Upload route: `src/app/api/upload-image/route.ts`
-- Image proxy route: `src/app/api/image/[filename]/route.ts`
-- GPS route: `src/app/api/gps/route.ts`
+### B. Image Upload & OCR Flow
+1. User selects/crops EIR or container door image via `ImageUpload.tsx` (`react-easy-crop` & `browser-image-compression`).
+2. Client uploads file to `/api/upload-image/route.ts` -> saved in Vercel Blob under `itl-files/`.
+3. The API returns a local proxy URL format `/api/image/[filename]`.
+4. User clicks OCR (`GeminiOcrButton.tsx`) -> sends base64 images to `/api/gemini-ocr/route.ts`.
+5. Route sends structured prompt to Google Gemini API (`gemini-2.5-flash` or `GEMINI_MODEL`), extracts `container_no`, `seal_no`, `container_size_code`, `tare_weight`.
+6. Output is strictly validated (ISO 6346 checksum, regex formats) before returning to the form.
 
-## 5. Important Runtime Flows
+### C. GPS Lookup Flow
+1. In booking or vendor views, clicking GPS finds the truck's `gps_id` in `vendor.trucks[]`.
+2. Calls `/api/gps` (realtime coordinates) or navigates to `/gps/track/[plate]` / opens Google Maps (`https://maps.google.com/?q=${lat},${lon}`).
+3. Coordinates and station data are fetched from the DTC GPS API via `src/lib/dtcGps.ts`.
 
-### CRUD flow
+---
 
-- UI uses helpers from `src/lib/api.ts`
-- Requests go to `/api/collections/[collection]`
-- MongoDB access uses `src/lib/mongodb.ts`
-- Collection names are limited by `ALLOWED`
+## 6. Source of Truth Map
 
-### Booking workflow
+When modifying system behavior, refer to these authoritative files first:
 
-- Most operational complexity is inside `src/app/(dashboard)/bookings/page.tsx`
-- Vendor selection drives truck and driver options
-- Booking process state is derived from booking fields, not from a separate workflow engine
+| Area | Authoritative Source File |
+|---|---|
+| Domain Types & RBAC Roles | `src/lib/types.ts` |
+| Auth Gate & Session Checking | `src/components/AuthGate.tsx` |
+| Login Page & Credentials | `src/app/login/page.tsx` |
+| MongoDB Client & Indices | `src/lib/mongodb.ts` |
+| Frontend API Client (Header Injection) | `src/lib/api.ts` |
+| Booking Hub UI & Logic | `src/app/(dashboard)/bookings/page.tsx` |
+| Booking Form State & Types | `src/app/(dashboard)/bookings/types/booking-form.ts` |
+| Generic Collection CRUD & Branch Isolation | `src/app/api/collections/[collection]/route.ts` |
+| Container Patch API | `src/app/api/bookings/container/route.ts` |
+| Gemini OCR Integration | `src/app/api/gemini-ocr/route.ts` |
+| Vercel Blob Image Proxy | `src/app/api/image/[filename]/route.ts` |
+| DTC GPS Gateway | `src/lib/dtcGps.ts` & `src/app/api/gps/route.ts` |
 
-### Upload + OCR flow
+---
 
-- Images upload through `src/app/api/upload-image/route.ts`
-- Files are stored in Vercel Blob under `itl-files/`
-- Returned image URL is proxied via `/api/image/[filename]`
-- OCR runs through `src/app/api/gemini-ocr/route.ts`
-- OCR output is applied back into booking form fields
+## 7. Coding Guidelines for AI Assistants
 
-### GPS flow
+1. **Next.js App Router First**: All UI and core API work must be done within `src/app/`. Do not introduce duplicate backend logic in Python unless explicitly tasked.
+2. **Preserve Domain & Auth Types**: When updating fields, always update `src/lib/types.ts` first, then propagate changes through API routes and React components.
+3. **Respect Branch Isolation**: Keep `branch` awareness in models and queries. For non-admin roles, ensure queries filter by branch.
+4. **No Breaking Container Validation**: Container numbers must adhere to ISO 6346 (4 letters + 7 digits with check-digit validation in `src/lib/containerValidation.ts`).
+5. **Safe Image URLs**: Never expose direct raw Vercel Blob URLs directly to clients without going through `/api/image/[filename]` proxy or relative helper `toProxyUrl`.
+6. **Clean Imports**: Use `@/...` path aliases mapping to `src/...`.
+7. **No Phantom Files**: Note that `src/app/page.tsx` redirects to `/bookings`. Unauthenticated requests redirect to `/login`.
 
-- Booking UI gets truck location from `/api/gps`
-- The route uses a truck `gps_id` stored under the vendor record
-- Response returns `lat`, `lon`, speed, time, and location summary
+---
 
-### LINE flow
+## 8. Environment Variables Reference
 
-- The current tree does not contain an active Next.js LINE webhook route
-- The remaining LINE implementation is the legacy Flask server in `app.py`
-- Do not assume the LINE bot is fully active without checking code paths first
+```env
+# MongoDB Connection
+MONGODB_URI=mongodb+srv://...
+MONGODB_DB=eir_scanner
 
-## 6. Authentication And Authorization
+# Security & API Auth
+OCR_API_SECRET=your_secret_api_key
 
-Auth is implemented (Next.js). Session = signed JWT (HS256, `jose`) in the
-httpOnly `fcl_session` cookie. Passwords are scrypt-hashed via `node:crypto`.
+# Google Gemini (OCR)
+GEMINI_API_KEY=AIzaSy...
+GEMINI_MODEL=gemini-2.5-flash
 
-- `AUTH_SECRET` env var (>= 32 chars) signs sessions.
-- `src/proxy.ts` (Next 16 "proxy", formerly middleware) is the first gate: a
-  valid session cookie is required for every route except `/login` and
-  `/api/auth/login`. No session -> browsers redirect to `/login`, `/api/*`
-  returns `401`.
-- Per-permission checks live in the route handlers via
-  `requireAuth()` / `requirePermission(req, perm)` from `src/lib/auth/guard.ts`,
-  which re-loads the user from Mongo so role changes take effect immediately.
-- Model: each user has one `role` (`admin | manager | operator | viewer`) plus
-  an optional additive `permissions[]`. Rules live in
-  `src/lib/auth/permissions.ts` (`ROLE_PERMISSIONS`, `can()`). `admin` = `*`.
-- `users` collection is served only by `/api/users` (hashes passwords, strips
-  them from responses, requires `users:manage`). The generic
-  `/api/collections/users` path is blocked with `403`.
-- Client: `src/lib/auth/context.tsx` (`AuthProvider` / `useAuth`) exposes
-  `user` + `can()`; the dashboard layout gates on it and `Sidebar` hides nav
-  the user cannot access. UI gating is UX only — the API is the boundary.
-- Seed an admin: `node --env-file=.env.local scripts/create-admin.mjs <user> <pass> "Name"`.
+# DTC GPS Gateway
+DTC_GPS_API_BASE_URL=https://gps.dtc.co.th:8099
+DTC_GPS_API_TOKEN=E4QHL821CUE8ZF5...
 
-## 7. Legacy Python Path
+# Vercel Blob Storage
+BLOB_READ_WRITE_TOKEN=vercel_blob_rw_...
 
-Only work in the Python side when the task explicitly targets it.
+# Secondary / Legacy Integrations (Python)
+LINE_CHANNEL_SECRET=...
+LINE_CHANNEL_ACCESS_TOKEN=...
+OPENCLAW_WEBHOOK_URL=...
+OPENCLAW_API_KEY=...
+```
 
-Relevant files:
-
-- `api/index.py`
-- `services/db.py`
-- `services/ocr_client.py`
-- `services/line_client.py`
-- `handlers/image.py`
-- `app.py`
-
-Python path responsibilities:
-
-- generic CRUD endpoints
-- booking container patch API
-- LINE signature handling and image/webhook processing
-
-## 8. Known Risks And Technical Debt
-
-- Hardcoded credentials/tokens exist in the codebase
-- The legacy Python path (`api/index.py`) still has no auth — only the Next.js
-  app is protected
-- There is duplicated business logic between Next.js and Python paths
-- Some legacy Thai strings have encoding issues
-- Secrets were previously stored in Markdown docs; new docs intentionally avoid that
-
-## 9. Best Editing Strategy
-
-When changing features, prefer this order:
-
-1. Confirm whether the active behavior lives in Next.js or Python
-2. Update the domain type in `src/lib/types.ts` if the data shape changes
-3. Update the API route
-4. Update the UI that consumes it
-5. Check any matching helper in `src/lib/`
-
-For booking-related tasks, start in `src/app/(dashboard)/bookings/page.tsx` and then follow calls outward.
-
-## 10. Environment Variables To Expect
-
-Common variables used across the repo:
-
-- `MONGODB_URI`
-- `MONGODB_DB`
-- `AUTH_SECRET` (session JWT signing key, >= 32 chars)
-- `OCR_API_SECRET`
-- `OCR_API_URL`
-- `GEMINI_API_KEY`
-- `GEMINI_MODEL`
-- `LINE_CHANNEL_SECRET`
-- `LINE_CHANNEL_ACCESS_TOKEN`
-- `OPENCLAW_WEBHOOK_URL`
-- `OPENCLAW_API_KEY`
-
-Move any remaining hardcoded external tokens into env vars if you are touching those integrations.

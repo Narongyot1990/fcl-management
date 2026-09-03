@@ -1,136 +1,100 @@
-# Integrations
+# Integrations Guide
 
-This document replaces the older scattered setup notes and focuses on the integrations that affect coding work.
+This guide details all third-party services and integrations connected to the ITL FCL Management system.
 
-## MongoDB
+---
 
-Used by both the Next.js and Python paths.
+## 1. MongoDB Atlas
 
-Environment variables:
+Primary persistence database for all master data and operational bookings.
 
+### Configuration
 ```env
-MONGODB_URI=
+MONGODB_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/
 MONGODB_DB=eir_scanner
 ```
 
-Main files:
+### Key Implementation Details
+- **Connection pooling**: Managed via `src/lib/mongodb.ts` (cached globally in development to prevent hot-reload connection leaks).
+- **Auto-indexing**: `bookings` collection automatically establishes indices for `booking_date`, `created_at`, `container_no`, and unique `booking_no`.
+- **Allowed Collections**: Whitelisted in `ALLOWED` (`vendors`, `containers`, `bookings`, `customers`, `users`).
 
-- Next.js: `src/lib/mongodb.ts`
-- Python: `services/db.py`
+---
 
-## Vercel Blob
+## 2. Vercel Blob Storage
 
-Used for image storage.
+Stores container door and EIR ticket images securely.
 
-Main flow:
-
-- Upload through `src/app/api/upload-image/route.ts`
-- Read through `src/app/api/image/[filename]/route.ts`
-
-Behavior:
-
-- Files are stored under `itl-files/`
-- Upload route uses private access
-- Client should use the returned proxy URL, not the raw blob URL
-
-## Gemini OCR
-
-Used to extract booking fields from:
-
-- container door image
-- EIR image
-
-Environment variables:
-
+### Configuration
 ```env
-GEMINI_API_KEY=
-GEMINI_MODEL=
+BLOB_READ_WRITE_TOKEN=vercel_blob_rw_...
 ```
 
-Main route:
+### Image Pipeline
+1. Uploads hit `src/app/api/upload-image/route.ts`.
+2. Images are stored with `access: 'private'` under prefix `itl-files/`.
+3. Client receives and stores proxy URL `/api/image/[filename]`.
+4. Serving endpoint `src/app/api/image/[filename]/route.ts` streams image binary directly, preventing exposure of internal storage endpoints.
 
-- `src/app/api/gemini-ocr/route.ts`
+---
 
-Important coding note:
+## 3. Google Gemini AI (OCR Engine)
 
-- OCR output is validated again after model response
-- Keep strict validation when adjusting prompts or supported fields
+Performs multi-image OCR extraction from container door photos and paper EIR slips.
 
-## LINE Messaging API
-
-Environment variables:
-
+### Configuration
 ```env
-LINE_CHANNEL_SECRET=
-LINE_CHANNEL_ACCESS_TOKEN=
+GEMINI_API_KEY=AIzaSy...
+GEMINI_MODEL=gemini-2.5-flash
 ```
 
-Relevant implementations:
+### Extraction Workflow
+- **Route**: `src/app/api/gemini-ocr/route.ts`
+- **Model Default**: `gemini-2.5-flash` (or overridden by `GEMINI_MODEL`).
+- **Prompt Strategy**: Structured JSON output prompt instructing the vision model to locate:
+  - `container_no` (4 letters + 7 digits)
+  - `container_size_code` (e.g. 45G1, 22G1)
+  - `tare_weight` (numeric kilograms)
+  - `seal_no` (alphanumeric security seal ID)
+- **Validation**: Strict ISO 6346 check digit algorithm and regex filters are applied before sending results to the client.
 
-- `services/line_client.py`
-- `app.py`
+---
 
-Current status:
+## 4. DTC GPS Telematics API
 
-- There is no active Next.js LINE webhook route in the current tree
-- The remaining LINE implementation is the legacy Flask path
+Connects to the DTC Enterprise Fleet Management API to fetch live truck telemetry, coordinates, and historical station logs.
 
-When working on LINE features:
-
-1. Decide whether to add a new Next.js route or update the Python path
-2. Move any remaining hardcoded values into env vars
-3. Verify signature handling before enabling replies
-
-## OCR Scanner Service
-
-Used in the Python path.
-
-Environment variables:
-
-```env
-OCR_API_URL=
-OCR_API_SECRET=
-```
-
-Relevant file:
-
-- `services/ocr_client.py`
-
-## GPS Provider
-
-Used by:
-
-- `src/app/api/gps/route.ts`
-- `src/app/api/gps/history/route.ts`
-- `src/app/api/gps/history-raw/route.ts`
-- `src/lib/dtcGps.ts`
-
-Current behavior:
-
-- Accepts a `gps_id`
-- Calls the DTC GPS API
-- Returns coordinates and lightweight status data
-
-Important note:
-
-- GPS token and base URL are read from environment variables
-
-Environment variables:
-
+### Configuration
 ```env
 DTC_GPS_API_BASE_URL=https://gps.dtc.co.th:8099
-DTC_GPS_API_TOKEN=
+DTC_GPS_API_TOKEN=E4QHL821CUE8ZF5...
 ```
 
-## OpenClaw
+### Core Endpoints & Implementation
+Implementation lives in `src/lib/dtcGps.ts`:
+- **Realtime Telemetry**: `fetchDtcRealtime(gpsId)` -> calls `/getRealtimeData`
+- **Station-to-Station Reports**: `fetchDtcStationReport(gpsId, date)` -> calls `/getStationToStationReport`
+- **Raw History Log**: `fetchDtcHistory(gpsId, date)` -> calls `/getHistory`
 
-Only relevant to the standalone Flask path in `app.py`.
+### Failover & Token Handling
+- The gateway reads `DTC_GPS_API_TOKEN` from the environment.
+- If the configured token returns an authentication error from DTC, it automatically falls back to the system fallback token to prevent UI disruptions.
 
-Environment variables:
+---
 
+## 5. LINE Messaging API & OpenClaw (Secondary / Legacy)
+
+The codebase includes legacy LINE webhook handlers under the Python path (`app.py` & `services/line_client.py`).
+
+### Configuration
 ```env
-OPENCLAW_WEBHOOK_URL=
-OPENCLAW_API_KEY=
+LINE_CHANNEL_SECRET=...
+LINE_CHANNEL_ACCESS_TOKEN=...
+OPENCLAW_WEBHOOK_URL=...
+OPENCLAW_API_KEY=...
 ```
 
-Use this only when the task explicitly targets the standalone LINE bridge.
+### Operational Note
+- There is currently no active Next.js webhook route for LINE in `src/app/api`.
+- If new LINE bot features are added, prioritize creating a native Next.js route handler in `src/app/api/line/route.ts` using `@line/bot-sdk`.
+

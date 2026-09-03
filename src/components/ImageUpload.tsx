@@ -22,7 +22,7 @@ export default function ImageUpload({ label, value, type, onChange }: Props) {
     setError("");
     setUploading(true);
     try {
-      const options = { maxSizeMB: 1, maxWidthOrHeight: 1600, useWebWorker: true };
+      const options = { maxSizeMB: 2, maxWidthOrHeight: 2560, useWebWorker: true, fileType: "image/jpeg" };
       const file = new File([blob], filename, { type: blob.type || "image/jpeg" });
       const compressed = await imageCompression(file, options);
 

@@ -1,77 +1,81 @@
 # API Reference
 
-This document summarizes the active in-repo API surface that is most relevant to the current dashboard implementation.
+This document provides complete, up-to-date specifications for all API endpoints in the Next.js application, along with reference notes for the secondary/legacy Python API.
 
-## Authentication
+---
 
-Browser/API auth uses a signed JWT session in the httpOnly `fcl_session`
-cookie, set by `POST /api/auth/login`. `src/proxy.ts` rejects any request
-without a valid session (`401` for `/api/*`, redirect to `/login` for pages);
-`/login` and `/api/auth/login` are the only exceptions.
+## Authentication & Authorization Headers
 
-Each sensitive route also enforces a specific permission via
-`requirePermission()` (`src/lib/auth/guard.ts`) and returns `403` when the
-authenticated user lacks it. Permission per collection:
+All generic collection endpoints receive authentication and context headers automatically populated by `src/lib/api.ts` from `sessionStorage.getItem("itl_user")`:
 
-| Collection | read | write / delete |
-| --- | --- | --- |
-| `bookings`, `shipments` | `bookings:read` | `bookings:write` / `bookings:delete` |
-| `customers` | `customers:read` | `customers:write` |
-| `vendors` | `vendors:read` | `vendors:write` |
-| `containers` | `containers:read` | `containers:write` |
-| `users` | — (use `/api/users`, needs `users:manage`) | — |
+| Header Name | Type | Description |
+|---|---|---|
+| `x-itl-role` | `string` | Logged-in user's role: `"admin"`, `"leader"`, or `"driver"`. |
+| `x-itl-branch` | `string` | Logged-in user's branch (e.g. `"Bangkok"`). |
+| `X-API-Key` | `string` | Secret API key (matched against `OCR_API_SECRET` for machine endpoints). |
 
-`POST /api/bookings/container` (legacy Python path) still authenticates with
-`X-API-Key: <OCR_API_SECRET>` for machine callers.
+### Branch Scoping Rules
+- If `x-itl-role` is `"admin"`, the request has global visibility across all branches.
+- If `x-itl-role` is `"leader"` or `"driver"` and `x-itl-branch` is present, `GET` queries are automatically scoped with `{ branch }`, and `POST` mutations enforce `doc.branch = branch`.
 
-### `POST /api/auth/login`
+---
 
-Body `{ "username", "password" }`. On success sets the `fcl_session` cookie and
-returns `{ user: { id, username, name, role, permissions[] } }`. Bad
-credentials -> `401`; disabled account -> `403`.
+## Next.js API Endpoints
 
-### `POST /api/auth/logout`
+### 1. Generic Collection Management
 
-Clears the session cookie. Always `{ "ok": true }`.
+Base URL: `/api/collections/[collection]`
 
-### `GET /api/auth/me`
+Supported `[collection]` values:
+`"vendors"` | `"containers"` | `"bookings"` | `"customers"` | `"users"`
 
-Returns the current `{ user }` (id, username, name, role, effective
-`permissions[]`) or `401`.
+---
 
-### `GET|POST /api/users`, `PUT|DELETE /api/users/[id]`
+#### `GET /api/collections/[collection]`
+Retrieve records from the specified collection with support for filtering, pagination, sorting, and branch scoping.
 
-User administration. Requires `users:manage`. Passwords are scrypt-hashed on
-write and never returned. You cannot delete, disable, or self-demote your own
-account.
+**Headers:**
+- `x-itl-role`: User role
+- `x-itl-branch`: User branch
 
-## Active Next.js Routes
+**Query Parameters:**
+| Parameter | Type | Description |
+|---|---|---|
+| `page` | `number` | Page number for pagination (1-indexed). |
+| `limit` | `number` | Maximum items per page (capped at 200, default 50). |
+| `date_from` | `string` | *(Bookings only)* Start date filter (`YYYY-MM-DD`). |
+| `date_to` | `string` | *(Bookings only)* End date filter (`YYYY-MM-DD`). |
+| `no_container` | `boolean` | *(Bookings only)* Filter bookings where `container_no` is missing or empty. |
+| `booking_nos` | `string` | *(Bookings only)* Comma-separated list of booking numbers for batch lookup. |
+| `workflow` | `string` | *(Bookings only)* Operational workflow filter: `no_truck`, `no_container`, `loading_pending`, `loaded`, `return_pending`. |
+| `[fieldName]` | `string` | Any schema field name to perform a case-insensitive regex search. |
 
-### `GET /api/collections/[collection]`
 
-Purpose:
-
-- List records from an allowed collection
-
-Allowed collections:
-
-- `vendors`
-- `containers`
-- `bookings`
-- `customers`
-- `users`
-
-Behavior:
-
-- Query params become case-insensitive regex filters
-- For `bookings`, `page` and `limit` enable server-side pagination
-- For `bookings`, `date_from`, `date_to`, `no_container`, and `booking_nos` are supported filters
-- Response shape:
-
+**Success Response (`200 OK`):**
 ```json
 {
-  "count": 12,
-  "records": [],
+  "count": 10,
+  "records": [
+    {
+      "_id": "65e01234567890abcdef1234",
+      "booking_no": "BK-2026-001",
+      "booking_date": "2026-04-10",
+      "job_type": "Export",
+      "customer_code": "HRF",
+      "vendor_code": "FLS",
+      "truck_plate": "70-1234",
+      "driver_name": "สมชาย มีรักษ์",
+      "driver_phone": "081-234-5678",
+      "container_no": "MSCU1234567",
+      "container_size": "40'HC",
+      "container_size_code": "45G1",
+      "tare_weight": "3800",
+      "seal_no": "SL-998811",
+      "loading_status": "loaded",
+      "return_completed": false,
+      "created_at": "2026-04-10T08:30:00.000Z"
+    }
+  ],
   "page": 1,
   "limit": 50,
   "total": 120,
@@ -79,221 +83,257 @@ Behavior:
 }
 ```
 
-### `POST /api/collections/[collection]`
+---
 
-Purpose:
+#### `POST /api/collections/[collection]`
+Create a new record in the specified collection.
 
-- Create a record in an allowed collection
+**Deduplication Keys Enforced:**
+- `vendors`: `code`
+- `bookings`: `booking_no`
+- `customers`: `code`
+- `users`: `username`
 
-Behavior:
-
-- Performs dedup check using keys from `src/lib/mongodb.ts`
-- Booking inserts also rely on a unique `booking_no` index when it can be created
-- Adds `created_at`
-
-Success response:
-
+**Request Body Example:**
 ```json
 {
-  "created": true,
-  "record": {}
+  "booking_no": "BK-2026-002",
+  "booking_date": "2026-04-11",
+  "customer_code": "HRF",
+  "vendor_code": "FLS",
+  "job_type": "Export"
 }
 ```
 
-### `PUT /api/collections/[collection]/[id]`
+**Responses:**
+- `200 OK`: `{"created": true, "record": { ...doc, "_id": "..." }}`
+- `409 Conflict`: `{"error": "Record already exists (duplicate)"}`
+- `500 / 503`: `{"error": "Database error details"}`
 
-Purpose:
+---
 
-- Patch a record by MongoDB ObjectId
+#### `PUT /api/collections/[collection]/[id]`
+Update an existing record by its MongoDB `ObjectId`.
 
-Behavior:
+**Request Body:** JSON payload containing updated fields (system strips `_id` and `created_at` automatically).
 
-- Removes `_id` and `created_at` from incoming payload before update
+**Responses:**
+- `200 OK`: `{"updated": true}`
+- `400 Bad Request`: `{"error": "Invalid ID"}`
+- `404 Not Found`: `{"error": "Record not found"}`
 
-Success response:
+---
 
-```json
-{
-  "updated": true
-}
-```
+#### `DELETE /api/collections/[collection]/[id]`
+Delete a record by its MongoDB `ObjectId`.
 
-### `DELETE /api/collections/[collection]/[id]`
+**Responses:**
+- `200 OK`: `{"deleted": true}`
+- `400 Bad Request`: `{"error": "Invalid ID"}`
+- `404 Not Found`: `{"error": "Record not found"}`
 
-Purpose:
+---
 
-- Delete a record by MongoDB ObjectId
+### 2. Booking Container Patch Endpoint
 
-Success response:
+#### `POST /api/bookings/container`
+Directly updates container-specific fields on a booking. Used by external tools, OCR integrations, or LINE bots.
 
-```json
-{
-  "deleted": true
-}
-```
-
-## Booking Container Patch
-
-### `POST /api/bookings/container`
-
-Purpose:
-
-- Update container-related fields on an existing booking
-
-Expected headers:
-
+**Headers:**
+- `Content-Type: application/json`
 - `X-API-Key: <OCR_API_SECRET>`
 
-Required body fields:
-
+**Request Body:**
 ```json
 {
   "booking_no": "BK-2026-001",
-  "container_no": "MSCU1234567"
+  "container_no": "MSCU1234567",
+  "seal_no": "SL-123456",
+  "container_size": "40'HC",
+  "container_size_code": "45G1",
+  "tare_weight": "3850"
 }
 ```
 
-Optional fields:
+**Validation Rules:**
+- `container_no` is validated against **ISO 6346** (4 letters + 7 digits with check-digit validation).
 
-- `seal_no`
-- `container_size`
-- `container_size_code`
-- `tare_weight`
-
-Behavior:
-
-- Validates `container_no` against ISO 6346
-- Finds booking by `booking_no` case-insensitively
-- Updates only container-related fields
-- Returns a grouped response containing:
-  - `booking`
-  - `pickup_info`
-  - `container_info`
-  - `loading_info`
-  - `return_info`
-
-Common error cases:
-
-- `400` invalid JSON or missing required fields
-- `401` missing or invalid API key
-- `404` booking not found
-- `422` invalid container number
-
-## Upload And Image Access
-
-### `POST /api/upload-image`
-
-Purpose:
-
-- Upload an image to private Vercel Blob storage
-
-Expected multipart fields:
-
-- `file`
-- `type`
-
-Success response:
-
+**Success Response (`200 OK`):**
 ```json
 {
-  "url": "/api/image/eir_123456.jpg",
-  "blobUrl": "https://...",
-  "filename": "eir_123456.jpg"
+  "booking": {
+    "booking_no": "BK-2026-001",
+    "booking_date": "2026-04-10",
+    "job_type": "Export",
+    "customer_code": "HRF",
+    "vendor_code": "FLS"
+  },
+  "pickup_info": {
+    "truck_plate": "70-1234",
+    "driver_name": "สมชาย มีรักษ์",
+    "driver_phone": "081-234-5678",
+    "plan_pickup_date": "2026-04-10"
+  },
+  "container_info": {
+    "container_no": "MSCU1234567",
+    "container_size": "40'HC",
+    "container_size_code": "45G1",
+    "tare_weight": "3850",
+    "seal_no": "SL-123456"
+  },
+  "loading_info": {
+    "loading_status": "loaded"
+  },
+  "return_info": {
+    "return_completed": false
+  }
 }
 ```
 
-### `GET /api/image/[filename]`
+---
 
-Purpose:
+### 3. Image Upload & Proxy
 
-- Proxy a private Blob file back to the client
+#### `POST /api/upload-image`
+Uploads an image file to Vercel Blob storage (`itl-files/` prefix) with private access.
 
-Behavior:
+**Request:** `multipart/form-data`
+- `file`: Image binary (`image/jpeg`, `image/png`, etc.)
+- `type`: Category identifier (e.g. `"eir"`, `"container"`)
 
-- Searches for the file under the `itl-files/` prefix
-- Uses Blob SDK private access to stream the content
+**Success Response (`200 OK`):**
+```json
+{
+  "url": "/api/image/eir_1712740000000.jpg",
+  "blobUrl": "https://blob.vercel-storage.com/itl-files/eir_1712740000000.jpg",
+  "filename": "eir_1712740000000.jpg"
+}
+```
 
-## OCR
+---
 
-### `POST /api/gemini-ocr`
+#### `GET /api/image/[filename]`
+Streams private Vercel Blob images securely back to the frontend client.
 
-Purpose:
+**Response:** Binary image stream with appropriate `Content-Type` and `Cache-Control` headers.
 
-- Extract structured booking/container fields from two images
+---
 
-Expected JSON body:
+### 4. Gemini OCR Extraction
 
+#### `POST /api/gemini-ocr`
+Sends container door and/or EIR ticket images to Google Gemini for field extraction.
+
+**Request Body:**
 ```json
 {
   "containerImage": {
-    "base64": "...",
+    "base64": "<base64_encoded_image_data>",
     "contentType": "image/jpeg"
   },
   "eirImage": {
-    "base64": "...",
+    "base64": "<base64_encoded_image_data>",
     "contentType": "image/jpeg"
   }
 }
 ```
 
-Returned fields:
-
-- `container_size_code`
-- `tare_weight`
-- `container_no`
-- `seal_no`
-
-Validation rules:
-
-- `container_size_code`: `2 digits + 1 letter + 1 digit`
-- `container_no`: `4 letters + 7 digits`
-- `tare_weight`: `3-5 digits`
-
-## GPS
-
-### `POST /api/gps`
-
-Purpose:
-
-- Fetch current coordinates for a truck GPS unit
-
-Expected body:
-
+**Success Response (`200 OK`):**
 ```json
 {
-  "gps_id": "DEVICE_ID"
+  "container_no": "MSCU1234567",
+  "container_size_code": "45G1",
+  "tare_weight": "3850",
+  "seal_no": "SL-998811"
 }
 ```
 
-Success response:
+**Server Validation Rules:**
+- `container_no`: 4 letters + 7 digits (ISO 6346)
+- `container_size_code`: `^\d{2}[A-Z0-9]\d$`
+- `tare_weight`: 3 to 5 digits (`^\d{3,5}$`)
+- `seal_no`: Stripped of invalid non-alphanumeric noise
 
+---
+
+### 5. GPS Telematics (DTC GPS)
+
+#### `POST /api/gps`
+Fetch realtime vehicle telemetry by `gps_id`.
+
+**Request Body:**
 ```json
 {
-  "lat": 13.123,
-  "lon": 100.123,
-  "speed": 0,
-  "time": "2026-04-10 10:30:00",
-  "location": "Somewhere"
+  "gps_id": "DTC_DEVICE_12345"
 }
 ```
 
-Related routes exist:
+**Success Response (`200 OK`):**
+```json
+{
+  "lat": 13.7563,
+  "lon": 100.5018,
+  "speed": 62,
+  "time": "2026-04-10 14:32:00",
+  "location": "Bang Sao Thong, Samut Prakan"
+}
+```
 
-- `POST /api/gps/history`
-- `POST /api/gps/history-raw`
+---
 
-Inspect those route files before changing historical GPS behavior.
+#### `POST /api/gps/history`
+Fetch DTC Station-to-Station report for a specific vehicle and date.
 
-## LINE
+**Request Body:**
+```json
+{
+  "gps_id": "DTC_DEVICE_12345",
+  "date": "2026-04-10"
+}
+```
 
-There is no active Next.js LINE webhook route in the current tree. The remaining LINE path is the legacy Flask implementation in `app.py`.
+**Success Response (`200 OK`):**
+```json
+{
+  "stations": [
+    {
+      "station_f": "Depot A",
+      "station_n": "Factory B",
+      "start_time": "2026-04-10 08:00:00",
+      "end_time": "2026-04-10 10:15:00",
+      "distance": "85.4"
+    }
+  ],
+  "date": "2026-04-10",
+  "gps_id": "DTC_DEVICE_12345",
+  "truck_name": "70-1234",
+  "count": 1
+}
+```
 
-## Legacy Python API
+---
 
-There is also a Python API in `api/index.py` that overlaps with some of the routes above:
+#### `POST /api/gps/history-raw`
+Fetch raw time-series GPS location logs for route playback.
 
-- generic CRUD
-- booking container patch
-- LINE webhook
+**Request Body:**
+```json
+{
+  "gps_id": "DTC_DEVICE_12345",
+  "date": "2026-04-10"
+}
+```
 
-If a task references Vercel Python runtime or FastAPI specifically, inspect that file before making changes.
+---
+
+## Secondary / Legacy Python API (`api/index.py`)
+
+*Note: Active Next.js dashboard uses Next.js route handlers above. The Python API is preserved for standalone Vercel Python runtime workflows.*
+
+| Endpoint | Method | Purpose |
+|---|---|---|
+| `/api/records` | `GET` | Query records with legacy prompt filter |
+| `/api/records/{id}` | `PUT` | Update record by ObjectId |
+| `/api/bookings/container` | `POST` | Update container info (Python path) |
+| `/callback` | `POST` | LINE Messaging API Webhook receiver |
+
