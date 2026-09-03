@@ -818,15 +818,15 @@ export default function BookingsPage() {
             <>
               {/* Booking Info */}
               <Section title="Booking" icon="📋" defaultOpen={!isEditing}>
-                <FormField label="วันที่จอง"><Input type="date" value={headerForm.booking_date} onChange={setHeader("booking_date")} required /></FormField>
+                <FormField label="Booking Date"><Input type="date" value={headerForm.booking_date} onChange={setHeader("booking_date")} required /></FormField>
                 {!isEditing && (
-                  <FormField label="Booking No." hint='พิมพ์ "BKK0001" หรือ "BKK0001 #2" เพื่อระบุ shipment เอง'>
-                    <Input value={bookingInput} onChange={(e) => setBookingInput(e.target.value)} placeholder="BKK0001 หรือ BKK0001 #2" required />
+                  <FormField label="Booking No." hint='Enter "BKK0001" or "BKK0001 #2" to specify shipment'>
+                    <Input value={bookingInput} onChange={(e) => setBookingInput(e.target.value)} placeholder="BKK0001 or BKK0001 #2" required />
                   </FormField>
                 )}
                 <FormField label="Job Type"><Select value={headerForm.job_type} onChange={setHeader("job_type")} options={JOB_TYPE_OPTIONS} /></FormField>
-                <FormField label="Customer"><Select value={headerForm.customer_code} onChange={setHeader("customer_code")} options={customers.map((c) => ({ value: c.code, label: `${c.code} — ${c.name}` }))} placeholder="เลือก Customer…" /></FormField>
-                <div className="col-span-2"><FormField label="Vendor (default)"><Select value={headerForm.vendor_code} onChange={(e) => handleHeaderVendorChange(e.target.value)} options={vendors.map((v) => ({ value: v.code, label: `${v.code} — ${v.name}` }))} placeholder="เลือก Vendor…" /></FormField></div>
+                <FormField label="Customer"><Select value={headerForm.customer_code} onChange={setHeader("customer_code")} options={customers.map((c) => ({ value: c.code, label: `${c.code} — ${c.name}` }))} placeholder="Select Customer…" /></FormField>
+                <div className="col-span-2"><FormField label="Vendor (Default)"><Select value={headerForm.vendor_code} onChange={(e) => handleHeaderVendorChange(e.target.value)} options={vendors.map((v) => ({ value: v.code, label: `${v.code} — ${v.name}` }))} placeholder="Select Vendor…" /></FormField></div>
               </Section>
 
               {editTarget?.mode !== "header" && (
@@ -834,15 +834,15 @@ export default function BookingsPage() {
                   {/* Container */}
                   <Section title="Container" icon="📦" defaultOpen={false}>
                     <FormField label="Container No."><Input value={form.container_no} onChange={set("container_no")} placeholder="TCKU1234567" /></FormField>
-                    <FormField label="Seal No."><Input value={form.seal_no} onChange={set("seal_no")} placeholder="หมายเลขซีล" /></FormField>
-                    <FormField label="Size" hint="e.g. 40HC"><Select value={form.container_size} onChange={(e) => handleSizeChange(e.target.value)} options={sizeOptions} placeholder="เลือก Size…" /></FormField>
-                    <FormField label="ISO Code" hint="e.g. 45G1"><Select value={form.container_size_code} onChange={(e) => handleCodeChange(e.target.value)} options={codeOptions} placeholder="เลือก Code…" /></FormField>
+                    <FormField label="Seal No."><Input value={form.seal_no} onChange={set("seal_no")} placeholder="Seal Number" /></FormField>
+                    <FormField label="Size" hint="e.g. 40HC"><Select value={form.container_size} onChange={(e) => handleSizeChange(e.target.value)} options={sizeOptions} placeholder="Select Size…" /></FormField>
+                    <FormField label="ISO Code" hint="e.g. 45G1"><Select value={form.container_size_code} onChange={(e) => handleCodeChange(e.target.value)} options={codeOptions} placeholder="Select Code…" /></FormField>
                     <FormField label="Tare (kg)"><Input value={form.tare_weight} onChange={set("tare_weight")} placeholder="3800" /></FormField>
                     <div />
                     <div className="col-span-2 flex flex-col gap-3">
                       <div className="grid grid-cols-2 gap-3">
-                        <ImageUpload label="รูป EIR" value={form.eir_image_url} type="eir" onChange={(url) => setFormField("eir_image_url", url)} />
-                        <ImageUpload label="รูป Container" value={form.container_image_url} type="container" onChange={(url) => setFormField("container_image_url", url)} />
+                        <ImageUpload label="EIR Photo" value={form.eir_image_url} type="eir" onChange={(url) => setFormField("eir_image_url", url)} />
+                        <ImageUpload label="Container Photo" value={form.container_image_url} type="container" onChange={(url) => setFormField("container_image_url", url)} />
                       </div>
                       <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-slate-100">
                         <GeminiOcrButton
@@ -860,29 +860,29 @@ export default function BookingsPage() {
                             };
                           })}
                         />
-                        <p className="text-[10px] text-slate-400">AI อ่านจากรูปอัตโนมัติ (95%+ confidence)</p>
+                        <p className="text-[10px] text-slate-400">AI Auto-extracted (95%+ confidence)</p>
                       </div>
                     </div>
                   </Section>
 
                   {/* Pickup + Return side-by-side */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <Section title="Pickup รับตู้" icon="🚛" defaultOpen={false}>
-                      <FormField label="Est. Pickup (วัน-เวลา)"><Input type="datetime-local" value={form.plan_pickup_date} onChange={set("plan_pickup_date")} /></FormField>
-                      <FormField label="ETA ถึงปลายทาง"><Input type="datetime-local" value={form.eta} onChange={set("eta")} /></FormField>
-                      <div className="col-span-2"><FormField label="Vendor (ของ shipment นี้)"><Select value={form.vendor_code} onChange={(e) => handleVendorChange(e.target.value)} options={vendors.map((v) => ({ value: v.code, label: `${v.code} — ${v.name}` }))} placeholder={`Default: ${headerForm.vendor_code || "—"}`} /></FormField></div>
-                      <FormField label="ทะเบียนรถ"><Select value={form.truck_plate} onChange={set("truck_plate")} options={truckPlateOptions} placeholder={selectedVendor ? "เลือกทะเบียน…" : "เลือก Vendor ก่อน"} disabled={!selectedVendor} /></FormField>
-                      <FormField label="คนขับ"><Select value={form.driver_name} onChange={(e) => handleDriverChange(e.target.value)} options={driverOptions} placeholder={selectedVendor ? "เลือกคนขับ…" : "เลือก Vendor ก่อน"} disabled={!selectedVendor} /></FormField>
-                      <FormField label="เบอร์โทร"><Input value={form.driver_phone} onChange={set("driver_phone")} placeholder="Auto-fill" readOnly /></FormField>
+                    <Section title="Pickup Process" icon="🚛" defaultOpen={false}>
+                      <FormField label="Est. Pickup (Date/Time)"><Input type="datetime-local" value={form.plan_pickup_date} onChange={set("plan_pickup_date")} /></FormField>
+                      <FormField label="ETA to Destination"><Input type="datetime-local" value={form.eta} onChange={set("eta")} /></FormField>
+                      <div className="col-span-2"><FormField label="Vendor (This Shipment)"><Select value={form.vendor_code} onChange={(e) => handleVendorChange(e.target.value)} options={vendors.map((v) => ({ value: v.code, label: `${v.code} — ${v.name}` }))} placeholder={`Default: ${headerForm.vendor_code || "—"}`} /></FormField></div>
+                      <FormField label="Truck Plate"><Select value={form.truck_plate} onChange={set("truck_plate")} options={truckPlateOptions} placeholder={selectedVendor ? "Select Plate…" : "Select Vendor first"} disabled={!selectedVendor} /></FormField>
+                      <FormField label="Driver"><Select value={form.driver_name} onChange={(e) => handleDriverChange(e.target.value)} options={driverOptions} placeholder={selectedVendor ? "Select Driver…" : "Select Vendor first"} disabled={!selectedVendor} /></FormField>
+                      <FormField label="Phone Number"><Input value={form.driver_phone} onChange={set("driver_phone")} placeholder="Auto-fill" readOnly /></FormField>
                     </Section>
 
-                    <Section title="Return คืนตู้" icon="🔄" defaultOpen={false}>
+                    <Section title="Return Process" icon="🔄" defaultOpen={false}>
                       <FormField label="Plan Return"><Input type="date" value={form.plan_return_date} onChange={set("plan_return_date")} /></FormField>
-                      <FormField label="ทะเบียนรถ"><Select value={form.return_truck_plate} onChange={set("return_truck_plate")} options={truckPlateOptions} placeholder={selectedVendor ? "เลือกทะเบียน…" : "เลือก Vendor ก่อน"} disabled={!selectedVendor} /></FormField>
-                      <FormField label="คนขับ"><Select value={form.return_driver_name} onChange={(e) => handleReturnDriverChange(e.target.value)} options={driverOptions} placeholder={selectedVendor ? "เลือกคนขับ…" : "เลือก Vendor ก่อน"} disabled={!selectedVendor} /></FormField>
-                      <FormField label="เบอร์โทร"><Input value={form.return_driver_phone} onChange={set("return_driver_phone")} placeholder="Auto-fill" readOnly /></FormField>
+                      <FormField label="Truck Plate"><Select value={form.return_truck_plate} onChange={set("return_truck_plate")} options={truckPlateOptions} placeholder={selectedVendor ? "Select Plate…" : "Select Vendor first"} disabled={!selectedVendor} /></FormField>
+                      <FormField label="Driver"><Select value={form.return_driver_name} onChange={(e) => handleReturnDriverChange(e.target.value)} options={driverOptions} placeholder={selectedVendor ? "Select Driver…" : "Select Vendor first"} disabled={!selectedVendor} /></FormField>
+                      <FormField label="Phone Number"><Input value={form.return_driver_phone} onChange={set("return_driver_phone")} placeholder="Auto-fill" readOnly /></FormField>
                       <div className="col-span-2 flex flex-col gap-2">
-                        <FormField label="คืนตู้จริง"><Input type="datetime-local" value={form.return_date} onChange={set("return_date")} /></FormField>
+                        <FormField label="Actual Return Date"><Input type="datetime-local" value={form.return_date} onChange={set("return_date")} /></FormField>
                         <Toggle checked={form.gcl_received} onChange={(v) => setFormField("gcl_received", v)} label="GCL received" />
                         <Toggle checked={form.return_completed} onChange={(v) => setFormField("return_completed", v)} label="Container returned" />
                       </div>
@@ -892,9 +892,9 @@ export default function BookingsPage() {
                   {/* Loading Status */}
                   <Section title="Loading Status" icon="📊" cols={2} defaultOpen={false}>
                     <FormField label="Plan Loading"><Input type="date" value={form.plan_loading_date} onChange={set("plan_loading_date")} /></FormField>
-                    <FormField label="Pending เวลา"><Input type="datetime-local" value={form.pending_at} onChange={set("pending_at")} /></FormField>
-                    <FormField label="Loading เวลา"><Input type="datetime-local" value={form.loading_at} onChange={set("loading_at")} /></FormField>
-                    <FormField label="Loaded เวลา"><Input type="datetime-local" value={form.loaded_at} onChange={set("loaded_at")} /></FormField>
+                    <FormField label="Pending Time"><Input type="datetime-local" value={form.pending_at} onChange={set("pending_at")} /></FormField>
+                    <FormField label="Loading Time"><Input type="datetime-local" value={form.loading_at} onChange={set("loading_at")} /></FormField>
+                    <FormField label="Loaded Time"><Input type="datetime-local" value={form.loaded_at} onChange={set("loaded_at")} /></FormField>
                   </Section>
                 </>
               )}
@@ -903,19 +903,19 @@ export default function BookingsPage() {
             <>
               {/* Bulk create: shared fields */}
               <Section title="Shared Info (Booking, Customer, Vendor)" icon="📋" defaultOpen={true}>
-                <FormField label="วันที่จอง"><Input type="date" value={headerForm.booking_date} onChange={setHeader("booking_date")} required /></FormField>
+                <FormField label="Booking Date"><Input type="date" value={headerForm.booking_date} onChange={setHeader("booking_date")} required /></FormField>
                 <FormField label="Job Type"><Select value={headerForm.job_type} onChange={setHeader("job_type")} options={JOB_TYPE_OPTIONS} /></FormField>
-                <FormField label="Customer"><Select value={headerForm.customer_code} onChange={setHeader("customer_code")} options={customers.map((c) => ({ value: c.code, label: `${c.code} — ${c.name}` }))} placeholder="เลือก Customer…" /></FormField>
-                <div className="col-span-2"><FormField label="Vendor (ผู้ขนส่ง)"><Select value={headerForm.vendor_code} onChange={(e) => handleHeaderVendorChange(e.target.value)} options={vendors.map((v) => ({ value: v.code, label: `${v.code} — ${v.name}` }))} placeholder="เลือก Vendor…" /></FormField></div>
-                <FormField label="ทะเบียนรถ"><Select value={form.truck_plate} onChange={set("truck_plate")} options={truckPlateOptions} placeholder={selectedVendor ? "เลือกทะเบียน…" : "เลือก Vendor ก่อน"} disabled={!selectedVendor} /></FormField>
-                <FormField label="คนขับ"><Select value={form.driver_name} onChange={(e) => handleDriverChange(e.target.value)} options={driverOptions} placeholder={selectedVendor ? "เลือกคนขับ…" : "เลือก Vendor ก่อน"} disabled={!selectedVendor} /></FormField>
+                <FormField label="Customer"><Select value={headerForm.customer_code} onChange={setHeader("customer_code")} options={customers.map((c) => ({ value: c.code, label: `${c.code} — ${c.name}` }))} placeholder="Select Customer…" /></FormField>
+                <div className="col-span-2"><FormField label="Vendor (Carrier)"><Select value={headerForm.vendor_code} onChange={(e) => handleHeaderVendorChange(e.target.value)} options={vendors.map((v) => ({ value: v.code, label: `${v.code} — ${v.name}` }))} placeholder="Select Vendor…" /></FormField></div>
+                <FormField label="Truck Plate"><Select value={form.truck_plate} onChange={set("truck_plate")} options={truckPlateOptions} placeholder={selectedVendor ? "Select Plate…" : "Select Vendor first"} disabled={!selectedVendor} /></FormField>
+                <FormField label="Driver"><Select value={form.driver_name} onChange={(e) => handleDriverChange(e.target.value)} options={driverOptions} placeholder={selectedVendor ? "Select Driver…" : "Select Vendor first"} disabled={!selectedVendor} /></FormField>
               </Section>
 
               {/* Bulk create: paste area */}
-              <Section title="Booking Numbers (ต้องระบุ #N ทุกบรรทัด)" icon="📝" defaultOpen={true}>
+              <Section title="Booking Numbers (Must specify #N on every line)" icon="📝" defaultOpen={true}>
                 <div className="col-span-2 flex flex-col gap-2">
                   <textarea value={bulkText} onChange={(e) => handleBulkTextChange(e.target.value)}
-                    placeholder={`วางทีละบรรทัด ต้องมี #N กำกับเสมอ เช่น:\nBKK0001 #1\nBKK0001 #2\nBKK0002 #1`}
+                    placeholder={`Paste line by line, must include #N e.g.:\nBKK0001 #1\nBKK0001 #2\nBKK0002 #1`}
                     rows={8} className="w-full px-3 py-2 text-sm border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono resize-y" />
                   {bulkLines.length > 0 && (
                     <div className="text-xs text-slate-500">
@@ -924,7 +924,7 @@ export default function BookingsPage() {
                   )}
                   {bulkLines.some((l) => !l.parsed) && (
                     <div className="text-xs px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-amber-700">
-                      ทุกบรรทัดต้องระบุ #N เช่น &quot;BKK0001 #1&quot; — บรรทัดที่ขาด: {bulkLines.filter((l) => !l.parsed).map((l) => l.raw).join(", ")}
+                      Every line must specify #N e.g. &quot;BKK0001 #1&quot; — Missing on lines: {bulkLines.filter((l) => !l.parsed).map((l) => l.raw).join(", ")}
                     </div>
                   )}
                 </div>

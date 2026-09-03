@@ -7,10 +7,10 @@ export function toProxyUrl(url: string | undefined): string {
 }
 
 export function toThaiDate(iso: string | undefined): string {
-  if (!iso) return "\u2014";
+  if (!iso) return "—";
   const d = new Date(iso);
   if (isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("th-TH", { year: "numeric", month: "short", day: "numeric" });
+  return d.toLocaleDateString("en-GB", { year: "numeric", month: "short", day: "numeric" });
 }
 
 export function toShortDate(iso: string | undefined): string {

@@ -3,7 +3,7 @@ export const toThaiDate = (iso: string | undefined) => {
   if (!iso) return "\u2014";
   const d = new Date(iso);
   if (isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("th-TH", { year: "numeric", month: "short", day: "numeric" });
+  return d.toLocaleDateString("en-GB", { year: "numeric", month: "short", day: "numeric" });
 };
 
 // ── Short date formatter (dd/MM) ─────────────────────────────────────────────

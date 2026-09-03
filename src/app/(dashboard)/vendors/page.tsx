@@ -86,7 +86,7 @@ export default function VendorsPage() {
       const mapsUrl = `https://maps.google.com/?q=${data.lat},${data.lon}`;
       window.open(mapsUrl, "_blank");
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "เกิดข้อผิดพลาดในการดึงข้อมูลพิกัด GPS");
+      alert(err instanceof Error ? err.message : "Error fetching GPS coordinates");
     } finally {
       setGpsLoading(null);
     }
@@ -131,11 +131,11 @@ export default function VendorsPage() {
         }),
       });
       const json = (await res.json()) as { error?: string; stations?: StationReportRow[]; latest_gps_time?: string };
-      if (!res.ok) throw new Error(json.error || "ไม่สามารถดึงข้อมูลได้");
+      if (!res.ok) throw new Error(json.error || "Failed to fetch station data");
       setStationData(json.stations || []);
       setStationLatestGpsTime(json.latest_gps_time || null);
     } catch (err: unknown) {
-      setStationError(err instanceof Error ? err.message : "ไม่สามารถดึงข้อมูลประวัติได้");
+      setStationError(err instanceof Error ? err.message : "Failed to fetch history data");
     } finally {
       setStationLoading(false);
     }
@@ -163,10 +163,10 @@ export default function VendorsPage() {
         body: JSON.stringify({ gps_id: gpsId, date }),
       });
       const json = await res.json() as { error?: string; points?: GpsPoint[] };
-      if (!res.ok) throw new Error(json.error || "ไม่สามารถดึงข้อมูลได้");
+      if (!res.ok) throw new Error(json.error || "Failed to fetch data");
       setHistoryPoints(json.points || []);
     } catch (err: unknown) {
-      setHistoryError(err instanceof Error ? err.message : "ไม่สามารถดึงข้อมูลประวัติได้");
+      setHistoryError(err instanceof Error ? err.message : "Failed to fetch history data");
     } finally {
       setHistoryLoading(false);
     }
@@ -286,13 +286,13 @@ export default function VendorsPage() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="Vendors" subtitle="จัดการข้อมูลผู้ขนส่ง ทะเบียนรถ และคนขับ" onAdd={canWrite ? openCreate : undefined}>
+      <PageHeader title="Vendors" subtitle="Manage carriers, truck plates, and drivers" onAdd={canWrite ? openCreate : undefined}>
         <div className="relative">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="ค้นหาด้วยรหัส…"
+            placeholder="Search by code…"
             className="pl-9 pr-4 py-2 text-sm border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-52"
           />
         </div>
@@ -306,7 +306,7 @@ export default function VendorsPage() {
             <div className="rounded-lg bg-blue-50 p-2 text-blue-600"><UsersRound size={16} /></div>
           </div>
           <div className="mt-3 text-3xl font-extrabold text-slate-800 tracking-tight">{records.length}</div>
-          <p className="mt-1 text-[10px] text-slate-400">บริษัทขนส่งที่เปิดใช้งาน</p>
+          <p className="mt-1 text-[10px] text-slate-400">Active carrier companies</p>
         </div>
 
         <div className="relative overflow-hidden rounded-xl border border-slate-100 bg-gradient-to-br from-white to-slate-50/50 p-4 shadow-sm transition-all hover:shadow-md">
@@ -315,7 +315,7 @@ export default function VendorsPage() {
             <div className="rounded-lg bg-purple-50 p-2 text-purple-600"><Truck size={16} /></div>
           </div>
           <div className="mt-3 text-3xl font-extrabold text-slate-800 tracking-tight">{totalTrucks}</div>
-          <p className="mt-1 text-[10px] text-slate-400">จำนวนทะเบียนรถจดทะเบียน</p>
+          <p className="mt-1 text-[10px] text-slate-400">Total registered truck plates</p>
         </div>
 
         <div className="relative overflow-hidden rounded-xl border border-slate-100 bg-gradient-to-br from-white to-slate-50/50 p-4 shadow-sm transition-all hover:shadow-md">
@@ -324,7 +324,7 @@ export default function VendorsPage() {
             <div className="rounded-lg bg-amber-50 p-2 text-amber-600"><UsersRound size={16} /></div>
           </div>
           <div className="mt-3 text-3xl font-extrabold text-slate-800 tracking-tight">{totalDrivers}</div>
-          <p className="mt-1 text-[10px] text-slate-400">คนขับรถทั้งหมดในระบบ</p>
+          <p className="mt-1 text-[10px] text-slate-400">Total drivers in system</p>
         </div>
 
         <div className="relative overflow-hidden rounded-xl border border-slate-100 bg-gradient-to-br from-white to-slate-50/50 p-4 shadow-sm transition-all hover:shadow-md">
@@ -333,7 +333,7 @@ export default function VendorsPage() {
             <div className="rounded-lg bg-emerald-50 p-2 text-emerald-600"><Satellite size={16} /></div>
           </div>
           <div className="mt-3 text-3xl font-extrabold text-slate-800 tracking-tight">{gpsEnabled}</div>
-          <p className="mt-1 text-[10px] text-slate-400">รถที่ระบุ GPS ID เรียบร้อย</p>
+          <p className="mt-1 text-[10px] text-slate-400">Trucks with GPS ID configured</p>
         </div>
       </div>
 
@@ -346,7 +346,7 @@ export default function VendorsPage() {
         {loading ? (
           <div className="bg-white rounded-xl border border-[var(--border)] shadow-sm px-4 py-10 text-center text-[var(--muted)] text-sm">Loading…</div>
         ) : records.length === 0 ? (
-          <div className="bg-white rounded-xl border border-[var(--border)] shadow-sm px-4 py-10 text-center text-[var(--muted)] text-sm">ยังไม่มีข้อมูล Vendor กด Add New เพื่อเพิ่ม</div>
+          <div className="bg-white rounded-xl border border-[var(--border)] shadow-sm px-4 py-10 text-center text-[var(--muted)] text-sm">No vendors found. Click Add New to create.</div>
         ) : (
           records.map((v) => (
             <div key={v._id} className="bg-white rounded-xl border border-[var(--border)] shadow-sm p-3.5">
@@ -365,7 +365,7 @@ export default function VendorsPage() {
               
               {/* Mobile Trucks */}
               <div className="mb-3">
-                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide">ทะเบียนรถ</span>
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide">Truck Plates</span>
                 <div className="flex flex-wrap gap-1.5 mt-1">
                   {v.trucks?.length ? (
                     v.trucks.map((t, i) => (
@@ -384,7 +384,7 @@ export default function VendorsPage() {
                           <div className="absolute right-0 top-6 z-50 bg-white rounded-lg shadow-xl border border-slate-200 py-1 min-w-[170px]" onClick={(e) => e.stopPropagation()}>
                             <button type="button" onClick={() => handleGpsCurrentLocation({ plate: t.plate, gps_id: t.gps_id! })}
                               className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-blue-50 text-slate-700 hover:text-blue-700 transition-colors">
-                              <MapPin size={11} className="text-blue-500" /> ตำแหน่ง Realtime
+                              <MapPin size={11} className="text-blue-500" /> Realtime Location
                             </button>
                             <button type="button" onClick={() => handleOpenStation({ plate: t.plate, gps_id: t.gps_id! }, "v2")}
                               className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-amber-50 text-slate-700 hover:text-amber-700 transition-colors">
@@ -396,11 +396,11 @@ export default function VendorsPage() {
                             </button>
                             <button type="button" onClick={() => handleOpenHistory({ plate: t.plate, gps_id: t.gps_id! })}
                               className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 transition-colors">
-                              <History size={11} className="text-emerald-500" /> ประวัติ GPS
+                              <History size={11} className="text-emerald-500" /> GPS History
                             </button>
                             <a href={`/vendors/gps/station-realtime/${encodeURIComponent(t.plate)}`} target="_blank" rel="noopener noreferrer"
                               className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-orange-50 text-slate-700 hover:text-orange-700 transition-colors border-t border-slate-100 mt-0.5 pt-1.5">
-                              <ExternalLink size={11} className="text-orange-500" /> หน้าติดตามรายกะ (Dedicated)
+                              <ExternalLink size={11} className="text-orange-500" /> Shift Track (Dedicated)
                             </a>
                           </div>
                         )}
@@ -417,7 +417,7 @@ export default function VendorsPage() {
               {/* Mobile Drivers */}
               {(v.drivers || []).length > 0 && (
                 <div>
-                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide">คนขับ</span>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide">Drivers</span>
                   <div className="flex flex-wrap gap-1.5 mt-1">
                     {v.drivers.map((d, i) => (
                       <button 
@@ -442,10 +442,10 @@ export default function VendorsPage() {
       <div className="hidden md:block bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
         {/* Table Header */}
         <div className="grid grid-cols-12 border-b border-slate-100 bg-slate-50/75 px-5 py-3.5 text-xs font-bold text-slate-400 uppercase tracking-wider">
-          <div className="col-span-1">รหัส</div>
-          <div className="col-span-2">ชื่อบริษัท</div>
-          <div className="col-span-4">ทะเบียนรถ & GPS</div>
-          <div className="col-span-4">รายชื่อคนขับ</div>
+          <div className="col-span-1">Code</div>
+          <div className="col-span-2">Company Name</div>
+          <div className="col-span-4">Truck Plates & GPS</div>
+          <div className="col-span-4">Driver List</div>
           <div className="col-span-1 text-right">Actions</div>
         </div>
 
@@ -454,7 +454,7 @@ export default function VendorsPage() {
           {loading ? (
             <div className="px-5 py-10 text-center text-[var(--muted)]">Loading…</div>
           ) : records.length === 0 ? (
-            <div className="px-5 py-10 text-center text-[var(--muted)]">ยังไม่มีข้อมูล Vendor กด Add New เพื่อเพิ่ม</div>
+            <div className="px-5 py-10 text-center text-[var(--muted)]">No vendors found. Click Add New to create.</div>
           ) : (
             records.map((v) => (
               <div key={v._id} className="grid grid-cols-12 px-5 py-4 hover:bg-slate-50/50 transition-colors items-start">
@@ -493,7 +493,7 @@ export default function VendorsPage() {
                             <div className="absolute left-0 top-7 z-50 bg-white rounded-lg shadow-xl border border-slate-200 py-1.5 min-w-[180px]" onClick={(e) => e.stopPropagation()}>
                               <button type="button" onClick={() => handleGpsCurrentLocation({ plate: t.plate, gps_id: t.gps_id! })}
                                 className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-blue-50 text-slate-700 hover:text-blue-700 transition-colors">
-                                <MapPin size={12} className="text-blue-500" /> ตำแหน่ง Realtime
+                                <MapPin size={12} className="text-blue-500" /> Realtime Location
                               </button>
                               <button type="button" onClick={() => handleOpenStation({ plate: t.plate, gps_id: t.gps_id! }, "v2")}
                                 className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-amber-50 text-slate-700 hover:text-amber-700 transition-colors">
@@ -505,11 +505,11 @@ export default function VendorsPage() {
                               </button>
                               <button type="button" onClick={() => handleOpenHistory({ plate: t.plate, gps_id: t.gps_id! })}
                                 className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 transition-colors">
-                                <History size={12} className="text-emerald-500" /> ประวัติ GPS
+                                <History size={12} className="text-emerald-500" /> GPS History
                               </button>
                               <a href={`/vendors/gps/station-realtime/${encodeURIComponent(t.plate)}`} target="_blank" rel="noopener noreferrer"
                                 className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-orange-50 text-slate-700 hover:text-orange-700 transition-colors border-t border-slate-100 mt-1 pt-1.5 font-medium">
-                                <ExternalLink size={12} className="text-orange-500" /> หน้าติดตามรายกะ (Dedicated)
+                                <ExternalLink size={12} className="text-orange-500" /> Shift Track (Dedicated)
                               </a>
                             </div>
                           )}
@@ -531,7 +531,7 @@ export default function VendorsPage() {
                           type="button"
                           onClick={() => setDriverProfileTarget(d)}
                           className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-slate-50 text-slate-700 border border-slate-200 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 transition-all font-medium cursor-pointer"
-                          title={`เบอร์โทร: ${d.phone || 'ไม่ระบุ'}`}
+                          title={`Phone: ${d.phone || 'Not specified'}`}
                         >
                           <span>{d.name}</span>
                           {d.phone && <span className="text-[10px] text-slate-400">📞</span>}
@@ -556,30 +556,30 @@ export default function VendorsPage() {
         </div>
       </div>
 
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? "แก้ไข Vendor" : "เพิ่ม Vendor"} size="lg">
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? "Edit Vendor" : "Add Vendor"} size="lg">
         <form onSubmit={handleSave} className="flex flex-col gap-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <FormField label="รหัสย่อ" required>
+            <FormField label="Vendor Code" required>
               <Input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} placeholder="e.g. ABC" required />
             </FormField>
-            <FormField label="ชื่อเต็ม (บริษัท)" required>
-              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="ชื่อบริษัท" required />
+            <FormField label="Company Name" required>
+              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Company name" required />
             </FormField>
           </div>
 
           {/* Trucks */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-medium text-slate-600 uppercase tracking-wide">ทะเบียนรถ & GPS</label>
+              <label className="text-xs font-medium text-slate-600 uppercase tracking-wide">Truck Plates & GPS</label>
               <button type="button" onClick={addTruck} className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700">
-                <Plus size={12} /> เพิ่มทะเบียน
+                <Plus size={12} /> Add Truck
               </button>
             </div>
             <div className="flex flex-col gap-2">
               {form.trucks.map((truck, i) => (
                 <div key={i} className="flex items-center gap-2">
-                  <Input value={truck.plate} onChange={(e) => setTruck(i, "plate", e.target.value)} placeholder="ทะเบียนรถ e.g. กข 1234" className="flex-1" />
-                  <Input value={truck.gps_id} onChange={(e) => setTruck(i, "gps_id", e.target.value)} placeholder="GPS ID (ไม่บังคับ)" className="flex-1" />
+                  <Input value={truck.plate} onChange={(e) => setTruck(i, "plate", e.target.value)} placeholder="Truck plate e.g. 70-1234" className="flex-1" />
+                  <Input value={truck.gps_id} onChange={(e) => setTruck(i, "gps_id", e.target.value)} placeholder="GPS ID (Optional)" className="flex-1" />
                   {form.trucks.length > 1 && (
                     <button type="button" onClick={() => removeTruck(i)} className="p-1.5 rounded-lg hover:bg-red-50 text-[var(--muted)] hover:text-red-600 transition-colors shrink-0">
                       <X size={14} />
@@ -593,16 +593,16 @@ export default function VendorsPage() {
           {/* Drivers */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-medium text-slate-600 uppercase tracking-wide">คนขับรถ</label>
+              <label className="text-xs font-medium text-slate-600 uppercase tracking-wide">Drivers</label>
               <button type="button" onClick={addDriver} className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700">
-                <Plus size={12} /> เพิ่มคนขับ
+                <Plus size={12} /> Add Driver
               </button>
             </div>
             <div className="flex flex-col gap-2">
               {form.drivers.map((d, i) => (
                 <div key={i} className="flex items-center gap-2">
-                  <Input value={d.name} onChange={(e) => setDriver(i, "name", e.target.value)} placeholder="ชื่อ-นามสกุล" />
-                  <Input value={d.phone} onChange={(e) => setDriver(i, "phone", e.target.value)} placeholder="เบอร์โทร" />
+                  <Input value={d.name} onChange={(e) => setDriver(i, "name", e.target.value)} placeholder="Full name" />
+                  <Input value={d.phone} onChange={(e) => setDriver(i, "phone", e.target.value)} placeholder="Phone number" />
                   {form.drivers.length > 1 && (
                     <button type="button" onClick={() => removeDriver(i)} className="p-1.5 rounded-lg hover:bg-red-50 text-[var(--muted)] hover:text-red-600 transition-colors shrink-0">
                       <X size={14} />
@@ -614,9 +614,9 @@ export default function VendorsPage() {
           </div>
 
           <div className="flex gap-3 justify-end pt-2">
-            <button type="button" onClick={() => setModalOpen(false)} className="px-4 py-2 text-sm rounded-lg border border-[var(--border)] hover:bg-slate-50 transition-colors">ยกเลิก</button>
+            <button type="button" onClick={() => setModalOpen(false)} className="px-4 py-2 text-sm rounded-lg border border-[var(--border)] hover:bg-slate-50 transition-colors">Cancel</button>
             <button type="submit" disabled={saving} className="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50 font-medium">
-              {saving ? "กำลังบันทึก…" : editing ? "บันทึก" : "สร้าง Vendor"}
+              {saving ? "Saving…" : editing ? "Save Changes" : "Create Vendor"}
             </button>
           </div>
         </form>
@@ -624,8 +624,8 @@ export default function VendorsPage() {
 
       <ConfirmDialog
         open={!!deleteTarget}
-        title="ลบ Vendor"
-        message={`ต้องการลบ vendor "${deleteTarget?.code}" ใช่หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้`}
+        title="Delete Vendor"
+        message={`Are you sure you want to delete vendor "${deleteTarget?.code}"? This action cannot be undone.`}
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
         loading={deleting}
@@ -812,40 +812,40 @@ export default function VendorsPage() {
       </Modal>
 
       {/* ── GPS History Modal (with map) ── */}
-      <Modal open={historyOpen} onClose={() => setHistoryOpen(false)} title={`ประวัติ GPS — ${gpsTruck?.plate || ""}`} size="lg">
+      <Modal open={historyOpen} onClose={() => setHistoryOpen(false)} title={`GPS History — ${gpsTruck?.plate || ""}`} size="lg">
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-2 flex-wrap">
             <button type="button" onClick={() => { setHistoryDateMode("today"); fetchHistoryRaw(gpsTruck!.gps_id, getTodayDate()); setHistoryDate(getTodayDate()); }}
               className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors ${historyDateMode === "today" ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
-              <CalendarDays size={11} className="inline mr-1" />วันนี้
+              <CalendarDays size={11} className="inline mr-1" />Today
             </button>
             <button type="button" onClick={() => setHistoryDateMode("custom")}
               className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors ${historyDateMode === "custom" ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
-              <CalendarDays size={11} className="inline mr-1" />เลือกวันที่
+              <CalendarDays size={11} className="inline mr-1" />Select Date
             </button>
             {historyDateMode === "custom" && (
               <input type="date" value={historyDate} onChange={(e) => { setHistoryDate(e.target.value); fetchHistoryRaw(gpsTruck!.gps_id, e.target.value); }}
                 className="px-2 py-1 text-xs border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" />
             )}
-            {historyPoints.length > 0 && <span className="text-[10px] text-slate-400 ml-auto">{historyPoints.length} จุด</span>}
+            {historyPoints.length > 0 && <span className="text-[10px] text-slate-400 ml-auto">{historyPoints.length} pts</span>}
           </div>
 
           {historyLoading ? (
-            <div className="flex items-center justify-center py-8"><Loader2 size={16} className="animate-spin mr-2 text-emerald-500" /><span className="text-sm text-slate-500">กำลังโหลด…</span></div>
+            <div className="flex items-center justify-center py-8"><Loader2 size={16} className="animate-spin mr-2 text-emerald-500" /><span className="text-sm text-slate-500">Loading…</span></div>
           ) : historyError ? (
             <div className="py-4 text-sm text-red-500 text-center bg-red-50 rounded-lg">{historyError}</div>
           ) : historyPoints.length === 0 ? (
-            <div className="py-6 text-sm text-slate-400 text-center bg-slate-50 rounded-lg">ไม่พบข้อมูลสำหรับวันที่นี้</div>
+            <div className="py-6 text-sm text-slate-400 text-center bg-slate-50 rounded-lg">No GPS data found for this date</div>
           ) : (
             <>
               {/* Map */}
               <GpsMap points={historyPoints} />
               {/* Legend */}
               <div className="flex items-center gap-4 text-[10px] text-slate-500 px-1">
-                <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-full bg-green-500 border border-white shadow-sm" />เริ่มต้น</div>
-                <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-full bg-red-500 border border-white shadow-sm" />สิ้นสุด</div>
-                <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-full bg-slate-800 border border-white shadow-sm" />📍 สถานี</div>
-                <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-full bg-blue-500 border border-white shadow-sm" />จุด GPS</div>
+                <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-full bg-green-500 border border-white shadow-sm" />Start</div>
+                <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-full bg-red-500 border border-white shadow-sm" />End</div>
+                <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-full bg-slate-800 border border-white shadow-sm" />📍 Station</div>
+                <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-full bg-blue-500 border border-white shadow-sm" />GPS Point</div>
               </div>
             </>
           )}
@@ -856,7 +856,7 @@ export default function VendorsPage() {
       <Modal 
         open={!!driverProfileTarget} 
         onClose={() => setDriverProfileTarget(null)} 
-        title="ประวัติคนขับรถ" 
+        title="Driver Profile" 
         size="lg"
       >
         <div className="h-[500px]">

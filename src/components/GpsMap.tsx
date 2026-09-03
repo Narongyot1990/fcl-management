@@ -128,7 +128,7 @@ export default function GpsMap({ points }: GpsMapProps) {
           <div style="font-size:11px;line-height:1.5;min-width:140px;">
             ${hasStation ? `<div style="font-weight:700;color:#1e293b;margin-bottom:2px;">📍 ${p.station_name}</div>` : ""}
             <div style="color:#475569;">${p.time}</div>
-            ${p.gps_speed !== undefined ? `<div style="color:#475569;">ความเร็ว: ${p.gps_speed} km/h</div>` : ""}
+            ${p.gps_speed !== undefined ? `<div style="color:#475569;">Speed: ${p.gps_speed} km/h</div>` : ""}
             ${p.status_name_th ? `<div style="color:#475569;">${p.status_name_th}</div>` : ""}
             ${locationStr ? `<div style="color:#94a3b8;font-size:10px;">${locationStr}</div>` : ""}
           </div>`;

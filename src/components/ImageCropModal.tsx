@@ -89,7 +89,7 @@ export default function ImageCropModal({ imageSrc, onConfirm, onCancel, onSkip }
     <div className="fixed inset-0 z-[200] flex flex-col bg-black/95">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 bg-black/60 border-b border-white/10 shrink-0">
-        <span className="text-sm font-semibold text-white">ครอปและหมุนรูป</span>
+        <span className="text-sm font-semibold text-white">Crop & Rotate Image</span>
         <button onClick={onCancel} className="p-1.5 rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition-colors">
           <X size={18} />
         </button>
@@ -153,7 +153,7 @@ export default function ImageCropModal({ imageSrc, onConfirm, onCancel, onSkip }
                 onClick={() => setRotation(0)}
                 className="px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white/60 text-xs transition-colors"
               >
-                รีเซ็ต
+                Reset
               </button>
             )}
             <span className="text-xs text-white/40">{rotation}°</span>
@@ -165,7 +165,7 @@ export default function ImageCropModal({ imageSrc, onConfirm, onCancel, onSkip }
               onClick={onCancel}
               className="px-3 py-2 rounded-lg border border-white/20 text-white/70 text-xs hover:bg-white/10 transition-colors"
             >
-              ยกเลิก
+              Cancel
             </button>
             {onSkip && (
               <button
@@ -173,7 +173,7 @@ export default function ImageCropModal({ imageSrc, onConfirm, onCancel, onSkip }
                 onClick={onSkip}
                 className="px-3 py-2 rounded-lg border border-white/20 text-white/70 text-xs hover:bg-white/10 transition-colors"
               >
-                ข้ามครอป
+                Skip Crop
               </button>
             )}
             <button
@@ -183,7 +183,7 @@ export default function ImageCropModal({ imageSrc, onConfirm, onCancel, onSkip }
               className="flex items-center gap-2 px-3 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-xs font-semibold transition-colors disabled:opacity-50"
             >
               <Check size={14} />
-              {processing ? "กำลังครอป…" : "ยืนยัน"}
+              {processing ? "Processing…" : "Confirm"}
             </button>
           </div>
         </div>

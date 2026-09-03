@@ -136,7 +136,7 @@ export default function ImageUpload({ label, value, type, onChange }: Props) {
                 onClick={() => inputRef.current?.click()}
                 className="px-2.5 py-1.5 rounded-lg bg-white/95 text-slate-800 text-xs font-semibold hover:bg-white transition-colors flex items-center gap-1.5 shadow-sm"
               >
-                <Crop size={12} /> เปลี่ยน
+                <Crop size={12} /> Change
               </button>
               <button
                 type="button"
@@ -149,7 +149,7 @@ export default function ImageUpload({ label, value, type, onChange }: Props) {
             {uploading && (
               <div className="absolute inset-0 bg-white/70 flex items-center justify-center gap-2">
                 <Loader2 size={18} className="text-blue-500 animate-spin" />
-                <span className="text-[11px] text-blue-600 font-medium">อัปโหลด…</span>
+                <span className="text-[11px] text-blue-600 font-medium">Uploading…</span>
               </div>
             )}
           </div>
@@ -164,13 +164,13 @@ export default function ImageUpload({ label, value, type, onChange }: Props) {
             {uploading ? (
               <>
                 <Loader2 size={20} className="text-blue-500 animate-spin" />
-                <span className="text-[11px] text-blue-500 font-medium">อัปโหลด…</span>
+                <span className="text-[11px] text-blue-500 font-medium">Uploading…</span>
               </>
             ) : (
               <>
                 <ImageIcon size={20} className="text-slate-300" />
                 <span className="text-[11px] text-slate-400 text-center leading-snug">
-                  คลิกเพื่อเลือกรูป<br />
+                  Click or drag image here<br />
                   <span className="text-[10px] text-slate-300">JPG, PNG, WEBP</span>
                 </span>
               </>

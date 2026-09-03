@@ -50,7 +50,7 @@ export function containerNoMessage(value: string): string | null {
   const result = validateContainerNo(value);
   if (result === "empty" || result === "valid") return null;
   if (!/^[A-Z]{4}\d{7}$/i.test(value.trim())) {
-    return "รูปแบบไม่ถูกต้อง (ต้องเป็น 4 ตัวอักษร + 7 ตัวเลข เช่น TCKU1234567)";
+    return "Invalid format (must be 4 letters + 7 digits e.g. TCKU1234567)";
   }
-  return "Check digit ไม่ถูกต้อง (ISO 6346) — กรุณาตรวจสอบเลขตู้อีกครั้ง";
+  return "Invalid check digit (ISO 6346) — please verify container number";
 }

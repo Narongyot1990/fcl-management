@@ -9,14 +9,14 @@ import type { Driver } from "@/lib/types";
 // Mock data for demonstration - in real app would fetch from API
 const MOCK_DRIVER: Driver = {
   _id: "test-123",
-  name: "สมชาย มีรักษ์",
+  name: "Somchai Meerak",
   phone: "081-234-5678",
   score: 92,
   rating: 4.8,
   jobs_count: 156,
   status: "on_job",
   avatar_url: "",
-  joined_at: "มกราคม 2024",
+  joined_at: "January 2024",
   id_card_no: "1-2345-67890-12-1",
   license_no: "DL-99887766"
 };

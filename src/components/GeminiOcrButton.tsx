@@ -67,7 +67,7 @@ export default function GeminiOcrButton({ containerImageUrl, eirImageUrl, onResu
       const hasData = data.container_size_code || data.tare_weight || data.container_no || data.seal_no;
       if (!hasData) {
         setStatus("low_confidence");
-        setMessage("ภาพไม่ชัดพอ หรือ Gemini ไม่มั่นใจ — กรุณากรอกเอง");
+        setMessage("Image unclear or low confidence — please enter manually");
         return;
       }
 
@@ -88,7 +88,7 @@ export default function GeminiOcrButton({ containerImageUrl, eirImageUrl, onResu
       }, 4000);
     } catch (e) {
       setStatus("error");
-      setMessage(e instanceof Error ? e.message : "เกิดข้อผิดพลาด");
+      setMessage(e instanceof Error ? e.message : "An error occurred");
       setTimeout(() => {
         setStatus("idle");
         setMessage("");
@@ -113,7 +113,7 @@ export default function GeminiOcrButton({ containerImageUrl, eirImageUrl, onResu
             ? "bg-red-50 text-red-600 border-red-100 hover:bg-red-100"
             : "bg-violet-50 text-violet-700 border-violet-200 hover:bg-violet-100 hover:border-violet-300"
           }`}
-        title={!containerImageUrl || !eirImageUrl ? "อัปโหลดรูป Container และ EIR ก่อน" : "สแกนทั้ง 2 รูปด้วย Gemini AI"}
+        title={!containerImageUrl || !eirImageUrl ? "Upload both Container and EIR images first" : "Scan both images with Gemini AI"}
       >
         {status === "loading" ? (
           <Loader2 size={13} className="animate-spin shrink-0" />
@@ -126,14 +126,14 @@ export default function GeminiOcrButton({ containerImageUrl, eirImageUrl, onResu
         )}
         <span>
           {status === "loading"
-            ? "กำลังสแกน…"
+            ? "Scanning…"
             : status === "success"
-            ? "สแกนสำเร็จ"
+            ? "Scan Complete"
             : status === "low_confidence"
-            ? "ความมั่นใจต่ำ"
+            ? "Low Confidence"
             : status === "error"
-            ? "สแกนล้มเหลว"
-            : "สแกนทั้ง 2 รูป (AI)"}
+            ? "Scan Failed"
+            : "Scan Both Images (AI)"}
         </span>
       </button>
 
