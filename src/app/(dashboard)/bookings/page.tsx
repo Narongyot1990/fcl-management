@@ -223,8 +223,12 @@ export default function BookingsPage() {
       setRecords(res.records);
       setTotalRecords(res.total ?? res.count);
       setTotalPages(res.totalPages ?? 1);
-      // Auto-expand all loaded bookings by default so all shipment rows, containers, edit & delete buttons are immediately visible
-      setExpandedIds(new Set(res.records.map((b) => b._id)));
+      // Start collapsed — the list is long; the user expands what they need.
+      // Keep any rows they had already expanded when the list reloads.
+      setExpandedIds((prev) => {
+        const ids = new Set(res.records.map((b) => b._id));
+        return new Set([...prev].filter((id) => ids.has(id)));
+      });
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to load bookings");
     } finally {
